@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 
 @Entity
 public class User {
@@ -24,17 +25,14 @@ public class User {
 	private Date DateOfBirth;
 	private Date CreatedAt;
 	private boolean IsActive;
-	@OneToMany(mappedBy ="user")
-	private List<UserRoles>list=new ArrayList();
+	@OneToMany(mappedBy = "user")
+	private List<UserRoles> list = new ArrayList();
+	@OneToOne(mappedBy = "user")
+	private Doctors doctors;
+	@OneToMany(mappedBy = "user")
+	private List<Appointments> list1 = new ArrayList();
+	@OneToMany(mappedBy = "user")
+	private List<review> list2 = new ArrayList<>();
+	@OneToMany(mappedBy = "user")
+	private List<Notifications> list3 = new ArrayList<>();
 }
-/*•	UserID (PK) – INT, AUTO_INCREMENT
-•	FullName – VARCHAR(100)
-•	Email – VARCHAR(100), UNIQUE
-•	Phone – VARCHAR(20), UNIQUE
-•	Username – VARCHAR(50), UNIQUE
-•	Password – VARCHAR(255)
-•	Address – VARCHAR(255)
-•	DateOfBirth – DATE
-•	CreatedAt – DATETIME
-•	IsActive – BIT
-*/

@@ -10,13 +10,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 
 @Entity
-public class Role {
+public class Specializations {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer RoleID;
-	private String RoleName;
-	private String Description;
-	private boolean IsActive;
-	@OneToMany(mappedBy = "role")
-	private List<UserRoles> list = new ArrayList();
+	private Integer id;
+	private String specName;
+	private String description;
+	private boolean isActive;
+	@OneToMany(mappedBy = "specializations")
+	private List<DoctorSpecializations> list = new ArrayList<>();
 }

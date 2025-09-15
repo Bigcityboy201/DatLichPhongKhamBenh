@@ -1,5 +1,7 @@
 package truonggg.Model;
 
+import java.util.Date;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -8,15 +10,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
 @Entity
-public class UserRoles {
+public class Notifications {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer UserRoleID;
+	private Integer id;
+	private String message;
+	private boolean IsRead;// 1=da doc
+	private Date createdAt;
 	@ManyToOne
-	@JoinColumn(name = "user_id", referencedColumnName = "UserID")
+	@JoinColumn(name = "user_id", referencedColumnName = "UserId")
 	private User user;
-	@ManyToOne
-	@JoinColumn(name = "role_id", referencedColumnName = "RoleID")
-	private Role role;
-	private boolean IsActive;
 }

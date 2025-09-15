@@ -8,15 +8,16 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
 @Entity
-public class UserRoles {
+public class DoctorSpecializations {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer UserRoleID;
+	private Integer id;
+	private boolean isActive;
 	@ManyToOne
-	@JoinColumn(name = "user_id", referencedColumnName = "UserID")
-	private User user;
+	@JoinColumn(name = "doctor_id", referencedColumnName = "id")
+	private Doctors doctors;
 	@ManyToOne
-	@JoinColumn(name = "role_id", referencedColumnName = "RoleID")
-	private Role role;
-	private boolean IsActive;
+	@JoinColumn(name = "specialization_id", referencedColumnName = "id")
+	private Specializations specializations;
+
 }
