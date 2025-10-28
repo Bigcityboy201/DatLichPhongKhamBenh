@@ -1,0 +1,76 @@
+package truonggg.service.IMPL;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import truonggg.Exception.NotFoundException;
+import truonggg.Model.Departments;
+import truonggg.dto.reponseDTO.DepartmentsResponseDTO;
+import truonggg.dto.requestDTO.DepartmentsDeleteRequestDTO;
+import truonggg.dto.requestDTO.DepartmentsRequestDTO;
+import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
+import truonggg.mapper.DepartmentsMapper;
+import truonggg.repo.DepartmentsRepository;
+import truonggg.service.DepartmentsService;
+
+@Service
+@RequiredArgsConstructor
+public class DepartmentsServiceIMPL implements DepartmentsService {
+
+	private final DepartmentsMapper departmentsMapper;
+
+	private final DepartmentsRepository departmentsRepository;
+
+	@Override
+	public DepartmentsResponseDTO createDepartment(DepartmentsRequestDTO dto) {
+		Departments departments = this.departmentsMapper.toEntity(dto);
+		departments = this.departmentsRepository.save(departments);
+		return this.departmentsMapper.toResponse(departments);
+	}
+
+	@Override
+	public List<DepartmentsResponseDTO> getAll() {
+		List<Departments> departments = this.departmentsRepository.findAll();
+		return this.departmentsMapper.toDTOList(departments);
+	}
+
+	@Override
+	public DepartmentsResponseDTO update(DepartmentsUpdateRequestDTO dto) {
+		// tìm xem có khoa không
+		Departments foundDepartments = this.departmentsRepository.findById(dto.getId())
+				.orElseThrow(() -> new NotFoundException("department", "Department Not Found "));
+		// lấy ra
+		if (dto.getName() != null) {
+			foundDepartments.setName(dto.getName());
+		}
+		if (dto.getDescription() != null) {
+			foundDepartments.setDescription(dto.getDescription());
+		}
+		return this.departmentsMapper.toResponse(this.departmentsRepository.save(foundDepartments));
+	}
+
+	@Override
+	public boolean delete(DepartmentsDeleteRequestDTO dto) {
+		// tìm xem có khoa không
+		Departments foundDepartments = this.departmentsRepository.findById(dto.getId())
+				.orElseThrow(() -> new NotFoundException("department", "Department Not Found "));
+		// lấy ra
+		if (dto.getIsActive() != null) {
+			foundDepartments.setIsActive(dto.getIsActive());
+		}
+		this.departmentsRepository.save(foundDepartments);
+		return true;
+	}
+
+	@Override
+	public boolean delete(Integer id) {
+		// tìm xem có khoa không
+		Departments foundDepartments = this.departmentsRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("department", "Department Not Found "));
+		this.departmentsRepository.delete(foundDepartments);
+		return true;
+	}
+
+}

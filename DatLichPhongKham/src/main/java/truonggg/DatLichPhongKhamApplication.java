@@ -9,5 +9,4 @@ public class DatLichPhongKhamApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(DatLichPhongKhamApplication.class, args);
 	}
-
 }

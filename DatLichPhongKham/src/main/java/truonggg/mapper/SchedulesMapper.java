@@ -1,0 +1,28 @@
+package truonggg.mapper;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+import truonggg.Model.Schedules;
+import truonggg.dto.reponseDTO.SchedulesReponseDTO;
+import truonggg.dto.requestDTO.SchedulesRequestDTO;
+
+@Mapper(componentModel = "spring")
+public interface SchedulesMapper {
+	@Mapping(source = "doctors.id", target = "doctorId")
+	@Mapping(source = "doctors.user.fullName", target = "doctorName")
+	SchedulesReponseDTO toDTO(final Schedules dto);
+
+	@Mapping(source = "doctorId", target = "doctors.id")
+	Schedules toModel(final SchedulesRequestDTO dto);
+
+	default List<SchedulesReponseDTO> toDTOList(List<Schedules> list) {
+		if (list == null || list.isEmpty()) {
+			return List.of();
+		}
+		return list.stream().map(this::toDTO).collect(Collectors.toList());
+	}
+}
