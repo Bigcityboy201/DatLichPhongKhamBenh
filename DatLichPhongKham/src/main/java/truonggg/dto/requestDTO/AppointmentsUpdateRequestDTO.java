@@ -2,7 +2,6 @@ package truonggg.dto.requestDTO;
 
 import java.time.LocalDateTime;
 
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,9 +16,6 @@ import truonggg.Enum.Appointments_Enum;
 @AllArgsConstructor
 @Builder
 public class AppointmentsUpdateRequestDTO {
-
-	@NotNull(message = "Appointment ID is required")
-	private Integer id;
 
 	private LocalDateTime appointmentDateTime;
 

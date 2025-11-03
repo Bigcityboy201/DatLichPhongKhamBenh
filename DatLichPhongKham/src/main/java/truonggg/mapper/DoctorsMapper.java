@@ -24,7 +24,7 @@ public interface DoctorsMapper {
 	@Mapping(source = "user.phone", target = "phone")
 	@Mapping(source = "departments.id", target = "departmentId")
 	@Mapping(source = "departments.name", target = "departmentName")
-	// @Mapping(source = "isActive", target = "isActive")
+	@Mapping(source = "isActive", target = "active")
 	@Mapping(source = "isFeatured", target = "isFeatured")
 	@Mapping(target = "specializations", expression = "java(mapSpecializations(doctors.getList4()))")
 	@Mapping(target = "schedules", expression = "java(mapSchedules(doctors.getList2()))")

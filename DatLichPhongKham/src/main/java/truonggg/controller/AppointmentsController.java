@@ -2,6 +2,7 @@ package truonggg.controller;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
-import truonggg.dto.requestDTO.AppointmentsDeleteRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.reponse.SuccessReponse;
@@ -28,37 +28,45 @@ public class AppointmentsController {
 
 	// GET /api/appointments - Lấy tất cả
 	@GetMapping
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
 	public SuccessReponse<List<AppointmentsResponseDTO>> getAllAppointments() {
 		return SuccessReponse.of(this.appointmentsService.getAll());
 	}
 
 	// GET /api/appointments/{id} - Lấy theo ID
 	@GetMapping("/{id}")
-    public SuccessReponse<AppointmentsResponseDTO> getAppointmentById(@PathVariable Integer id) {
+	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> getAppointmentById(@PathVariable Integer id) {
 		return SuccessReponse.of(this.appointmentsService.findById(id));
 	}
 
 	// POST /api/appointments - Tạo mới
 	@PostMapping
-	public SuccessReponse<AppointmentsResponseDTO> createAppointment(@RequestBody @Valid final AppointmentsRequestDTO dto) {
+	public SuccessReponse<AppointmentsResponseDTO> createAppointment(
+			@RequestBody @Valid final AppointmentsRequestDTO dto) {
 		return SuccessReponse.of(this.appointmentsService.createAppointments(dto));
 	}
 
 	// PUT /api/appointments - Cập nhật
-	@PutMapping
-	public SuccessReponse<AppointmentsResponseDTO> updateAppointment(@RequestBody @Valid AppointmentsUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.appointmentsService.update(dto));
+	@PutMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> updateAppointment(@PathVariable Integer id,
+			@RequestBody @Valid AppointmentsUpdateRequestDTO dto) {
+		return SuccessReponse.of(this.appointmentsService.update(id, dto));
 	}
 
 	// DELETE /api/appointments - Soft delete
-	@DeleteMapping
-	public SuccessReponse<Boolean> deleteAppointment(@RequestBody @Valid AppointmentsDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.appointmentsService.delete(dto));
+	@PutMapping("/{id}/status")
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+    public SuccessReponse<AppointmentsResponseDTO> deleteAppointment(@PathVariable Integer id) {
+		return SuccessReponse.of(this.appointmentsService.delete(id));
 	}
 
 	// DELETE /api/appointments/{id} - Hard delete
 	@DeleteMapping("/{id}")
-    public SuccessReponse<Boolean> hardDeleteAppointment(@PathVariable Integer id) {
-		return SuccessReponse.of(this.appointmentsService.delete(id));
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	public SuccessReponse<String> hardDeleteAppointment(@PathVariable Integer id) {
+		this.appointmentsService.deleteManually(id);
+		return SuccessReponse.of("Xóa thành công!");
 	}
 }

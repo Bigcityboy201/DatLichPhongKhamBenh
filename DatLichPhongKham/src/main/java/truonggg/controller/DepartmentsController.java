@@ -2,6 +2,7 @@ package truonggg.controller;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,24 +38,28 @@ public class DepartmentsController {
 
 	// POST /api/departments - Tạo mới
 	@PostMapping
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<DepartmentsResponseDTO> createDepartment(@RequestBody @Valid final DepartmentsRequestDTO dto) {
 		return SuccessReponse.of(this.departmentsService.createDepartment(dto));
 	}
 
 	// PUT /api/departments - Cập nhật
 	@PutMapping
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<DepartmentsResponseDTO> updateDepartment(@RequestBody @Valid DepartmentsUpdateRequestDTO dto) {
 		return SuccessReponse.of(this.departmentsService.update(dto));
 	}
 
 	// DELETE /api/departments - Soft delete
 	@DeleteMapping
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<Boolean> deleteDepartment(@RequestBody @Valid DepartmentsDeleteRequestDTO dto) {
 		return SuccessReponse.of(this.departmentsService.delete(dto));
 	}
 
 	// DELETE /api/departments/{id} - Hard delete
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<Boolean> hardDeleteDepartment(@PathVariable Integer id) {
 		return SuccessReponse.of(this.departmentsService.delete(id));
 	}

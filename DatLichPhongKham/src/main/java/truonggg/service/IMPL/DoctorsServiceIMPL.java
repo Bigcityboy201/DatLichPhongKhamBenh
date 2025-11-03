@@ -108,9 +108,9 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	}
 
 	@Override
-	public DoctorsReponseDTO updateProfile(DoctorUpdateRequestDTO dto) {
+	public DoctorsReponseDTO updateProfile(Integer id, DoctorUpdateRequestDTO dto) {
 		// Tìm doctor hiện tại
-		Doctors foundDoctor = this.doctorsRepository.findById(dto.getId())
+		Doctors foundDoctor = this.doctorsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 		// Cập nhật thông tin User
 		User user = foundDoctor.getUser();
@@ -139,9 +139,9 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	}
 
 	@Override
-	public DoctorsReponseDTO updateWithUser(DoctorUpdateRequestDTO dto) {
+	public DoctorsReponseDTO updateWithUser(Integer id, DoctorUpdateRequestDTO dto) {
 		// Tìm doctor hiện tại
-		Doctors foundDoctor = this.doctorsRepository.findById(dto.getId())
+		Doctors foundDoctor = this.doctorsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 
 		// Cập nhật thông tin Doctor
@@ -195,9 +195,9 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	}
 
 	@Override
-	public boolean delete(DoctorsDeleteRequestDTO dto) {
+	public DoctorsReponseDTO delete(Integer id, DoctorsDeleteRequestDTO dto) {
 		// Tìm xem có bác sĩ không
-		Doctors foundDoctor = this.doctorsRepository.findById(dto.getId())
+		Doctors foundDoctor = this.doctorsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 
 		// Soft delete - set isActive
@@ -205,15 +205,20 @@ public class DoctorsServiceIMPL implements DoctorsService {
 			foundDoctor.setIsActive(dto.getIsActive());
 			this.doctorsRepository.save(foundDoctor);
 		}
-		return true;
+		return this.doctorsMapper.toDTO(foundDoctor);
 	}
 
 	@Override
-	public boolean delete(Integer id) {
+	public boolean deleteManually(Integer id) {
 		// Tìm xem có bác sĩ không
 		Doctors foundDoctor = this.doctorsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 
+		User user = foundDoctor.getUser();
+		if (user != null) {
+			user.setDoctors(null);
+			userRepository.delete(user);
+		}
 		// Hard delete - xóa hoàn toàn khỏi DB
 		this.doctorsRepository.delete(foundDoctor);
 		return true;

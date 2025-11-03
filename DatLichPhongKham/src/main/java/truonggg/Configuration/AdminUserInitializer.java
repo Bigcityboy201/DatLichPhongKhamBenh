@@ -30,44 +30,32 @@ public class AdminUserInitializer implements CommandLineRunner {
 	private void createBasicRolesIfNotExists() {
 		// Tạo role ADMIN
 		if (roleRepository.findByRoleName(SecurityRole.ROLE_ADMIN) == null) {
-			Role adminRole = Role.builder()
-					.roleName(SecurityRole.ROLE_ADMIN)
-					.Description("Administrator role")
-					.isActive(true)
-					.build();
+			Role adminRole = Role.builder().roleName(SecurityRole.ROLE_ADMIN).Description("Administrator role")
+					.isActive(true).build();
 			roleRepository.save(adminRole);
 			System.out.println("Created ADMIN role");
 		}
 
 		// Tạo role USER
 		if (roleRepository.findByRoleName(SecurityRole.ROLE_USER) == null) {
-			Role userRole = Role.builder()
-					.roleName(SecurityRole.ROLE_USER)
-					.Description("Regular user role")
-					.isActive(true)
-					.build();
+			Role userRole = Role.builder().roleName(SecurityRole.ROLE_USER).Description("Regular user role")
+					.isActive(true).build();
 			roleRepository.save(userRole);
 			System.out.println("Created USER role");
 		}
 
 		// Tạo role EMPLOYEE
 		if (roleRepository.findByRoleName(SecurityRole.ROLE_EMPLOYEE) == null) {
-			Role employeeRole = Role.builder()
-					.roleName(SecurityRole.ROLE_EMPLOYEE)
-					.Description("Employee role")
-					.isActive(true)
-					.build();
+			Role employeeRole = Role.builder().roleName(SecurityRole.ROLE_EMPLOYEE).Description("Employee role")
+					.isActive(true).build();
 			roleRepository.save(employeeRole);
 			System.out.println("Created EMPLOYEE role");
 		}
 
 		// Tạo role DOCTOR
 		if (roleRepository.findByRoleName(SecurityRole.ROLE_DOCTOR) == null) {
-			Role doctorRole = Role.builder()
-					.roleName(SecurityRole.ROLE_DOCTOR)
-					.Description("Doctor role")
-					.isActive(true)
-					.build();
+			Role doctorRole = Role.builder().roleName(SecurityRole.ROLE_DOCTOR).Description("Doctor role")
+					.isActive(true).build();
 			roleRepository.save(doctorRole);
 			System.out.println("Created DOCTOR role");
 		}
@@ -75,23 +63,18 @@ public class AdminUserInitializer implements CommandLineRunner {
 
 	private void createAdminUserIfNotExists() {
 		String adminUsername = "quangtruongngo2012004";
-		
+
 		// Tạo user admin nếu chưa có
 		User admin = userRepository.findByUserName(adminUsername).orElse(null);
 		if (admin == null) {
 			// Lấy role ADMIN
 			Role adminRole = roleRepository.findByRoleName(SecurityRole.ROLE_ADMIN);
-			
-			admin = User.builder()
-					.userName(adminUsername)
-					.password(passwordEncoder.encode("quangtruong1"))
-					.fullName("Quang Truong")
-					.email("quangtruong2012004@gmail.com")
-					.phone("0123456789")
-					.isActive(true)
+
+			admin = User.builder().userName(adminUsername).password(passwordEncoder.encode("quangtruong1"))
+					.fullName("Quang Truong").email("quangtruong2012004@gmail.com").phone("0123456789").isActive(false)
 					.role(adminRole) // Gán role ADMIN trực tiếp
 					.build();
-			
+
 			admin = userRepository.save(admin);
 			System.out.println("Created admin user: " + adminUsername + " with ADMIN role");
 		} else {

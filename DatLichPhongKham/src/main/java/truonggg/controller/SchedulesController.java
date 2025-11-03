@@ -2,6 +2,7 @@ package truonggg.controller;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,24 +42,28 @@ public class SchedulesController {
 
 	// POST /api/schedules - Tạo mới
 	@PostMapping
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
 	public SuccessReponse<SchedulesReponseDTO> createSchedule(@RequestBody @Valid SchedulesRequestDTO dto) {
 		return SuccessReponse.of(this.schedulesService.save(dto));
 	}
 
 	// PUT /api/schedules - Cập nhật
 	@PutMapping
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
 	public SuccessReponse<SchedulesReponseDTO> updateSchedule(@RequestBody @Valid SchedulesUpdateRequestDTO dto) {
 		return SuccessReponse.of(this.schedulesService.update(dto));
 	}
 
 	// DELETE /api/schedules - Soft delete
 	@DeleteMapping
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
 	public SuccessReponse<Boolean> deleteSchedule(@RequestBody @Valid SchedulesDeleteRequestDTO dto) {
 		return SuccessReponse.of(this.schedulesService.delete(dto));
 	}
 
 	// DELETE /api/schedules/{id} - Hard delete
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<Boolean> hardDeleteSchedule(@PathVariable Integer id) {
 		return SuccessReponse.of(this.schedulesService.delete(id));
 	}

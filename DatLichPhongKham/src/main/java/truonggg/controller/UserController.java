@@ -4,9 +4,9 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,8 +15,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.UserResponseDTO;
 import truonggg.dto.requestDTO.AssignRoleRequestDTO;
-import truonggg.dto.requestDTO.UserDeleteRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
+import truonggg.dto.requestDTO.UserStatusDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
 import truonggg.reponse.SuccessReponse;
 import truonggg.service.UserService;
@@ -45,16 +45,16 @@ public class UserController {
 		return SuccessReponse.of(this.userService.createUser(dto));
 	}
 
-	// PUT /api/users - Cập nhật
-	@PutMapping
-	public SuccessReponse<UserResponseDTO> updateUser(@RequestBody @Valid UserUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.userService.update(dto));
+	@PatchMapping("/{id}")
+	public SuccessReponse<UserResponseDTO> updateUserPartially(@PathVariable Integer id,
+			@RequestBody @Valid UserUpdateRequestDTO dto) {
+		return SuccessReponse.of(userService.update(id, dto));
 	}
 
-	// DELETE /api/users - Soft delete
-	@DeleteMapping
-	public SuccessReponse<Boolean> deleteUser(@RequestBody @Valid UserDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.userService.delete(dto));
+	@PatchMapping("/{id}/status")
+	public SuccessReponse<UserResponseDTO> updateUserStatus(@PathVariable(name = "id") Integer id,
+			@RequestBody @Valid UserStatusDTO dto) {
+		return SuccessReponse.of(userService.updateStatus(id, dto.getActive()));
 	}
 
 	// POST /api/users/assign-role - Admin phân role cho user
@@ -64,8 +64,9 @@ public class UserController {
 	}
 
 	// DELETE /api/users/{id} - Hard delete
-	@DeleteMapping("/{id}")
-	public SuccessReponse<Boolean> hardDeleteUser(@PathVariable Integer id) {
-		return SuccessReponse.of(this.userService.delete(id));
+	@DeleteMapping("/manually/{id}")
+	public SuccessReponse<String> hardDeleteUser(@PathVariable Integer id) {
+		this.userService.deleteManually(id);
+		return SuccessReponse.of("Đã xóa thành công user with id:" + id);
 	}
 }

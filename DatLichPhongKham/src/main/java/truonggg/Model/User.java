@@ -39,12 +39,12 @@ public class User {
 	private Date createdAt;
 	@Column(columnDefinition = "BIT DEFAULT 0")
 	private boolean isActive;
-	
+
 	// Thay đổi từ OneToMany sang ManyToOne - mỗi user chỉ có 1 role
 	@ManyToOne
 	@JoinColumn(name = "role_id", referencedColumnName = "roleId")
 	private Role role;
-	
+
 	@OneToOne(mappedBy = "user")
 	private Doctors doctors;
 	@OneToMany(mappedBy = "user")
@@ -54,11 +54,15 @@ public class User {
 	@OneToMany(mappedBy = "user")
 	private List<Notifications> list3 = new ArrayList<>();
 
-	public boolean isActive() {
-		return isActive;
-	}
+//	public boolean isActive() {
+//		return isActive;
+//	}
 
 	public void setActive(boolean isActive) {
 		this.isActive = isActive;
+	}
+
+	public boolean getIsActive() {
+		return isActive;
 	}
 }

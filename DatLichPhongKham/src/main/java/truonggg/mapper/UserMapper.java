@@ -16,10 +16,11 @@ public interface UserMapper {
 	User toEntity(UserRequestDTO dto);
 
 	@Mapping(source = "role.roleName", target = "role")
+
 	UserResponseDTO toDTO(User user);
 
 	User toModel(final SignUpRequest dto);
-	
+
 	default List<UserResponseDTO> toDTOList(List<User> users) {
 		if (users == null || users.isEmpty())
 			return List.of();

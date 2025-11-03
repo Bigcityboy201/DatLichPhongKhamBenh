@@ -20,8 +20,8 @@ public class DoctorsReponseDTO {
 	private int experienceYears;
 	private String description;
 	private String imageUrl;
-	private boolean isActive;
-	private Boolean isFeatured;
+    private Boolean active;
+    private Boolean isFeatured;
 	private Integer departmentId;
 	private String departmentName;
 	private List<String> schedules;

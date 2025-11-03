@@ -1,6 +1,5 @@
 package truonggg.service.IMPL;
 
-import java.sql.Date;
 import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,7 +15,6 @@ import truonggg.Model.UserRoles;
 import truonggg.constant.SecurityRole;
 import truonggg.dto.reponseDTO.UserResponseDTO;
 import truonggg.dto.requestDTO.AssignRoleRequestDTO;
-import truonggg.dto.requestDTO.UserDeleteRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
 import truonggg.mapper.UserMapper;
@@ -66,8 +64,13 @@ public class UserServiceIMPL implements UserService {
 
 		// lưu user
 		user = this.userRepository.save(user);
+		UserRoles userRole = new UserRoles();
+		userRole.setUser(user);
+		userRole.setRole(roleUser);
+		userRolesRepository.save(userRole);
 
-		System.out.println("Successfully created user: " + user.getUserName() + " with role: " + roleUser.getRoleName());
+		System.out
+				.println("Successfully created user: " + user.getUserName() + " with role: " + roleUser.getRoleName());
 
 		return true;
 	}
@@ -86,24 +89,8 @@ public class UserServiceIMPL implements UserService {
 		// Assign role mới (replace role cũ)
 		user.setRole(role);
 		this.userRepository.save(user);
-		
+
 		return true;
-	}
-
-	@Override
-	public User update(User user) {
-		// Tìm user hiện tại
-		User foundUser = this.userRepository.findById(user.getUserId())
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
-
-		// Cập nhật thông tin user
-		foundUser.setFullName(user.getFullName());
-		foundUser.setEmail(user.getEmail());
-		foundUser.setPhone(user.getPhone());
-		foundUser.setAddress(user.getAddress());
-		foundUser.setDateOfBirth(user.getDateOfBirth());
-		foundUser.setActive(user.isActive());
-		return this.userRepository.save(foundUser);
 	}
 
 	@Override
@@ -120,18 +107,38 @@ public class UserServiceIMPL implements UserService {
 
 	@Override
 	@Transactional
-	public UserResponseDTO update(UserUpdateRequestDTO dto) {
-		User user = this.userRepository.findById(dto.getUserId())
+	public User update(User user) {
+		User foundUser = userRepository.findById(user.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+
+		// Cập nhật từng field nếu không null
+		if (user.getFullName() != null)
+			foundUser.setFullName(user.getFullName());
+		if (user.getEmail() != null)
+			foundUser.setEmail(user.getEmail());
+		if (user.getPhone() != null)
+			foundUser.setPhone(user.getPhone());
+		if (user.getAddress() != null)
+			foundUser.setAddress(user.getAddress());
+		if (user.getDateOfBirth() != null)
+			foundUser.setDateOfBirth(user.getDateOfBirth());
+		foundUser.setActive(user.getIsActive());
+
+		return userRepository.save(foundUser);
+	}
+
+	@Override
+	@Transactional
+	public UserResponseDTO update(Integer id, UserUpdateRequestDTO dto) {
+		User user = this.userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
 		// Cập nhật thông tin từ DTO
 		user.setFullName(dto.getFullName());
 		user.setEmail(dto.getEmail());
 		user.setPhone(dto.getPhone());
 		user.setAddress(dto.getAddress());
-		if (dto.getDateOfBirth() != null && !dto.getDateOfBirth().isEmpty()) {
-			user.setDateOfBirth(Date.valueOf(dto.getDateOfBirth()));
-		}
+		if (dto.getDateOfBirth() != null)
+			user.setDateOfBirth(dto.getDateOfBirth());
 		if (dto.getIsActive() != null) {
 			user.setActive(dto.getIsActive());
 		}
@@ -140,21 +147,20 @@ public class UserServiceIMPL implements UserService {
 		return this.userMapper.toDTO(user);
 	}
 
-	@Override
 	@Transactional
-	public boolean delete(UserDeleteRequestDTO dto) {
-		User user = this.userRepository.findById(dto.getUserId())
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+	public UserResponseDTO updateStatus(Integer id, Boolean isActive) {
+		User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		// Soft delete - set isActive to false
-		user.setActive(false);
-		this.userRepository.save(user);
-		return true;
+		if (isActive != null) {
+			user.setActive(isActive);
+			userRepository.save(user);
+		}
+		return this.userMapper.toDTO(user);
 	}
 
 	@Override
 	@Transactional
-	public boolean delete(Integer id) {
+	public boolean deleteManually(Integer id) {
 		User user = this.userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
 		// Hard delete - remove from database

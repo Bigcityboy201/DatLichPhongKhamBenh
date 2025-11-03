@@ -15,6 +15,8 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException {
 		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		response.getWriter().write("Authentication Required. Please login to access this resource.");
+		response.setContentType("application/json");
+		response.setCharacterEncoding("UTF-8");
+		response.getWriter().write("{\"error\":\"Authentication Required\",\"message\":\"Please login to access this resource.\"}");
 	}
 }

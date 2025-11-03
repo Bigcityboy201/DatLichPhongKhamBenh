@@ -4,8 +4,10 @@ import java.util.List;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -55,7 +57,7 @@ public class DoctorsController {
 
 	// GET /api/doctors/department - Lấy theo Department
 	@GetMapping("/department")
-	public SuccessReponse<List<DoctorsReponseDTO>> getDoctorsByDepartment(@RequestParam Integer id,
+	public SuccessReponse<List<DoctorsReponseDTO>> getDoctorsByDepartment(@RequestParam(required = false) Integer id,
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 
@@ -66,31 +68,40 @@ public class DoctorsController {
 
 	// POST /api/doctors - Tạo mới
 	@PostMapping
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
 	public SuccessReponse<DoctorsReponseDTO> createDoctor(@RequestBody @Valid final DoctorsRequestDTO dto) {
 		return SuccessReponse.of(this.doctorsService.createDoctor(dto));
 	}
 
 	// PUT /api/doctors/profile - Cập nhật profile (cho DOCTOR)
-	@PutMapping("/profile")
-	public SuccessReponse<DoctorsReponseDTO> updateDoctorProfile(@RequestBody @Valid DoctorUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.updateProfile(dto));
+	@PutMapping("/{id}/profile")
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	public SuccessReponse<DoctorsReponseDTO> updateDoctorProfile(@PathVariable Integer id,
+			@RequestBody @Valid DoctorUpdateRequestDTO dto) {
+		return SuccessReponse.of(this.doctorsService.updateProfile(id, dto));
 	}
 
 	// PUT /api/doctors - Cập nhật (cho ADMIN/EMPLOYEE)
-	@PutMapping
-	public SuccessReponse<DoctorsReponseDTO> updateDoctor(@RequestBody @Valid DoctorUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.updateWithUser(dto));
+	@PutMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
+	public SuccessReponse<DoctorsReponseDTO> updateDoctor(@PathVariable Integer id,
+			@RequestBody @Valid DoctorUpdateRequestDTO dto) {
+		return SuccessReponse.of(this.doctorsService.updateWithUser(id, dto));
 	}
 
 	// DELETE /api/doctors - Soft delete
-	@DeleteMapping
-	public SuccessReponse<Boolean> deleteDoctor(@RequestBody @Valid DoctorsDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.delete(dto));
+	@PatchMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
+	public SuccessReponse<DoctorsReponseDTO> deleteDoctor(@PathVariable Integer id,
+			@RequestBody @Valid DoctorsDeleteRequestDTO dto) {
+		return SuccessReponse.of(this.doctorsService.delete(id, dto));
 	}
 
 	// DELETE /api/doctors/{id} - Hard delete
 	@DeleteMapping("/{id}")
-	public SuccessReponse<Boolean> hardDeleteDoctor(@PathVariable Integer id) {
-		return SuccessReponse.of(this.doctorsService.delete(id));
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
+	public SuccessReponse<String> hardDeleteDoctor(@PathVariable Integer id) {
+		this.doctorsService.deleteManually(id);
+		return SuccessReponse.of("Xóa thành công doctor với id:" + id);
 	}
 }

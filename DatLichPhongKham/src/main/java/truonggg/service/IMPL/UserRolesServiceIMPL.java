@@ -40,8 +40,8 @@ public class UserRolesServiceIMPL implements UserRolesService {
 				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
 		// Kiểm tra User đã có Role này chưa
-		Optional<UserRoles> existingUserRole = this.userRolesRepository
-				.findByUserUserIdAndRoleRoleId(dto.getUserId(), dto.getRoleId());
+		Optional<UserRoles> existingUserRole = this.userRolesRepository.findByUserUserIdAndRoleRoleId(dto.getUserId(),
+				dto.getRoleId());
 
 		if (existingUserRole.isPresent()) {
 			// Nếu đã có, cập nhật isActive

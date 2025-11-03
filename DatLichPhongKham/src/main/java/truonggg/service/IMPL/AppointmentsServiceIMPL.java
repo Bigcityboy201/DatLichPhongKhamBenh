@@ -3,15 +3,15 @@ package truonggg.service.IMPL;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import truonggg.Exception.NotFoundException;
 import truonggg.Enum.Appointments_Enum;
+import truonggg.Exception.NotFoundException;
 import truonggg.Model.Appointments;
 import truonggg.Model.Doctors;
 import truonggg.Model.User;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
-import truonggg.dto.requestDTO.AppointmentsDeleteRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.mapper.AppointmentsMapper;
@@ -54,9 +54,9 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 	}
 
 	@Override
-	public AppointmentsResponseDTO update(AppointmentsUpdateRequestDTO dto) {
+	public AppointmentsResponseDTO update(Integer id, AppointmentsUpdateRequestDTO dto) {
 		// Tìm xem có lịch hẹn không
-		Appointments foundAppointment = this.appointmentsRepository.findById(dto.getId())
+		Appointments foundAppointment = this.appointmentsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
 
 		// Cập nhật thông tin nếu có
@@ -88,24 +88,26 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 	}
 
 	@Override
-	public boolean delete(AppointmentsDeleteRequestDTO dto) {
-		// Tìm xem có lịch hẹn không
-		Appointments foundAppointment = this.appointmentsRepository.findById(dto.getId())
-				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
-
-		// Soft delete - cập nhật status thành CANCELLED
-		foundAppointment.setStatus(Appointments_Enum.CANCELLED);
-		this.appointmentsRepository.save(foundAppointment);
-
-		return true;
-	}
-
-	@Override
-	public boolean delete(Integer id) {
+	public AppointmentsResponseDTO delete(Integer id) {
 		// Tìm xem có lịch hẹn không
 		Appointments foundAppointment = this.appointmentsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
 
+		// Soft delete - cập nhật status thành CANCELLED
+		foundAppointment.setStatus(Appointments_Enum.CANCELLED);
+		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(foundAppointment));
+	}
+
+	@Override
+	@Transactional
+	public boolean deleteManually(Integer id) {
+		// Tìm xem có lịch hẹn không
+		Appointments foundAppointment = this.appointmentsRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
+		foundAppointment.getList().clear();
+		if (foundAppointment.getDoctors() != null) {
+			foundAppointment.getDoctors().getList().remove(foundAppointment);
+		}
 		// Hard delete - xóa hoàn toàn khỏi DB
 		this.appointmentsRepository.delete(foundAppointment);
 

@@ -22,11 +22,11 @@ public interface DoctorsService {
 
 	DoctorsReponseDTO findById(Integer id);
 
-	DoctorsReponseDTO updateProfile(DoctorUpdateRequestDTO dto);
+	DoctorsReponseDTO updateProfile(Integer id, DoctorUpdateRequestDTO dto);
 
-	DoctorsReponseDTO updateWithUser(DoctorUpdateRequestDTO dto);
+	DoctorsReponseDTO updateWithUser(Integer id, DoctorUpdateRequestDTO dto);
 
-	boolean delete(DoctorsDeleteRequestDTO dto);
+	DoctorsReponseDTO delete(Integer id, DoctorsDeleteRequestDTO dto);
 
-	boolean delete(Integer id);
+	boolean deleteManually(Integer id);
 }

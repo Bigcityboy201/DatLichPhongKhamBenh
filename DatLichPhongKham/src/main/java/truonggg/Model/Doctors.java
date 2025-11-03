@@ -40,7 +40,7 @@ public class Doctors {
 	@OneToOne
 	@JoinColumn(name = "user_id", referencedColumnName = "userId")
 	private User user;
-	@OneToMany(mappedBy = "doctors", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+	@OneToMany(mappedBy = "doctors", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Appointments> list = new ArrayList();
 	@OneToMany(mappedBy = "doctors")
 	private List<review> list1 = new ArrayList<>();
