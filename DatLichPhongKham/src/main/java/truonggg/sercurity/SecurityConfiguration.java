@@ -3,6 +3,7 @@ package truonggg.sercurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -20,23 +21,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
-	private static final String[] WHITE_LIST = { 
-		"/auth/**",
-		// Public endpoints cho frontend
-		"/api/doctors",
-		"/api/doctors/*",
-		"/api/doctors/department",
-		"/api/departments",
-		"/api/appointments",
-		"/api/siteinfos"
-	};
+	private static final String[] WHITE_LIST = { "/auth/**",
+			// Public endpoints cho frontend
+			"/api/doctors", "/api/doctors/*", "/api/doctors/department", "/api/departments", "/api/appointments",
+			"/api/siteinfos", "/api/reviews/*", "/api/schedules" };
 
 	private final JwtAuthenticationFilter jwtRequestFilter;
 	private final UserDetailsService userDetailsService;
@@ -83,7 +77,7 @@ public class SecurityConfiguration {
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
-		
+
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
@@ -97,10 +91,10 @@ public class SecurityConfiguration {
 		http.authorizeHttpRequests(auths -> auths
 				// Public endpoints - không cần xác thực
 				.requestMatchers(WHITE_LIST).permitAll()
-				
+
 				// ADMIN only - quản lý hệ thống
 				.requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN")
-				
+
 				// EMPLOYEE + ADMIN - quản lý khoa và thông tin site
 				.requestMatchers(HttpMethod.POST, "/api/departments").hasAnyAuthority("EMPLOYEE", "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/departments").hasAnyAuthority("EMPLOYEE", "ADMIN")
@@ -108,7 +102,7 @@ public class SecurityConfiguration {
 				.requestMatchers(HttpMethod.POST, "/api/siteinfos").hasAnyAuthority("EMPLOYEE", "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/siteinfos").hasAnyAuthority("EMPLOYEE", "ADMIN")
 				.requestMatchers(HttpMethod.DELETE, "/api/siteinfos/**").hasAnyAuthority("EMPLOYEE", "ADMIN")
-				
+
 				// DOCTOR + ADMIN - quản lý bác sĩ và lịch hẹn
 				.requestMatchers(HttpMethod.POST, "/api/doctors").hasAnyAuthority("DOCTOR", "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/doctors/**").hasAnyAuthority("DOCTOR", "ADMIN")
@@ -117,11 +111,11 @@ public class SecurityConfiguration {
 				.requestMatchers(HttpMethod.PUT, "/api/appointments").hasAnyAuthority("DOCTOR", "ADMIN")
 				.requestMatchers(HttpMethod.DELETE, "/api/appointments/**").hasAnyAuthority("DOCTOR", "ADMIN")
 				.requestMatchers("/api/schedules/**").hasAnyAuthority("DOCTOR", "ADMIN")
-				
+
 				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông tin cơ bản
 				.requestMatchers(HttpMethod.GET, "/api/appointments/{id}")
-					.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
-				
+				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+
 				// Tất cả request khác cần xác thực
 				.anyRequest().authenticated())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

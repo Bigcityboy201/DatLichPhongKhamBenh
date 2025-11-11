@@ -23,7 +23,7 @@ public class SchedulesReponseDTO {
 	private LocalDateTime startAt;
 	@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
 	private LocalDateTime endAt;
-	private boolean isActive;
+	private boolean active;
 	private Integer doctorId;
 	private String doctorName;
 }

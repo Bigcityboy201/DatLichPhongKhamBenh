@@ -18,7 +18,7 @@ public class ReviewResponseDTO {
 	private Integer rating;
 	private String comment;
 	private Date createAt;
-	private Boolean isActive;
+	private Boolean active;
 	private String userName;
 	private String doctorName;
 }

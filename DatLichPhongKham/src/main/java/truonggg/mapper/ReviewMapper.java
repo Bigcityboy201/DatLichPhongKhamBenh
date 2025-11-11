@@ -11,12 +11,12 @@ import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
 
 @Mapper(componentModel = "spring", builder = @Builder(disableBuilder = true))
 public interface ReviewMapper {
-	
+
 	@Mapping(target = "id", source = "id")
 	@Mapping(target = "rating", source = "rating")
 	@Mapping(target = "comment", source = "comment")
 	@Mapping(target = "createAt", source = "createAt")
-	@Mapping(target = "isActive", ignore = true)
+	@Mapping(source = "isActive", target = "active")
 	@Mapping(target = "userName", source = "user.fullName")
 	@Mapping(target = "doctorName", source = "doctors.user.fullName")
 	ReviewResponseDTO toDTO(review review);

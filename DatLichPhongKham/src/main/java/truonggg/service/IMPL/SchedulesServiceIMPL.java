@@ -4,12 +4,12 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import truonggg.Exception.NotFoundException;
 import truonggg.Model.Doctors;
 import truonggg.Model.Schedules;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
-import truonggg.dto.requestDTO.SchedulesDeleteRequestDTO;
 import truonggg.dto.requestDTO.SchedulesRequestDTO;
 import truonggg.dto.requestDTO.SchedulesUpdateRequestDTO;
 import truonggg.mapper.SchedulesMapper;
@@ -48,8 +48,8 @@ public class SchedulesServiceIMPL implements SchedulesService {
 	}
 
 	@Override
-	public SchedulesReponseDTO update(SchedulesUpdateRequestDTO dto) {
-		Schedules foundSchedule = this.schedulesRepository.findById(dto.getId())
+	public SchedulesReponseDTO update(Integer id, SchedulesUpdateRequestDTO dto) {
+		Schedules foundSchedule = this.schedulesRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("schedule", "Schedule Not Found"));
 
 		// Cập nhật dayOfWeek nếu có
@@ -78,17 +78,18 @@ public class SchedulesServiceIMPL implements SchedulesService {
 	}
 
 	@Override
-	public boolean delete(SchedulesDeleteRequestDTO dto) {
-		Schedules foundSchedule = this.schedulesRepository.findById(dto.getId())
+	public SchedulesReponseDTO delete(Integer id, SchedulesUpdateRequestDTO dto) {
+		Schedules foundSchedule = this.schedulesRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("schedule", "Schedule Not Found"));
 
-		if (dto.getIsActive() != null) {
-			foundSchedule.setIsActive(dto.getIsActive());
+		if (dto.getActive() != null) {
+			foundSchedule.setIsActive(dto.getActive());
 			this.schedulesRepository.save(foundSchedule);
 		}
-		return true;
+		return this.schedulesMapper.toDTO(foundSchedule);
 	}
 
+	@Transactional
 	@Override
 	public boolean delete(Integer id) {
 		Schedules foundSchedule = this.schedulesRepository.findById(id)

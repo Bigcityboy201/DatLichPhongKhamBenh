@@ -44,7 +44,7 @@ public class Doctors {
 	private List<Appointments> list = new ArrayList();
 	@OneToMany(mappedBy = "doctors")
 	private List<review> list1 = new ArrayList<>();
-	@OneToMany(mappedBy = "doctors", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+	@OneToMany(mappedBy = "doctors", fetch = FetchType.LAZY, orphanRemoval = true)
 	private List<Schedules> list2 = new ArrayList<>();
 	@OneToMany(mappedBy = "doctors")
 	private List<RevenueReports> list3 = new ArrayList<>();

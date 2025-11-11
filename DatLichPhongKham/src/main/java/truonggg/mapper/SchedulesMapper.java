@@ -14,9 +14,11 @@ import truonggg.dto.requestDTO.SchedulesRequestDTO;
 public interface SchedulesMapper {
 	@Mapping(source = "doctors.id", target = "doctorId")
 	@Mapping(source = "doctors.user.fullName", target = "doctorName")
+	@Mapping(source = "isActive", target = "active")
 	SchedulesReponseDTO toDTO(final Schedules dto);
 
 	@Mapping(source = "doctorId", target = "doctors.id")
+	@Mapping(source = "active", target = "isActive")
 	Schedules toModel(final SchedulesRequestDTO dto);
 
 	default List<SchedulesReponseDTO> toDTOList(List<Schedules> list) {

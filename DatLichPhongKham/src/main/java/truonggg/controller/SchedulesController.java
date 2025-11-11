@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
-import truonggg.dto.requestDTO.SchedulesDeleteRequestDTO;
 import truonggg.dto.requestDTO.SchedulesRequestDTO;
 import truonggg.dto.requestDTO.SchedulesUpdateRequestDTO;
 import truonggg.reponse.SuccessReponse;
@@ -48,23 +47,26 @@ public class SchedulesController {
 	}
 
 	// PUT /api/schedules - Cập nhật
-	@PutMapping
+	@PutMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
-	public SuccessReponse<SchedulesReponseDTO> updateSchedule(@RequestBody @Valid SchedulesUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.schedulesService.update(dto));
+	public SuccessReponse<SchedulesReponseDTO> updateSchedule(@RequestBody @Valid SchedulesUpdateRequestDTO dto,
+			@PathVariable Integer id) {
+		return SuccessReponse.of(this.schedulesService.update(id, dto));
 	}
 
 	// DELETE /api/schedules - Soft delete
-	@DeleteMapping
+	@PutMapping("/status/{id}")
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
-	public SuccessReponse<Boolean> deleteSchedule(@RequestBody @Valid SchedulesDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.schedulesService.delete(dto));
+	public SuccessReponse<SchedulesReponseDTO> deleteSchedule(@RequestBody @Valid SchedulesUpdateRequestDTO dto,
+			@PathVariable Integer id) {
+		return SuccessReponse.of(this.schedulesService.delete(id, dto));
 	}
 
 	// DELETE /api/schedules/{id} - Hard delete
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<Boolean> hardDeleteSchedule(@PathVariable Integer id) {
-		return SuccessReponse.of(this.schedulesService.delete(id));
+	public SuccessReponse<String> hardDeleteSchedule(@PathVariable Integer id) {
+		this.schedulesService.delete(id);
+		return SuccessReponse.of("Xóa thành công lịch làm việc");
 	}
 }

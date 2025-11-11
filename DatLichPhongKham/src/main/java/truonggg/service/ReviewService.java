@@ -3,7 +3,6 @@ package truonggg.service;
 import java.util.List;
 
 import truonggg.dto.reponseDTO.ReviewResponseDTO;
-import truonggg.dto.requestDTO.ReviewDeleteRequestDTO;
 import truonggg.dto.requestDTO.ReviewRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
 
@@ -16,9 +15,9 @@ public interface ReviewService {
 
 	ReviewResponseDTO findById(Integer id);
 
-	ReviewResponseDTO update(ReviewUpdateRequestDTO dto);
+	ReviewResponseDTO update(Integer id, ReviewUpdateRequestDTO dto);
 
-	boolean delete(ReviewDeleteRequestDTO dto);
+	ReviewResponseDTO delete(Integer id, ReviewUpdateRequestDTO dto);
 
 	boolean delete(Integer id);
 }

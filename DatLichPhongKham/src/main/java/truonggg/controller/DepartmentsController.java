@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.DepartmentsResponseDTO;
-import truonggg.dto.requestDTO.DepartmentsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
 import truonggg.mapper.DepartmentsMapper;
@@ -39,28 +38,32 @@ public class DepartmentsController {
 	// POST /api/departments - Tạo mới
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	public SuccessReponse<DepartmentsResponseDTO> createDepartment(@RequestBody @Valid final DepartmentsRequestDTO dto) {
+	public SuccessReponse<DepartmentsResponseDTO> createDepartment(
+			@RequestBody @Valid final DepartmentsRequestDTO dto) {
 		return SuccessReponse.of(this.departmentsService.createDepartment(dto));
 	}
 
 	// PUT /api/departments - Cập nhật
-	@PutMapping
+	@PutMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	public SuccessReponse<DepartmentsResponseDTO> updateDepartment(@RequestBody @Valid DepartmentsUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.departmentsService.update(dto));
+	public SuccessReponse<DepartmentsResponseDTO> updateDepartment(@RequestBody @Valid DepartmentsUpdateRequestDTO dto,
+			@PathVariable Integer id) {
+		return SuccessReponse.of(this.departmentsService.update(id, dto));
 	}
 
 	// DELETE /api/departments - Soft delete
-	@DeleteMapping
+	@PutMapping("/status/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	public SuccessReponse<Boolean> deleteDepartment(@RequestBody @Valid DepartmentsDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.departmentsService.delete(dto));
+	public SuccessReponse<DepartmentsResponseDTO> deleteDepartment(@RequestBody @Valid DepartmentsUpdateRequestDTO dto,
+			@PathVariable Integer id) {
+		return SuccessReponse.of(this.departmentsService.delete(id, dto));
 	}
 
 	// DELETE /api/departments/{id} - Hard delete
-	@DeleteMapping("/{id}")
+	@DeleteMapping("/manually/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	public SuccessReponse<Boolean> hardDeleteDepartment(@PathVariable Integer id) {
-		return SuccessReponse.of(this.departmentsService.delete(id));
+	public SuccessReponse<String> hardDeleteDepartment(@PathVariable Integer id) {
+		this.departmentsService.delete(id);
+		return SuccessReponse.of("Xóa thành công khoa");
 	}
 }

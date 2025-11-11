@@ -17,7 +17,7 @@ public class DepartmentsResponseDTO {
 	private Integer id;
 	private String name;
 	private String description;
-	private boolean isActive;
+	private boolean active;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }

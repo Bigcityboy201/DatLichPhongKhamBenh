@@ -11,7 +11,6 @@ import truonggg.Model.Doctors;
 import truonggg.Model.User;
 import truonggg.Model.review;
 import truonggg.dto.reponseDTO.ReviewResponseDTO;
-import truonggg.dto.requestDTO.ReviewDeleteRequestDTO;
 import truonggg.dto.requestDTO.ReviewRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
 import truonggg.mapper.ReviewMapper;
@@ -40,11 +39,9 @@ public class ReviewServiceIMPL implements ReviewService {
 		review.setUser(user);
 		review.setDoctors(doctors);
 		review.setCreateAt(new Date());
-		review.setIsActive(true);
-
 		review = this.reviewRepository.save(review);
 		ReviewResponseDTO response = this.reviewMapper.toDTO(review);
-		response.setIsActive(review.getIsActive());
+		response.setActive(review.getIsActive());
 		return response;
 	}
 
@@ -53,19 +50,14 @@ public class ReviewServiceIMPL implements ReviewService {
 		List<review> reviews = this.reviewRepository.findAll();
 		return reviews.stream().map(review -> {
 			ReviewResponseDTO dto = reviewMapper.toDTO(review);
-			dto.setIsActive(review.getIsActive());
+			dto.setActive(review.getIsActive());
 			return dto;
 		}).toList();
 	}
 
 	@Override
 	public List<ReviewResponseDTO> getByDoctorId(Integer doctorId) {
-		List<review> reviews = this.reviewRepository.findByDoctorsId(doctorId);
-		return reviews.stream().map(review -> {
-			ReviewResponseDTO dto = reviewMapper.toDTO(review);
-			dto.setIsActive(review.getIsActive());
-			return dto;
-		}).toList();
+		return reviewRepository.findByDoctorsId(doctorId).stream().map(reviewMapper::toDTO).toList();
 	}
 
 	@Override
@@ -73,13 +65,13 @@ public class ReviewServiceIMPL implements ReviewService {
 		review review = this.reviewRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
 		ReviewResponseDTO dto = this.reviewMapper.toDTO(review);
-		dto.setIsActive(review.getIsActive());
+		dto.setActive(review.getIsActive());
 		return dto;
 	}
 
 	@Override
-	public ReviewResponseDTO update(ReviewUpdateRequestDTO dto) {
-		review foundReview = this.reviewRepository.findById(dto.getId())
+	public ReviewResponseDTO update(Integer id, ReviewUpdateRequestDTO dto) {
+		review foundReview = this.reviewRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
 
 		if (dto.getRating() != null) {
@@ -105,20 +97,19 @@ public class ReviewServiceIMPL implements ReviewService {
 
 		review savedReview = this.reviewRepository.save(foundReview);
 		ReviewResponseDTO response = this.reviewMapper.toDTO(savedReview);
-		response.setIsActive(savedReview.getIsActive());
+		response.setActive(savedReview.getIsActive());
 		return response;
 	}
 
 	@Override
-	public boolean delete(ReviewDeleteRequestDTO dto) {
-		review foundReview = this.reviewRepository.findById(dto.getId())
+	public ReviewResponseDTO delete(Integer id, ReviewUpdateRequestDTO dto) {
+		review foundReview = this.reviewRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
 
-		if (dto.getIsActive() != null) {
-			foundReview.setIsActive(dto.getIsActive());
-			this.reviewRepository.save(foundReview);
+		if (dto.getActive() != null) {
+			foundReview.setIsActive(dto.getActive());
 		}
-		return true;
+		return this.reviewMapper.toDTO(foundReview);
 	}
 
 	@Override

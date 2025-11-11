@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import truonggg.Exception.NotFoundException;
 import truonggg.Model.Departments;
 import truonggg.dto.reponseDTO.DepartmentsResponseDTO;
-import truonggg.dto.requestDTO.DepartmentsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
 import truonggg.mapper.DepartmentsMapper;
@@ -37,9 +36,9 @@ public class DepartmentsServiceIMPL implements DepartmentsService {
 	}
 
 	@Override
-	public DepartmentsResponseDTO update(DepartmentsUpdateRequestDTO dto) {
+	public DepartmentsResponseDTO update(Integer id, DepartmentsUpdateRequestDTO dto) {
 		// tìm xem có khoa không
-		Departments foundDepartments = this.departmentsRepository.findById(dto.getId())
+		Departments foundDepartments = this.departmentsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("department", "Department Not Found "));
 		// lấy ra
 		if (dto.getName() != null) {
@@ -52,16 +51,15 @@ public class DepartmentsServiceIMPL implements DepartmentsService {
 	}
 
 	@Override
-	public boolean delete(DepartmentsDeleteRequestDTO dto) {
+	public DepartmentsResponseDTO delete(Integer id, DepartmentsUpdateRequestDTO dto) {
 		// tìm xem có khoa không
-		Departments foundDepartments = this.departmentsRepository.findById(dto.getId())
+		Departments foundDepartments = this.departmentsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("department", "Department Not Found "));
 		// lấy ra
-		if (dto.getIsActive() != null) {
-			foundDepartments.setIsActive(dto.getIsActive());
+		if (dto.getActive() != null) {
+			foundDepartments.setIsActive(dto.getActive());
 		}
-		this.departmentsRepository.save(foundDepartments);
-		return true;
+		return this.departmentsMapper.toResponse(foundDepartments);
 	}
 
 	@Override

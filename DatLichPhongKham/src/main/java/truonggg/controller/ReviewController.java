@@ -9,13 +9,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.ReviewResponseDTO;
-import truonggg.dto.requestDTO.ReviewDeleteRequestDTO;
 import truonggg.dto.requestDTO.ReviewRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
 import truonggg.reponse.SuccessReponse;
@@ -53,20 +51,23 @@ public class ReviewController {
 	}
 
 	// PUT /api/reviews - Cập nhật
-	@PutMapping
-	public SuccessReponse<ReviewResponseDTO> updateReview(@RequestBody @Valid ReviewUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.reviewService.update(dto));
+	@PutMapping("/{id}")
+	public SuccessReponse<ReviewResponseDTO> updateReview(@RequestBody @Valid ReviewUpdateRequestDTO dto,
+			@PathVariable Integer id) {
+		return SuccessReponse.of(this.reviewService.update(id, dto));
 	}
 
 	// DELETE /api/reviews - Soft delete
-	@DeleteMapping
-	public SuccessReponse<Boolean> deleteReview(@RequestBody @Valid ReviewDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.reviewService.delete(dto));
+	@PutMapping("/status/{id}")
+	public SuccessReponse<ReviewResponseDTO> deleteReview(@RequestBody @Valid ReviewUpdateRequestDTO dto,
+			@PathVariable Integer id) {
+		return SuccessReponse.of(this.reviewService.delete(id, dto));
 	}
 
 	// DELETE /api/reviews/{id} - Hard delete
 	@DeleteMapping("/{id}")
-	public SuccessReponse<Boolean> hardDeleteReview(@PathVariable Integer id) {
-		return SuccessReponse.of(this.reviewService.delete(id));
+	public SuccessReponse<String> hardDeleteReview(@PathVariable Integer id) {
+		this.reviewService.delete(id);
+		return SuccessReponse.of("Xóa thành công review!");
 	}
 }

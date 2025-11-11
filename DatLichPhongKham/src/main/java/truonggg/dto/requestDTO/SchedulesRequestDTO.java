@@ -33,7 +33,7 @@ public class SchedulesRequestDTO {
 	@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
 	private LocalDateTime endAt;
 
-	private boolean isActive;
+	private boolean active;
 
 	@NotNull(message = "ID bác sĩ không được để trống")
 	private Integer doctorId;

@@ -20,4 +20,5 @@ public class DepartmentsRequestDTO {
 
 	@Size(max = 255, message = "Mô tả không được vượt quá 255 ký tự")
 	private String description;
+
 }

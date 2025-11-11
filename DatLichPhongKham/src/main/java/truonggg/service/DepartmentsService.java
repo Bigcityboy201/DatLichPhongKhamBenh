@@ -3,7 +3,6 @@ package truonggg.service;
 import java.util.List;
 
 import truonggg.dto.reponseDTO.DepartmentsResponseDTO;
-import truonggg.dto.requestDTO.DepartmentsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
 
@@ -12,9 +11,9 @@ public interface DepartmentsService {
 
 	List<DepartmentsResponseDTO> getAll();
 
-	DepartmentsResponseDTO update(DepartmentsUpdateRequestDTO dto);
+	DepartmentsResponseDTO update(Integer id, DepartmentsUpdateRequestDTO dto);
 
-	boolean delete(DepartmentsDeleteRequestDTO dto);
+	DepartmentsResponseDTO delete(Integer id, DepartmentsUpdateRequestDTO dto);
 
 	boolean delete(Integer id);
 

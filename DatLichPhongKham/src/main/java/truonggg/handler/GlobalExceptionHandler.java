@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.validation.ConstraintViolationException;
 import truonggg.Exception.NotFoundException;
+import truonggg.Exception.UserAlreadyExistException;
 import truonggg.reponse.ErrorCode;
 import truonggg.reponse.ErrorReponse;
 
@@ -36,6 +37,14 @@ public class GlobalExceptionHandler {
 
 		return ErrorReponse.of("Validation failed", ErrorCode.INTERNAL_SERVER, "request", details);
 
+	}
+
+	@ResponseStatus(HttpStatus.CONFLICT) // 409 trùng dữ liệu
+	@ExceptionHandler(UserAlreadyExistException.class)
+	public ErrorReponse handleUserAlreadyExist(UserAlreadyExistException ex) {
+		Map<String, Object> details = Map.of("field", ex.getMessage().contains("userName") ? "userName" : "email");
+
+		return ErrorReponse.of(ex.getMessage(), ex.getErrorCode(), ex.getDomain(), details);
 	}
 
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)

@@ -46,9 +46,13 @@ public class UserServiceIMPL implements UserService {
 	@Override
 	@Transactional
 	public Boolean signUp(User user) {
-		this.userRepository.findByUserName(user.getUserName()).ifPresent((u) -> {
-			throw new UserAlreadyExistException("User with userName: %s already existed!".formatted(u.getUserName()));
-		});
+		if (userRepository.existsByUserName(user.getUserName())) {
+			throw new UserAlreadyExistException("User with userName: " + user.getUserName() + " already existed!");
+		}
+
+		if (userRepository.existsByEmail(user.getEmail())) {
+			throw new UserAlreadyExistException("User with email: " + user.getEmail() + " already existed!");
+		}
 
 		user.setActive(false);
 		user.setPassword(this.passwordEncoder.encode(user.getPassword()));
