@@ -11,4 +11,5 @@ public class SignInResponse {
 
 	private String token;
 	private Date expiredDate;
+	private UserResponseDTO user;
 }

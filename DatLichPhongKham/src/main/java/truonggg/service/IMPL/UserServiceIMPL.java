@@ -45,7 +45,7 @@ public class UserServiceIMPL implements UserService {
 
 	@Override
 	@Transactional
-	public Boolean signUp(User user) {
+	public UserResponseDTO signUp(User user) {
 		if (userRepository.existsByUserName(user.getUserName())) {
 			throw new UserAlreadyExistException("User with userName: " + user.getUserName() + " already existed!");
 		}
@@ -76,7 +76,7 @@ public class UserServiceIMPL implements UserService {
 		System.out
 				.println("Successfully created user: " + user.getUserName() + " with role: " + roleUser.getRoleName());
 
-		return true;
+		return this.userMapper.toDTO(user);
 	}
 
 	@Override

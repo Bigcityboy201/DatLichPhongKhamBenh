@@ -11,7 +11,7 @@ import truonggg.dto.requestDTO.UserUpdateRequestDTO;
 public interface UserService {
 	UserResponseDTO createUser(UserRequestDTO dto);
 
-	Boolean signUp(final User user);
+	UserResponseDTO signUp(final User user);
 
 	List<UserResponseDTO> getAll();
 
