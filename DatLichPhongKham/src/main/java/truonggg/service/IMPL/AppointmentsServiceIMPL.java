@@ -1,7 +1,10 @@
 package truonggg.service.IMPL;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,7 @@ import truonggg.mapper.AppointmentsMapper;
 import truonggg.repo.AppointmentsRepository;
 import truonggg.repo.DoctorsRepository;
 import truonggg.repo.UserRepository;
+import truonggg.reponse.PagedResult;
 import truonggg.service.AppointmentsService;
 
 @Service
@@ -44,6 +48,18 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 	public List<AppointmentsResponseDTO> getAll() {
 		List<Appointments> appointments = this.appointmentsRepository.findAll();
 		return this.appointmentsMapper.toDTOList(appointments);
+	}
+
+	@Override
+	public PagedResult<AppointmentsResponseDTO> getAllPaged(Pageable pageable) {
+		Page<Appointments> appointmentsPage = this.appointmentsRepository.findAll(pageable);
+		List<AppointmentsResponseDTO> dtoList = appointmentsPage.stream().map(appointmentsMapper::toDTO)
+				.collect(Collectors.toList());
+
+		return PagedResult.<AppointmentsResponseDTO>builder().content(dtoList)
+				.totalElements((int) appointmentsPage.getTotalElements())
+				.totalPages(appointmentsPage.getTotalPages()).currentPage(appointmentsPage.getNumber())
+				.pageSize(appointmentsPage.getSize()).build();
 	}
 
 	@Override

@@ -121,8 +121,9 @@ public class SecurityConfiguration {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(this.authenticationProvider())
 				.addFilterBefore(this.jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
-				.exceptionHandling(handler -> handler.accessDeniedHandler(this.accessDeniedHandler))
-				.exceptionHandling(handler -> handler.authenticationEntryPoint(this.authenticationEntryPoint));
+				.exceptionHandling(handler -> handler
+						.accessDeniedHandler(this.accessDeniedHandler)
+						.authenticationEntryPoint(this.authenticationEntryPoint));
 		return http.build();
 	}
 }

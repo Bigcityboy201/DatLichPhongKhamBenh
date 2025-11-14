@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -19,16 +20,26 @@ import lombok.Setter;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SuccessReponse<T> {
 	private final OperationType operationType = OperationType.Success;
 	private final String message = "success";
 	private ErrorCode code;
 	private T data;
 	private int size;
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	private Integer totalElements;
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	private Integer totalPages;
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	private Integer page;
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	private Integer pageSize;
+	
 	@JsonFormat(timezone = "Asia/Saigon", pattern = "dd/MM/yyyy hh:mm:ss")
 	@JsonProperty(value = "thời gian")
 	private final Date timestamp = new Date();

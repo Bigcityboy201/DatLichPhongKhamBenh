@@ -2,13 +2,18 @@ package truonggg.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.SchedulesRequestDTO;
 import truonggg.dto.requestDTO.SchedulesUpdateRequestDTO;
+import truonggg.reponse.PagedResult;
 
 public interface SchedulesService {
 
 	List<SchedulesReponseDTO> getAll();
+
+	PagedResult<SchedulesReponseDTO> getAllPaged(Pageable pageable);
 
 	List<SchedulesReponseDTO> getByDoctorId(Integer doctorId);
 

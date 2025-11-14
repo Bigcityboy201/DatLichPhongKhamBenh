@@ -1,7 +1,10 @@
 package truonggg.service.IMPL;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
@@ -15,6 +18,7 @@ import truonggg.dto.requestDTO.SchedulesUpdateRequestDTO;
 import truonggg.mapper.SchedulesMapper;
 import truonggg.repo.DoctorsRepository;
 import truonggg.repo.SchedulesRepository;
+import truonggg.reponse.PagedResult;
 import truonggg.service.SchedulesService;
 
 @Service
@@ -30,6 +34,17 @@ public class SchedulesServiceIMPL implements SchedulesService {
 	public List<SchedulesReponseDTO> getAll() {
 		List<Schedules> schedules = this.schedulesRepository.findAll();
 		return this.schedulesMapper.toDTOList(schedules);
+	}
+
+	@Override
+	public PagedResult<SchedulesReponseDTO> getAllPaged(Pageable pageable) {
+		Page<Schedules> schedulesPage = this.schedulesRepository.findAll(pageable);
+		List<SchedulesReponseDTO> dtoList = schedulesPage.stream().map(schedulesMapper::toDTO)
+				.collect(Collectors.toList());
+
+		return PagedResult.<SchedulesReponseDTO>builder().content(dtoList)
+				.totalElements((int) schedulesPage.getTotalElements()).totalPages(schedulesPage.getTotalPages())
+				.currentPage(schedulesPage.getNumber()).pageSize(schedulesPage.getSize()).build();
 	}
 
 	@Override

@@ -1,7 +1,8 @@
 package truonggg.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -18,6 +20,7 @@ import truonggg.dto.requestDTO.AssignRoleRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
 import truonggg.dto.requestDTO.UserStatusDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
+import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
 import truonggg.service.UserService;
 
@@ -27,31 +30,40 @@ import truonggg.service.UserService;
 public class UserController {
 	private final UserService userService;
 
-	// GET /api/users - Lấy tất cả
+	// GET /api/users - Lấy tất cả (phân trang)
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	@GetMapping
-	public SuccessReponse<List<UserResponseDTO>> getAllUsers() {
-		return SuccessReponse.of(this.userService.getAll());
+	public SuccessReponse<?> getAllUsers(
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<UserResponseDTO> pagedResult = userService.getAllPaged(pageable);
+		return SuccessReponse.ofPaged(pagedResult);
 	}
 
 	// GET /api/users/{id} - Lấy theo ID
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	@GetMapping("/{id}")
 	public SuccessReponse<UserResponseDTO> getUserById(@PathVariable Integer id) {
 		return SuccessReponse.of(this.userService.findById(id));
 	}
 
 	// POST /api/users - Tạo mới
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	@PostMapping
 	public SuccessReponse<UserResponseDTO> createUser(@RequestBody @Valid final UserRequestDTO dto) {
 		return SuccessReponse.of(this.userService.createUser(dto));
 	}
 
 	@PatchMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<UserResponseDTO> updateUserPartially(@PathVariable Integer id,
 			@RequestBody @Valid UserUpdateRequestDTO dto) {
 		return SuccessReponse.of(userService.update(id, dto));
 	}
 
 	@PatchMapping("/{id}/status")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<UserResponseDTO> updateUserStatus(@PathVariable(name = "id") Integer id,
 			@RequestBody @Valid UserStatusDTO dto) {
 		return SuccessReponse.of(userService.updateStatus(id, dto.getActive()));
@@ -59,12 +71,14 @@ public class UserController {
 
 	// POST /api/users/assign-role - Admin phân role cho user
 	@PostMapping("/assign-role")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<Boolean> assignRoleToUser(@RequestBody @Valid AssignRoleRequestDTO dto) {
 		return SuccessReponse.of(this.userService.assignRole(dto));
 	}
 
 	// DELETE /api/users/{id} - Hard delete
 	@DeleteMapping("/manually/{id}")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<String> hardDeleteUser(@PathVariable Integer id) {
 		this.userService.deleteManually(id);
 		return SuccessReponse.of("Đã xóa thành công user with id:" + id);

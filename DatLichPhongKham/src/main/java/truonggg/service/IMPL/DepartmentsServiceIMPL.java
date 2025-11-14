@@ -2,6 +2,8 @@ package truonggg.service.IMPL;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import truonggg.dto.requestDTO.DepartmentsRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
 import truonggg.mapper.DepartmentsMapper;
 import truonggg.repo.DepartmentsRepository;
+import truonggg.reponse.PagedResult;
 import truonggg.service.DepartmentsService;
 
 @Service
@@ -33,6 +36,17 @@ public class DepartmentsServiceIMPL implements DepartmentsService {
 	public List<DepartmentsResponseDTO> getAll() {
 		List<Departments> departments = this.departmentsRepository.findAll();
 		return this.departmentsMapper.toDTOList(departments);
+	}
+
+	@Override
+	public PagedResult<DepartmentsResponseDTO> getAllPaged(Pageable pageable) {
+		Page<Departments> departmentsPage = departmentsRepository.findAll(pageable);
+
+		List<DepartmentsResponseDTO> dtoList = departmentsMapper.toDTOList(departmentsPage.getContent());
+
+		return PagedResult.<DepartmentsResponseDTO>builder().content(dtoList)
+				.totalElements((int) departmentsPage.getTotalElements()).totalPages(departmentsPage.getTotalPages())
+				.currentPage(departmentsPage.getNumber()).pageSize(departmentsPage.getSize()).build();
 	}
 
 	@Override

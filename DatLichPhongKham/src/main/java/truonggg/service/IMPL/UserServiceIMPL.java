@@ -1,7 +1,11 @@
 package truonggg.service.IMPL;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +25,7 @@ import truonggg.mapper.UserMapper;
 import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
 import truonggg.repo.UserRolesRepository;
+import truonggg.reponse.PagedResult;
 import truonggg.service.UserService;
 
 @Service
@@ -68,10 +73,7 @@ public class UserServiceIMPL implements UserService {
 
 		// lưu user
 		user = this.userRepository.save(user);
-		UserRoles userRole = new UserRoles();
-		userRole.setUser(user);
-		userRole.setRole(roleUser);
-		userRolesRepository.save(userRole);
+		this.syncUserRole(user, roleUser);
 
 		System.out
 				.println("Successfully created user: " + user.getUserName() + " with role: " + roleUser.getRoleName());
@@ -92,7 +94,8 @@ public class UserServiceIMPL implements UserService {
 
 		// Assign role mới (replace role cũ)
 		user.setRole(role);
-		this.userRepository.save(user);
+		user = this.userRepository.save(user);
+		this.syncUserRole(user, role);
 
 		return true;
 	}
@@ -101,6 +104,16 @@ public class UserServiceIMPL implements UserService {
 	public List<UserResponseDTO> getAll() {
 		List<User> users = this.userRepository.findAll();
 		return this.userMapper.toDTOList(users);
+	}
+
+	@Override
+	public PagedResult<UserResponseDTO> getAllPaged(Pageable pageable) {
+		Page<User> userPage = this.userRepository.findAll(pageable);
+		List<UserResponseDTO> dtoList = userPage.stream().map(userMapper::toDTO).collect(Collectors.toList());
+
+		return PagedResult.<UserResponseDTO>builder().content(dtoList)
+				.totalElements((int) userPage.getTotalElements()).totalPages(userPage.getTotalPages())
+				.currentPage(userPage.getNumber()).pageSize(userPage.getSize()).build();
 	}
 
 	@Override
@@ -170,5 +183,28 @@ public class UserServiceIMPL implements UserService {
 		// Hard delete - remove from database
 		this.userRepository.delete(user);
 		return true;
+	}
+	private void syncUserRole(User user, Role newRole) {
+		List<UserRoles> userRoles = new ArrayList<>(this.userRolesRepository.findByUserUserId(user.getUserId()));
+		boolean hasExistingRole = false;
+
+		for (UserRoles userRole : userRoles) {
+			boolean isTargetRole = userRole.getRole() != null
+					&& userRole.getRole().getRoleId().equals(newRole.getRoleId());
+			userRole.setIsActive(isTargetRole);
+			if (isTargetRole) {
+				hasExistingRole = true;
+			}
+		}
+
+		if (!hasExistingRole) {
+			UserRoles newUserRole = new UserRoles();
+			newUserRole.setUser(user);
+			newUserRole.setRole(newRole);
+			newUserRole.setIsActive(true);
+			userRoles.add(newUserRole);
+		}
+
+		this.userRolesRepository.saveAll(userRoles);
 	}
 }
