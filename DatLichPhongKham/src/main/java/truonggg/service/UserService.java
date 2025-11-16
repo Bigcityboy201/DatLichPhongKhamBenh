@@ -30,5 +30,5 @@ public interface UserService {
 
 	boolean deleteManually(Integer id);
 
-	Boolean assignRole(AssignRoleRequestDTO dto);
+	UserResponseDTO assignRole(AssignRoleRequestDTO dto);
 }

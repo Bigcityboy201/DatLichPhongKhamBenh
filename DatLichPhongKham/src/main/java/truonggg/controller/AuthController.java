@@ -3,8 +3,12 @@ package truonggg.controller;
 import java.util.Date;
 
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,20 +49,31 @@ public class AuthController {
 
 	@PostMapping(path = "/signIn")
 	public SuccessReponse<SignInResponse> signIn(@RequestBody @Valid SignInRequest request) {
-		Authentication authentication = this.authenticationManager
-				.authenticate(new UsernamePasswordAuthenticationToken(request.getUserName(), request.getPassword()));
+		try {
+			Authentication authentication = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(request.getUserName(), request.getPassword()));
 
-		// Retrieve user details from the authenticated token
-		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-		User user = userRepository.findByUserName(userDetails.getUsername())
-				.orElseThrow(() -> new NotFoundException("User", userDetails.getUsername()));
+			CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+			User user = userRepository.findByUserName(userDetails.getUsername())
+					.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		// Generate JWT token
-		String accessToken = this.jwtUtils.generateToken(userDetails);// trả ra token
-		Date expriedDate = this.jwtUtils.extractExpiration(accessToken);// trả ra ngày hết hạn
-		UserResponseDTO userDTO = userMapper.toDTO(user);
+			String accessToken = jwtUtils.generateToken(userDetails);
+			Date expiredDate = jwtUtils.extractExpiration(accessToken);
+			UserResponseDTO userDTO = userMapper.toDTO(user);
 
-		return SuccessReponse
-				.of(SignInResponse.builder().token(accessToken).expiredDate(expriedDate).user(userDTO).build());
+			return SuccessReponse
+					.of(SignInResponse.builder().token(accessToken).expiredDate(expiredDate).user(userDTO).build());
+
+		} catch (BadCredentialsException ex) {
+			throw new AuthenticationException("Username or password is incorrect") {
+			};
+		} catch (DisabledException ex) {
+			throw new AuthenticationException("User account is inactive") {
+			};
+		} catch (LockedException ex) {
+			throw new AuthenticationException("User account is locked") {
+			};
+		}
 	}
+
 }

@@ -33,8 +33,7 @@ public class UserController {
 	// GET /api/users - Lấy tất cả (phân trang)
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	@GetMapping
-	public SuccessReponse<?> getAllUsers(
-			@RequestParam(value = "page", defaultValue = "0") int page,
+	public SuccessReponse<?> getAllUsers(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		PagedResult<UserResponseDTO> pagedResult = userService.getAllPaged(pageable);
@@ -72,7 +71,7 @@ public class UserController {
 	// POST /api/users/assign-role - Admin phân role cho user
 	@PostMapping("/assign-role")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<Boolean> assignRoleToUser(@RequestBody @Valid AssignRoleRequestDTO dto) {
+	public SuccessReponse<UserResponseDTO> assignRoleToUser(@RequestBody @Valid AssignRoleRequestDTO dto) {
 		return SuccessReponse.of(this.userService.assignRole(dto));
 	}
 

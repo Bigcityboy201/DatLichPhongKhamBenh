@@ -7,11 +7,9 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import truonggg.Model.Role;
 import truonggg.Model.User;
-import truonggg.Model.UserRoles;
 import truonggg.constant.SecurityRole;
 import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
-import truonggg.repo.UserRolesRepository;
 
 @Component
 @RequiredArgsConstructor
@@ -19,7 +17,7 @@ public class AdminUserInitializer implements CommandLineRunner {
 
 	private final RoleRepository roleRepository;
 	private final UserRepository userRepository;
-	private final UserRolesRepository userRolesRepository;
+	// private final UserRolesRepository userRolesRepository;
 	private final PasswordEncoder passwordEncoder;
 
 	@Override
@@ -61,7 +59,7 @@ public class AdminUserInitializer implements CommandLineRunner {
 		if (admin == null) {
 			// Lấy role ADMIN trước khi tạo user
 			Role adminRole = roleRepository.findByRoleName(SecurityRole.ROLE_ADMIN);
-			
+
 			if (adminRole == null) {
 				System.out.println("ERROR: ADMIN role not found! Please create roles first.");
 				return;
@@ -73,14 +71,15 @@ public class AdminUserInitializer implements CommandLineRunner {
 					.role(adminRole) // Gán đối tượng Role, không phải null
 					.build();
 			admin = userRepository.save(admin);
-			System.out.println("Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
+			System.out.println(
+					"Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
 
 			// Tạo record vào user_roles
-			UserRoles userRole = UserRoles.builder().user(admin).role(adminRole).isActive(false) // role inactive cho
-																									// user
-					.build();
+//			UserRoles userRole = UserRoles.builder().user(admin).role(adminRole).isActive(false) // role inactive cho
+//																									// user
+//					.build();
 
-			userRolesRepository.save(userRole);
+			// userRolesRepository.save(userRole);
 			System.out.println("Assigned ADMIN role to admin in user_roles with isActive=false");
 		} else {
 			// Kiểm tra và cập nhật role nếu chưa có

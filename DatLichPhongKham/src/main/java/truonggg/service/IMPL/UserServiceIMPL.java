@@ -1,7 +1,8 @@
 package truonggg.service.IMPL;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -11,11 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import truonggg.Exception.MultiFieldViolationException;
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
 import truonggg.Model.Role;
 import truonggg.Model.User;
-import truonggg.Model.UserRoles;
 import truonggg.constant.SecurityRole;
 import truonggg.dto.reponseDTO.UserResponseDTO;
 import truonggg.dto.requestDTO.AssignRoleRequestDTO;
@@ -24,7 +25,7 @@ import truonggg.dto.requestDTO.UserUpdateRequestDTO;
 import truonggg.mapper.UserMapper;
 import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
-import truonggg.repo.UserRolesRepository;
+import truonggg.reponse.ErrorCode;
 import truonggg.reponse.PagedResult;
 import truonggg.service.UserService;
 
@@ -35,28 +36,38 @@ public class UserServiceIMPL implements UserService {
 	private final UserMapper userMapper;
 	private final PasswordEncoder passwordEncoder;
 	private final RoleRepository roleRepository;
-	private final UserRolesRepository userRolesRepository;
+	// private final UserRolesRepository userRolesRepository;
 
 	@Override
 	public UserResponseDTO createUser(UserRequestDTO dto) {
+		Map<String, String> errors = new HashMap<>();
+
 		if (userRepository.existsByEmail(dto.getEmail())) {
-			throw new NotFoundException("user", "Email already exists");
+			errors.put("email", "Email already exists");
 		}
+
+		if (userRepository.existsByUserName(dto.getUserName())) {
+			errors.put("userName", "Username already exists");
+		}
+
+		if (!errors.isEmpty()) {
+			throw new UserAlreadyExistException(errors);
+		}
+
 		User user = userMapper.toEntity(dto);
-		user = this.userRepository.save(user);
-		UserResponseDTO userResponseDTO = this.userMapper.toDTO(user);
-		return userResponseDTO;
+		user = userRepository.save(user);
+		return userMapper.toDTO(user);
 	}
 
 	@Override
 	@Transactional
 	public UserResponseDTO signUp(User user) {
-		if (userRepository.existsByUserName(user.getUserName())) {
-			throw new UserAlreadyExistException("User with userName: " + user.getUserName() + " already existed!");
+		if (userRepository.existsByEmail(user.getEmail())) {
+			throw new UserAlreadyExistException("email", "Email already exists");
 		}
 
-		if (userRepository.existsByEmail(user.getEmail())) {
-			throw new UserAlreadyExistException("User with email: " + user.getEmail() + " already existed!");
+		if (userRepository.existsByUserName(user.getUserName())) {
+			throw new UserAlreadyExistException("userName", "Username already exists");
 		}
 
 		user.setActive(false);
@@ -83,7 +94,7 @@ public class UserServiceIMPL implements UserService {
 
 	@Override
 	@Transactional
-	public Boolean assignRole(AssignRoleRequestDTO dto) {
+	public UserResponseDTO assignRole(AssignRoleRequestDTO dto) {
 		// Kiểm tra user tồn tại
 		User user = this.userRepository.findById(dto.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
@@ -95,9 +106,8 @@ public class UserServiceIMPL implements UserService {
 		// Assign role mới (replace role cũ)
 		user.setRole(role);
 		user = this.userRepository.save(user);
-		this.syncUserRole(user, role);
-
-		return true;
+		// this.syncUserRole(user, role);
+		return this.userMapper.toDTO(user);
 	}
 
 	@Override
@@ -111,9 +121,9 @@ public class UserServiceIMPL implements UserService {
 		Page<User> userPage = this.userRepository.findAll(pageable);
 		List<UserResponseDTO> dtoList = userPage.stream().map(userMapper::toDTO).collect(Collectors.toList());
 
-		return PagedResult.<UserResponseDTO>builder().content(dtoList)
-				.totalElements((int) userPage.getTotalElements()).totalPages(userPage.getTotalPages())
-				.currentPage(userPage.getNumber()).pageSize(userPage.getSize()).build();
+		return PagedResult.<UserResponseDTO>builder().content(dtoList).totalElements((int) userPage.getTotalElements())
+				.totalPages(userPage.getTotalPages()).currentPage(userPage.getNumber()).pageSize(userPage.getSize())
+				.build();
 	}
 
 	@Override
@@ -148,6 +158,22 @@ public class UserServiceIMPL implements UserService {
 	@Transactional
 	public UserResponseDTO update(Integer id, UserUpdateRequestDTO dto) {
 		User user = this.userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+
+		Map<String, String> errors = new HashMap<>();
+
+		// Kiểm tra email trùng với user khác
+		if (dto.getEmail() != null && userRepository.existsByEmail(dto.getEmail())) {
+			errors.put("email", "Email already exists");
+		}
+
+		// Kiểm tra username trùng với user khác
+		if (dto.getUserName() != null && userRepository.existsByUserName(dto.getUserName())) {
+			errors.put("userName", "Username already exists");
+		}
+
+		if (!errors.isEmpty()) {
+			throw new MultiFieldViolationException("user", errors, ErrorCode.ALREADY_EXIT);
+		}
 
 		// Cập nhật thông tin từ DTO
 		user.setFullName(dto.getFullName());
@@ -184,27 +210,42 @@ public class UserServiceIMPL implements UserService {
 		this.userRepository.delete(user);
 		return true;
 	}
+
+//	private void syncUserRole(User user, Role newRole) {
+//		// List<UserRoles> userRoles = new
+//		// ArrayList<>(this.userRolesRepository.findByUserUserId(user.getUserId()));
+//		boolean hasExistingRole = false;
+//
+//		for (UserRoles userRole : userRoles) {
+//			boolean isTargetRole = userRole.getRole() != null
+//					&& userRole.getRole().getRoleId().equals(newRole.getRoleId());
+//			userRole.setIsActive(isTargetRole);
+//			if (isTargetRole) {
+//				hasExistingRole = true;
+//			}
+//		}
+//
+//		if (!hasExistingRole) {
+//			UserRoles newUserRole = new UserRoles();
+//			newUserRole.setUser(user);
+//			newUserRole.setRole(newRole);
+//			newUserRole.setIsActive(true);
+//			userRoles.add(newUserRole);
+//		}
+//
+//		this.userRolesRepository.saveAll(userRoles);
+//	}
 	private void syncUserRole(User user, Role newRole) {
-		List<UserRoles> userRoles = new ArrayList<>(this.userRolesRepository.findByUserUserId(user.getUserId()));
-		boolean hasExistingRole = false;
-
-		for (UserRoles userRole : userRoles) {
-			boolean isTargetRole = userRole.getRole() != null
-					&& userRole.getRole().getRoleId().equals(newRole.getRoleId());
-			userRole.setIsActive(isTargetRole);
-			if (isTargetRole) {
-				hasExistingRole = true;
-			}
+		// Nếu user đã có role và role đó là role mới → không cần làm gì
+		if (user.getRole() != null && user.getRole().getRoleId().equals(newRole.getRoleId())) {
+			return;
 		}
 
-		if (!hasExistingRole) {
-			UserRoles newUserRole = new UserRoles();
-			newUserRole.setUser(user);
-			newUserRole.setRole(newRole);
-			newUserRole.setIsActive(true);
-			userRoles.add(newUserRole);
-		}
+		// Nếu user chưa có role hoặc đang đổi role → gán role mới
+		user.setRole(newRole);
 
-		this.userRolesRepository.saveAll(userRoles);
+		// Lưu user với role mới
+		this.userRepository.save(user);
 	}
+
 }

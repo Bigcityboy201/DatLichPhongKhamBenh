@@ -1,28 +1,24 @@
 package truonggg.Exception;
 
+import java.util.Map;
+
 import lombok.Getter;
 import lombok.Setter;
 import truonggg.reponse.ErrorCode;
 
 @Getter
 @Setter
-public class UserAlreadyExistException extends RuntimeException {
+public class UserAlreadyExistException extends MultiFieldViolationException {
 
 	private static final long serialVersionUID = 1L;
 
-	private final ErrorCode errorCode = ErrorCode.ALREADY_EXIT;
-	private final String domain; // linh hoạt
-	private String message;
-
-	// Constructor mặc định domain = "user"
-	public UserAlreadyExistException(final String message) {
-		this("user", message);
+	// Multi-field
+	public UserAlreadyExistException(Map<String, String> errors) {
+		super("user", errors, ErrorCode.ALREADY_EXIT);
 	}
 
-	// Constructor linh hoạt domain
-	public UserAlreadyExistException(final String domain, final String message) {
-		super(message);
-		this.domain = domain;
-		this.message = message;
+	// Single-field
+	public UserAlreadyExistException(String field, String message) {
+		super("user", Map.of(field, message), ErrorCode.ALREADY_EXIT);
 	}
 }

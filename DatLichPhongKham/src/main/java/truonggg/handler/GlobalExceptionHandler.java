@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.validation.ConstraintViolationException;
+import truonggg.Exception.MultiFieldViolationException;
 import truonggg.Exception.NotFoundException;
-import truonggg.Exception.UserAlreadyExistException;
 import truonggg.reponse.ErrorCode;
 import truonggg.reponse.ErrorReponse;
 
@@ -38,10 +38,10 @@ public class GlobalExceptionHandler {
 		return ErrorReponse.of("You do not have permission to access this resource", ErrorCode.INVALID, "security");
 	}
 
-	@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
-	@ExceptionHandler(exception = { AuthenticationException.class })
-	public ErrorReponse handle(final AuthenticationException ex) {
-		return ErrorReponse.of("Please login to access this resource", ErrorCode.INVALID, "security");
+	@ResponseStatus(HttpStatus.UNAUTHORIZED)
+	@ExceptionHandler(AuthenticationException.class)
+	public ErrorReponse handleAuthenticationException(AuthenticationException ex) {
+		return ErrorReponse.of(ex.getMessage(), ErrorCode.INVALID, "security");
 	}
 
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
@@ -54,12 +54,23 @@ public class GlobalExceptionHandler {
 
 	}
 
-	@ResponseStatus(HttpStatus.CONFLICT) // 409 trùng dữ liệu
-	@ExceptionHandler(UserAlreadyExistException.class)
-	public ErrorReponse handleUserAlreadyExist(UserAlreadyExistException ex) {
-		Map<String, Object> details = Map.of("field", ex.getMessage().contains("userName") ? "userName" : "email");
+//	@ResponseStatus(HttpStatus.CONFLICT) // 409 trùng dữ liệu
+//	@ExceptionHandler(UserAlreadyExistException.class)
+//	public ErrorReponse handleUserAlreadyExist(UserAlreadyExistException ex) {
+//		Map<String, Object> details = Map.of("field", ex.getMessage().contains("userName") ? "userName" : "email");
+//
+//		return ErrorReponse.of(ex.getMessage(), ex.getErrorCode(), ex.getDomain(), details);
+//	}
 
-		return ErrorReponse.of(ex.getMessage(), ex.getErrorCode(), ex.getDomain(), details);
+	@ResponseStatus(HttpStatus.CONFLICT) // 409
+	@ExceptionHandler(MultiFieldViolationException.class)
+	public ErrorReponse handleMultiFieldViolation(MultiFieldViolationException ex) {
+		// Convert Map<String, String> -> Map<String, Object> cho ErrorReponse
+		Map<String, Object> details = ex.getFieldErrors().entrySet().stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, e -> (Object) e.getValue()));
+
+		return ErrorReponse.of("Validation failed for fields: " + details.keySet(), ex.getErrorCode(), ex.getDomain(),
+				details);
 	}
 
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
@@ -105,19 +116,15 @@ public class GlobalExceptionHandler {
 	@ResponseStatus(value = HttpStatus.METHOD_NOT_ALLOWED)
 	@ExceptionHandler(exception = { HttpRequestMethodNotSupportedException.class })
 	public ErrorReponse handle(final HttpRequestMethodNotSupportedException ex) {
-		return ErrorReponse.of(
-				"HTTP method '" + ex.getMethod() + "' is not supported for this endpoint",
-				ErrorCode.INVALID,
-				"request");
+		return ErrorReponse.of("HTTP method '" + ex.getMethod() + "' is not supported for this endpoint",
+				ErrorCode.INVALID, "request");
 	}
 
 	// Thiếu required parameter
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	@ExceptionHandler(exception = { MissingServletRequestParameterException.class })
 	public ErrorReponse handle(final MissingServletRequestParameterException ex) {
-		return ErrorReponse.of(
-				"Required parameter '" + ex.getParameterName() + "' is missing",
-				ErrorCode.INVALID,
+		return ErrorReponse.of("Required parameter '" + ex.getParameterName() + "' is missing", ErrorCode.INVALID,
 				"request");
 	}
 
@@ -127,8 +134,7 @@ public class GlobalExceptionHandler {
 	public ErrorReponse handle(final MethodArgumentTypeMismatchException ex) {
 		return ErrorReponse.of(
 				"Parameter '" + ex.getName() + "' has invalid type. Expected: " + ex.getRequiredType().getSimpleName(),
-				ErrorCode.INVALID,
-				"request");
+				ErrorCode.INVALID, "request");
 	}
 
 	// Tham số không hợp lệ
@@ -136,17 +142,14 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(exception = { IllegalArgumentException.class })
 	public ErrorReponse handle(final IllegalArgumentException ex) {
 		return ErrorReponse.of(ex.getMessage() != null ? ex.getMessage() : "Invalid argument provided",
-				ErrorCode.INVALID,
-				"request");
+				ErrorCode.INVALID, "request");
 	}
 
 	// Media type không được hỗ trợ
 	@ResponseStatus(value = HttpStatus.UNSUPPORTED_MEDIA_TYPE)
 	@ExceptionHandler(exception = { HttpMediaTypeNotSupportedException.class })
 	public ErrorReponse handle(final HttpMediaTypeNotSupportedException ex) {
-		return ErrorReponse.of(
-				"Media type '" + ex.getContentType() + "' is not supported",
-				ErrorCode.INVALID,
+		return ErrorReponse.of("Media type '" + ex.getContentType() + "' is not supported", ErrorCode.INVALID,
 				"request");
 	}
 
@@ -165,8 +168,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(exception = { NullPointerException.class })
 	public ErrorReponse handle(final NullPointerException ex) {
 		return ErrorReponse.of("An internal error occurred. Please contact support if the problem persists",
-				ErrorCode.INTERNAL_SERVER,
-				"system");
+				ErrorCode.INTERNAL_SERVER, "system");
 	}
 
 	// Handler cuối cùng - bắt tất cả exception còn lại
@@ -175,9 +177,7 @@ public class GlobalExceptionHandler {
 	public ErrorReponse handle(final Exception ex) {
 		// Log exception để debug (có thể thêm logger sau)
 		ex.printStackTrace();
-		return ErrorReponse.of(
-				ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred",
-				ErrorCode.INTERNAL_SERVER,
-				"system");
+		return ErrorReponse.of(ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred",
+				ErrorCode.INTERNAL_SERVER, "system");
 	}
 }
