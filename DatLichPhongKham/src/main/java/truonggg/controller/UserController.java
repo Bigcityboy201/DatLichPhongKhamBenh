@@ -3,11 +3,13 @@ package truonggg.controller;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -81,5 +83,20 @@ public class UserController {
 	public SuccessReponse<String> hardDeleteUser(@PathVariable Integer id) {
 		this.userService.deleteManually(id);
 		return SuccessReponse.of("Đã xóa thành công user with id:" + id);
+	}
+
+	@GetMapping("/me")
+	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<UserResponseDTO> getMyProfile() {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		return SuccessReponse.of(this.userService.findByUserName(username));
+	}
+
+	@PutMapping("/profile")
+	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<UserResponseDTO> updateMyProfile(@RequestBody @Valid UserUpdateRequestDTO dto) {
+		// Lấy username từ token đã được JwtAuthenticationFilter set vào SecurityContext
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		return SuccessReponse.of(this.userService.updateProfile(username, dto));
 	}
 }

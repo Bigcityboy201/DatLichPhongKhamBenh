@@ -57,9 +57,8 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 				.collect(Collectors.toList());
 
 		return PagedResult.<AppointmentsResponseDTO>builder().content(dtoList)
-				.totalElements((int) appointmentsPage.getTotalElements())
-				.totalPages(appointmentsPage.getTotalPages()).currentPage(appointmentsPage.getNumber())
-				.pageSize(appointmentsPage.getSize()).build();
+				.totalElements((int) appointmentsPage.getTotalElements()).totalPages(appointmentsPage.getTotalPages())
+				.currentPage(appointmentsPage.getNumber()).pageSize(appointmentsPage.getSize()).build();
 	}
 
 	@Override
@@ -128,5 +127,21 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 		this.appointmentsRepository.delete(foundAppointment);
 
 		return true;
+	}
+
+	@Override
+	public PagedResult<AppointmentsResponseDTO> getAppointmentByUserPaged(Integer userId, Pageable pageable) {
+		User user = this.userRepository.findById(userId)
+				.orElseThrow(() -> new NotFoundException("user", "user not found!"));
+		Page<Appointments> appointmentsPage = appointmentsRepository.findByUserUserId(userId, pageable);
+		List<AppointmentsResponseDTO> dtoList = appointmentsPage.stream().map(appointmentsMapper::toDTO)
+				.collect(Collectors.toList());
+
+		PagedResult<AppointmentsResponseDTO> pagedResult = PagedResult.<AppointmentsResponseDTO>builder()
+				.content(dtoList).totalElements((int) appointmentsPage.getTotalElements())
+				.totalPages(appointmentsPage.getTotalPages()).currentPage(appointmentsPage.getNumber())
+				.pageSize(appointmentsPage.getSize()).build();
+
+		return pagedResult;
 	}
 }

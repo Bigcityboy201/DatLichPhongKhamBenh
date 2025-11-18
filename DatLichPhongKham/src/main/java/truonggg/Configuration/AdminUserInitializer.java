@@ -17,7 +17,6 @@ public class AdminUserInitializer implements CommandLineRunner {
 
 	private final RoleRepository roleRepository;
 	private final UserRepository userRepository;
-	// private final UserRolesRepository userRolesRepository;
 	private final PasswordEncoder passwordEncoder;
 
 	@Override
@@ -25,7 +24,7 @@ public class AdminUserInitializer implements CommandLineRunner {
 		// 1. Tạo role cơ bản nếu chưa có và set isActive=false
 		createBasicRolesIfNotExists();
 
-		// 2. Tạo admin user lần đầu, inactive, lưu vào user_roles
+		// 2. Tạo admin user lần đầu, inactive
 		createAdminUserIfNotExists();
 	}
 
@@ -59,7 +58,7 @@ public class AdminUserInitializer implements CommandLineRunner {
 		if (admin == null) {
 			// Lấy role ADMIN trước khi tạo user
 			Role adminRole = roleRepository.findByRoleName(SecurityRole.ROLE_ADMIN);
-
+			
 			if (adminRole == null) {
 				System.out.println("ERROR: ADMIN role not found! Please create roles first.");
 				return;
@@ -68,19 +67,10 @@ public class AdminUserInitializer implements CommandLineRunner {
 			// Tạo user admin inactive và gán role trực tiếp
 			admin = User.builder().userName(adminUsername).password(passwordEncoder.encode("quangtruong1"))
 					.fullName("Quang Truong").email("quangtruong2012004@gmail.com").phone("0123456789").isActive(false)
-					.role(adminRole) // Gán đối tượng Role, không phải null
+					.role(adminRole) // Gán đối tượng Role trực tiếp
 					.build();
 			admin = userRepository.save(admin);
-			System.out.println(
-					"Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
-
-			// Tạo record vào user_roles
-//			UserRoles userRole = UserRoles.builder().user(admin).role(adminRole).isActive(false) // role inactive cho
-//																									// user
-//					.build();
-
-			// userRolesRepository.save(userRole);
-			System.out.println("Assigned ADMIN role to admin in user_roles with isActive=false");
+			System.out.println("Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
 		} else {
 			// Kiểm tra và cập nhật role nếu chưa có
 			if (admin.getRole() == null) {

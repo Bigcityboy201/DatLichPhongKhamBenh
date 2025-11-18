@@ -31,4 +31,8 @@ public interface UserService {
 	boolean deleteManually(Integer id);
 
 	UserResponseDTO assignRole(AssignRoleRequestDTO dto);
+
+	UserResponseDTO findByUserName(String userName);
+
+	UserResponseDTO updateProfile(String userName, UserUpdateRequestDTO dto);
 }

@@ -1,5 +1,7 @@
 package truonggg.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,8 +33,7 @@ public class AppointmentsController {
 	// GET /api/appointments - Lấy tất cả (phân trang)
 	@GetMapping
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
-	public SuccessReponse<?> getAllAppointments(
-			@RequestParam(value = "page", defaultValue = "0") int page,
+	public SuccessReponse<?> getAllAppointments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsService.getAllPaged(pageable);
@@ -64,7 +65,7 @@ public class AppointmentsController {
 	// DELETE /api/appointments - Soft delete
 	@PutMapping("/{id}/status")
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
-    public SuccessReponse<AppointmentsResponseDTO> deleteAppointment(@PathVariable Integer id) {
+	public SuccessReponse<AppointmentsResponseDTO> deleteAppointment(@PathVariable Integer id) {
 		return SuccessReponse.of(this.appointmentsService.delete(id));
 	}
 
@@ -74,5 +75,16 @@ public class AppointmentsController {
 	public SuccessReponse<String> hardDeleteAppointment(@PathVariable Integer id) {
 		this.appointmentsService.deleteManually(id);
 		return SuccessReponse.of("Xóa thành công!");
+	}
+
+	@GetMapping("/user/{userId}")
+	@PreAuthorize("hasAnyAuthority('ADMIN','USER','EMPLOYEE')")
+	public SuccessReponse<List<AppointmentsResponseDTO>> getAppointmentByUser(@PathVariable Integer userId,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsService.getAppointmentByUserPaged(userId,
+				pageable);
+		return SuccessReponse.ofPaged(pagedResult);
 	}
 }

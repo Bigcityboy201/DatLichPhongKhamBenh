@@ -23,4 +23,7 @@ public interface AppointmentsService {
 	AppointmentsResponseDTO delete(Integer id);
 
 	boolean deleteManually(Integer id);
+
+	PagedResult<AppointmentsResponseDTO> getAppointmentByUserPaged(Integer userId, Pageable pageable);
+
 }

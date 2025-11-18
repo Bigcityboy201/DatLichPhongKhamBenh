@@ -31,16 +31,15 @@ public class Role {
 	private String Description;
 	@Column(columnDefinition = "BIT DEFAULT 0")
 	private boolean isActive;
-//	@OneToMany(mappedBy = "role")
-//	private List<UserRoles> list = new ArrayList();
+	// Mỗi user có 1 role, nên không cần list UserRoles nữa
 	@OneToMany(mappedBy = "role")
 	private List<User> users = new ArrayList();
-
+	
 	// Thêm method thủ công cho boolean isActive
 	public boolean getIsActive() {
 		return isActive;
 	}
-
+	
 	public void setIsActive(boolean isActive) {
 		this.isActive = isActive;
 	}

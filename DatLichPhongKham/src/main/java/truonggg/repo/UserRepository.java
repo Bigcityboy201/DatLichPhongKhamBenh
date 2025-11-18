@@ -20,4 +20,5 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 	// Tìm user theo username và load role (JOIN FETCH để đảm bảo role được load)
 	@Query("SELECT u FROM User u LEFT JOIN FETCH u.role WHERE u.userName = :username")
 	Optional<User> findByUserName(@Param("username") String username);
+
 }

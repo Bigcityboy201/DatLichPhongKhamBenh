@@ -68,6 +68,8 @@ public class DoctorsServiceIMPL implements DoctorsService {
 
 	@Override
 	public PagedResult<DoctorsReponseDTO> getDoctorsByDepartmentPaged(Integer departmentsId, Pageable pageable) {
+		Departments departments = this.departmentsRepository.findById(departmentsId)
+				.orElseThrow(() -> new NotFoundException("department", "Department not found!"));
 		// Lấy page từ repository
 		Page<Doctors> doctorsPage = doctorsRepository.findByDepartmentsId(departmentsId, pageable);
 
