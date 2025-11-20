@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,11 +37,33 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 	public AppointmentsResponseDTO createAppointments(AppointmentsRequestDTO dto) {
 		User user = this.userRepository.findById(dto.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
-		Doctors doctors = this.doctorsRepository.findById(dto.getDoctorId())
-				.orElseThrow(() -> new NotFoundException("doctor=", "Doctor Not Found"));
+
+		Doctors doctors = null;
+		if (dto.getDoctorId() != null) {
+			doctors = this.doctorsRepository.findById(dto.getDoctorId())
+					.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+
+			boolean doctorBusy = this.appointmentsRepository
+					.existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(doctors.getId(),
+							dto.getAppointmentDateTime(), Appointments_Enum.CANCELLED);
+			if (doctorBusy) {
+				throw new IllegalArgumentException("Bác sĩ đã có lịch hẹn tại khung giờ này");
+			}
+		}
+
 		Appointments appointments = this.appointmentsMapper.toEntity(dto);
 		appointments.setUser(user);
-		appointments.setDoctors(doctors);
+
+		if (doctors != null) {
+			appointments.setDoctors(doctors);
+			if (appointments.getStatus() == null || appointments.getStatus() == Appointments_Enum.PENDING) {
+				appointments.setStatus(Appointments_Enum.CONFIRMED);
+			}
+		} else {
+			appointments.setDoctors(null);
+			appointments.setStatus(Appointments_Enum.PENDING);
+		}
+
 		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(appointments));
 	}
 
@@ -130,10 +153,10 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 	}
 
 	@Override
-	public PagedResult<AppointmentsResponseDTO> getAppointmentByUserPaged(Integer userId, Pageable pageable) {
-		User user = this.userRepository.findById(userId)
-				.orElseThrow(() -> new NotFoundException("user", "user not found!"));
-		Page<Appointments> appointmentsPage = appointmentsRepository.findByUserUserId(userId, pageable);
+	public PagedResult<AppointmentsResponseDTO> getAppointmentByCurrentUser(String userName, Pageable pageable) {
+		User user = this.userRepository.findByUserName(userName)
+				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+		Page<Appointments> appointmentsPage = appointmentsRepository.findByUser_UserId(user.getUserId(), pageable);
 		List<AppointmentsResponseDTO> dtoList = appointmentsPage.stream().map(appointmentsMapper::toDTO)
 				.collect(Collectors.toList());
 
@@ -143,5 +166,43 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 				.pageSize(appointmentsPage.getSize()).build();
 
 		return pagedResult;
+	}
+
+	@Override
+	public AppointmentsResponseDTO cancelByUser(Integer id, String userName) {
+		Appointments found = appointmentsRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
+		if (!found.getUser().getUserName().equals(userName)) {
+			throw new AccessDeniedException("You cannot cancel this appointment");
+		}
+		found.setStatus(Appointments_Enum.CANCELLED);
+		return appointmentsMapper.toDTO(appointmentsRepository.save(found));
+	}
+
+	@Override
+	public AppointmentsResponseDTO assignDoctor(Integer appointmentId, Integer doctorId) {
+		Appointments appointment = this.appointmentsRepository.findById(appointmentId)
+				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
+
+		Doctors doctor = this.doctorsRepository.findById(doctorId)
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+
+		if (appointment.getDoctors() != null && appointment.getDoctors().getId().equals(doctorId)) {
+			return this.appointmentsMapper.toDTO(appointment);
+		}
+
+		boolean doctorBusy = this.appointmentsRepository
+				.existsByDoctors_IdAndAppointmentDateTimeAndStatusNotAndIdNot(doctorId,
+						appointment.getAppointmentDateTime(), Appointments_Enum.CANCELLED, appointment.getId());
+		if (doctorBusy) {
+			throw new IllegalArgumentException("Bác sĩ đã có lịch hẹn tại khung giờ này");
+		}
+
+		appointment.setDoctors(doctor);
+		if (appointment.getStatus() == null || appointment.getStatus() == Appointments_Enum.PENDING) {
+			appointment.setStatus(Appointments_Enum.CONFIRMED);
+		}
+
+		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(appointment));
 	}
 }

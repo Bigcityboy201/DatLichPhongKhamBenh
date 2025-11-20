@@ -104,4 +104,14 @@ public class DoctorsController {
 		this.doctorsService.deleteManually(id);
 		return SuccessReponse.of("Xóa thành công doctor với id:" + id);
 	}
+
+	@GetMapping("/search")
+	public SuccessReponse<List<DoctorsReponseDTO>> searchDoctors(@RequestParam String keyword,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<DoctorsReponseDTO> pagedResult = doctorsService.searchDoctors(keyword, pageable);
+		return SuccessReponse.ofPaged(pagedResult);
+	}
 }

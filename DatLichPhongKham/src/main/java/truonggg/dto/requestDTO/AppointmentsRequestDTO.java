@@ -27,7 +27,7 @@ public class AppointmentsRequestDTO {
 	@NotNull(message = "UserId không được bỏ trống")
 	private Integer userId;
 
-	@NotNull(message = "DoctorId không được bỏ trống")
+	// Có thể null nếu để EMPLOYEE gán bác sĩ sau
 	private Integer doctorId;
 
 	private Appointments_Enum status;

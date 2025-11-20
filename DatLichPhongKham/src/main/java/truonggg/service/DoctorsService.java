@@ -29,4 +29,6 @@ public interface DoctorsService {
 	DoctorsReponseDTO delete(Integer id, DoctorsDeleteRequestDTO dto);
 
 	boolean deleteManually(Integer id);
+
+	PagedResult<DoctorsReponseDTO> searchDoctors(String keyword, Pageable pageable);
 }

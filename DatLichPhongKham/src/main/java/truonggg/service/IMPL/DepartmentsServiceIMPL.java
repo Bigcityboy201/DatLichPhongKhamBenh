@@ -1,6 +1,7 @@
 package truonggg.service.IMPL;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -83,6 +84,23 @@ public class DepartmentsServiceIMPL implements DepartmentsService {
 				.orElseThrow(() -> new NotFoundException("department", "Department Not Found "));
 		this.departmentsRepository.delete(foundDepartments);
 		return true;
+	}
+
+	@Override
+	public PagedResult<DepartmentsResponseDTO> searchDepartments(String keyword, Pageable pageable) {
+		Page<Departments> departmentPage = departmentsRepository.findByNameContainingIgnoreCase(keyword, pageable);
+
+		// Chuyển đổi sang DTO
+		List<DepartmentsResponseDTO> dtoList = departmentPage.getContent().stream().map(departmentsMapper::toResponse)
+				.collect(Collectors.toList());
+
+		// Trả về PagedResult dùng builder
+		PagedResult<DepartmentsResponseDTO> pagedResult = PagedResult.<DepartmentsResponseDTO>builder().content(dtoList)
+				.totalElements((int) departmentPage.getTotalElements()).totalPages(departmentPage.getTotalPages())
+				.currentPage(departmentPage.getNumber()) // 0-based, cộng +1 nếu muốn 1-based
+				.pageSize(departmentPage.getSize()).build();
+
+		return pagedResult;
 	}
 
 }

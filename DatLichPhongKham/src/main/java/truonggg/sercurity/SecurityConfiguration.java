@@ -30,7 +30,8 @@ public class SecurityConfiguration {
 	private static final String[] WHITE_LIST = { "/auth/**",
 			// Public endpoints cho frontend
 			"/api/doctors", "/api/doctors/*", "/api/doctors/department", "/api/departments", "/api/appointments",
-			"/api/siteinfos", "/api/reviews/doctor/**", "/api/schedules", "/api/schedules/doctor/**" };
+			"/api/siteinfos", "/api/reviews/doctor/**", "/api/schedules", "/api/departments/search",
+			"/api/schedules/doctor/**,/api/doctors/search", "/api/reviews" };
 
 	private final JwtAuthenticationFilter jwtRequestFilter;
 	private final UserDetailsService userDetailsService;
@@ -121,57 +122,50 @@ public class SecurityConfiguration {
 
 				// NOTIFICATIONS - Bảo mật các API thông báo
 				// ADMIN + EMPLOYEE - xem tất cả thông báo
-				.requestMatchers(HttpMethod.GET, "/api/notifications")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
-				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông báo theo ID (cần kiểm tra ownership trong service)
+				.requestMatchers(HttpMethod.GET, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông báo theo ID (cần kiểm tra
+				// ownership trong service)
 				.requestMatchers(HttpMethod.GET, "/api/notifications/{id}")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
-				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông báo của user (cần kiểm tra userId = authenticated user)
+				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông báo của user (cần kiểm tra
+				// userId = authenticated user)
 				.requestMatchers(HttpMethod.GET, "/api/notifications/user/{userId}")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
 				.requestMatchers(HttpMethod.GET, "/api/notifications/user/{userId}/unread")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
 				// ADMIN + EMPLOYEE - tạo và quản lý thông báo
-				.requestMatchers(HttpMethod.POST, "/api/notifications")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
-				.requestMatchers(HttpMethod.PUT, "/api/notifications")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.POST, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.PUT, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
 				// USER + DOCTOR + EMPLOYEE + ADMIN - đánh dấu đã đọc (cần kiểm tra ownership)
 				.requestMatchers(HttpMethod.PUT, "/api/notifications/{id}/read")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
 				// ADMIN + EMPLOYEE - xóa thông báo
-				.requestMatchers(HttpMethod.DELETE, "/api/notifications")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
-				.requestMatchers(HttpMethod.DELETE, "/api/notifications/{id}")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.DELETE, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.DELETE, "/api/notifications/{id}").hasAnyAuthority("ADMIN", "EMPLOYEE")
 
 				// REVIEWS - Bảo mật các API đánh giá
-				// Public - xem đánh giá theo doctor (đã có trong WHITE_LIST: /api/reviews/doctor/**)
+				// Public - xem đánh giá theo doctor (đã có trong WHITE_LIST:
+				// /api/reviews/doctor/**)
 				// ADMIN + EMPLOYEE - xem tất cả đánh giá
-				.requestMatchers(HttpMethod.GET, "/api/reviews")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.GET, "/api/reviews").hasAnyAuthority("ADMIN", "EMPLOYEE")
 				// Public - xem đánh giá theo ID (để hiển thị chi tiết)
 				.requestMatchers(HttpMethod.GET, "/api/reviews/{id}").permitAll()
 				// USER - tạo đánh giá mới
-				.requestMatchers(HttpMethod.POST, "/api/reviews")
-				.hasAnyAuthority("USER", "ADMIN")
-				// USER + ADMIN + EMPLOYEE - cập nhật đánh giá (cần kiểm tra ownership trong service)
-				.requestMatchers(HttpMethod.PUT, "/api/reviews/{id}")
-				.hasAnyAuthority("USER", "ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyAuthority("USER", "ADMIN")
+				// USER + ADMIN + EMPLOYEE - cập nhật đánh giá (cần kiểm tra ownership trong
+				// service)
+				.requestMatchers(HttpMethod.PUT, "/api/reviews/{id}").hasAnyAuthority("USER", "ADMIN", "EMPLOYEE")
 				// ADMIN + EMPLOYEE - soft delete (thay đổi status)
-				.requestMatchers(HttpMethod.PUT, "/api/reviews/status/{id}")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.PUT, "/api/reviews/status/{id}").hasAnyAuthority("ADMIN", "EMPLOYEE")
 				// ADMIN + EMPLOYEE - hard delete
-				.requestMatchers(HttpMethod.DELETE, "/api/reviews/{id}")
-				.hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.DELETE, "/api/reviews/{id}").hasAnyAuthority("ADMIN", "EMPLOYEE")
 
 				// Tất cả request khác cần xác thực
 				.anyRequest().authenticated())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authenticationProvider(this.authenticationProvider())
 				.addFilterBefore(this.jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
-				.exceptionHandling(handler -> handler
-						.accessDeniedHandler(this.accessDeniedHandler)
+				.exceptionHandling(handler -> handler.accessDeniedHandler(this.accessDeniedHandler)
 						.authenticationEntryPoint(this.authenticationEntryPoint));
 		return http.build();
 	}

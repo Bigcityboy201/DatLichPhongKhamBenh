@@ -225,4 +225,21 @@ public class DoctorsServiceIMPL implements DoctorsService {
 		this.doctorsRepository.delete(foundDoctor);
 		return true;
 	}
+
+	@Override
+	public PagedResult<DoctorsReponseDTO> searchDoctors(String keyword, Pageable pageable) {
+		Page<Doctors> doctorsPage = doctorsRepository.findByUserFullNameContainingIgnoreCase(keyword, pageable);
+
+		// Chuyển đổi sang DTO
+		List<DoctorsReponseDTO> dtoList = doctorsPage.getContent().stream().map(doctorsMapper::toDTO)
+				.collect(Collectors.toList());
+
+		// Trả về PagedResult dùng builder
+		PagedResult<DoctorsReponseDTO> pagedResult = PagedResult.<DoctorsReponseDTO>builder().content(dtoList)
+				.totalElements((int) doctorsPage.getTotalElements()).totalPages(doctorsPage.getTotalPages())
+				.currentPage(doctorsPage.getNumber()) // 0-based, cộng +1 nếu muốn 1-based
+				.pageSize(doctorsPage.getSize()).build();
+
+		return pagedResult;
+	}
 }

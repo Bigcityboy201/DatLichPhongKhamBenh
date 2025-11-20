@@ -24,6 +24,10 @@ public interface AppointmentsService {
 
 	boolean deleteManually(Integer id);
 
-	PagedResult<AppointmentsResponseDTO> getAppointmentByUserPaged(Integer userId, Pageable pageable);
+	PagedResult<AppointmentsResponseDTO> getAppointmentByCurrentUser(String userName, Pageable pageable);
+
+	AppointmentsResponseDTO cancelByUser(Integer id, String userName);
+
+	AppointmentsResponseDTO assignDoctor(Integer appointmentId, Integer doctorId);
 
 }

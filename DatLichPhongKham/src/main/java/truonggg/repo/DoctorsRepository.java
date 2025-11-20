@@ -25,4 +25,6 @@ public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
 	@Query("SELECT d FROM Doctors d LEFT JOIN FETCH d.list2 WHERE d.id = :id")
 	Optional<Doctors> findByIdWithSchedules(@Param("id") Integer id);
 
+	Page<Doctors> findByUserFullNameContainingIgnoreCase(String keyword, Pageable pageable);
+
 }

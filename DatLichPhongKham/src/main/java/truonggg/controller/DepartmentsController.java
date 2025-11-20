@@ -1,5 +1,7 @@
 package truonggg.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,8 +35,7 @@ public class DepartmentsController {
 
 	// GET /api/departments - Lấy tất cả (phân trang)
 	@GetMapping
-	public SuccessReponse<?> getAllDepartments(
-			@RequestParam(value = "page", defaultValue = "0") int page,
+	public SuccessReponse<?> getAllDepartments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		PagedResult<DepartmentsResponseDTO> pagedResult = departmentsService.getAllPaged(pageable);
@@ -71,5 +72,15 @@ public class DepartmentsController {
 	public SuccessReponse<String> hardDeleteDepartment(@PathVariable Integer id) {
 		this.departmentsService.delete(id);
 		return SuccessReponse.of("Xóa thành công khoa");
+	}
+
+	@GetMapping("/search")
+	public SuccessReponse<List<DepartmentsResponseDTO>> searchDepartments(@RequestParam String keyword,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<DepartmentsResponseDTO> pagedResult = departmentsService.searchDepartments(keyword, pageable);
+		return SuccessReponse.ofPaged(pagedResult);
 	}
 }

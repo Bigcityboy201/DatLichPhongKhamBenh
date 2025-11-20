@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,17 +19,20 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.requestDTO.AppointmentAssignDoctorRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
 import truonggg.service.AppointmentsService;
+import truonggg.service.UserService;
 
 @RestController
 @RequestMapping(path = "/api/appointments")
 @RequiredArgsConstructor
 public class AppointmentsController {
 	private final AppointmentsService appointmentsService;
+	private final UserService userService;
 
 	// GET /api/appointments - Lấy tất cả (phân trang)
 	@GetMapping
@@ -49,8 +53,17 @@ public class AppointmentsController {
 
 	// POST /api/appointments - Tạo mới
 	@PostMapping
+	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> createAppointment(
 			@RequestBody @Valid final AppointmentsRequestDTO dto) {
+		var authentication = SecurityContextHolder.getContext().getAuthentication();
+		boolean isAdmin = authentication.getAuthorities().stream()
+				.anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
+		if (!isAdmin) {
+			String username = authentication.getName();
+			Integer currentUserId = this.userService.findByUserName(username).getUserId();
+			dto.setUserId(currentUserId);
+		}
 		return SuccessReponse.of(this.appointmentsService.createAppointments(dto));
 	}
 
@@ -77,14 +90,31 @@ public class AppointmentsController {
 		return SuccessReponse.of("Xóa thành công!");
 	}
 
-	@GetMapping("/user/{userId}")
-	@PreAuthorize("hasAnyAuthority('ADMIN','USER','EMPLOYEE')")
-	public SuccessReponse<List<AppointmentsResponseDTO>> getAppointmentByUser(@PathVariable Integer userId,
+	@GetMapping("/me")
+	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<List<AppointmentsResponseDTO>> getMyAppointments(
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsService.getAppointmentByUserPaged(userId,
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsService.getAppointmentByCurrentUser(username,
 				pageable);
 		return SuccessReponse.ofPaged(pagedResult);
+	}
+
+	@PutMapping("/{id}/cancel-user")
+	@PreAuthorize("hasAuthority('USER')")
+	public SuccessReponse<AppointmentsResponseDTO> cancelAppointmentByUser(@PathVariable Integer id) {
+
+		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+		return SuccessReponse.of(appointmentsService.cancelByUser(id, currentUsername));
+	}
+
+	@PutMapping("/{id}/assign-doctor")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> assignDoctor(@PathVariable Integer id,
+			@RequestBody @Valid AppointmentAssignDoctorRequestDTO dto) {
+		return SuccessReponse.of(this.appointmentsService.assignDoctor(id, dto.getDoctorId()));
 	}
 }
