@@ -43,7 +43,7 @@ public class UserController {
 	}
 
 	// GET /api/users/{id} - Lấy theo ID
-	@PreAuthorize("hasAnyAuthority('ADMIN')")
+	@PreAuthorize("hasAnyAuthority('ADMIN','EMPLOYEE')")
 	@GetMapping("/{id}")
 	public SuccessReponse<UserResponseDTO> getUserById(@PathVariable Integer id) {
 		return SuccessReponse.of(this.userService.findById(id));

@@ -47,6 +47,11 @@ public class AuthController {
 		return SuccessReponse.of(this.userService.signUp(user));
 	}
 
+	@PostMapping("/logout")
+	public SuccessReponse<Boolean> logout() {
+		return SuccessReponse.of(true);
+	}
+
 	@PostMapping(path = "/signIn")
 	public SuccessReponse<SignInResponse> signIn(@RequestBody @Valid SignInRequest request) {
 		try {
@@ -56,6 +61,10 @@ public class AuthController {
 			CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 			User user = userRepository.findByUserName(userDetails.getUsername())
 					.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+			if (Boolean.TRUE.equals(user.getIsActive())) {
+				throw new AuthenticationException("User account is inactive") {
+				};
+			}
 
 			String accessToken = jwtUtils.generateToken(userDetails);
 			Date expiredDate = jwtUtils.extractExpiration(accessToken);
@@ -68,7 +77,7 @@ public class AuthController {
 			throw new AuthenticationException("Username or password is incorrect") {
 			};
 		} catch (DisabledException ex) {
-			throw new AuthenticationException("User account is inactive") {
+			throw new AuthenticationException("User account is disabled") {
 			};
 		} catch (LockedException ex) {
 			throw new AuthenticationException("User account is locked") {

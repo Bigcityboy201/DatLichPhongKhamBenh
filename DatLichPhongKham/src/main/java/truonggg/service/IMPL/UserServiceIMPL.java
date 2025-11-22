@@ -177,16 +177,24 @@ public class UserServiceIMPL implements UserService {
 	public UserResponseDTO update(Integer id, UserUpdateRequestDTO dto) {
 		User user = this.userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		// Cập nhật thông tin từ DTO
-		user.setFullName(dto.getFullName());
-		user.setEmail(dto.getEmail());
-		user.setPhone(dto.getPhone());
-		user.setAddress(dto.getAddress());
+		// Update nếu DTO có giá trị (không null)
+		if (dto.getFullName() != null)
+			user.setFullName(dto.getFullName());
+
+		if (dto.getEmail() != null)
+			user.setEmail(dto.getEmail());
+
+		if (dto.getPhone() != null)
+			user.setPhone(dto.getPhone());
+
+		if (dto.getAddress() != null)
+			user.setAddress(dto.getAddress());
+
 		if (dto.getDateOfBirth() != null)
 			user.setDateOfBirth(dto.getDateOfBirth());
-		if (dto.getIsActive() != null) {
+
+		if (dto.getIsActive() != null)
 			user.setActive(dto.getIsActive());
-		}
 
 		user = this.userRepository.save(user);
 		return this.userMapper.toDTO(user);
