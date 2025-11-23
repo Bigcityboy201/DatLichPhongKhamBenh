@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import truonggg.Model.Doctors;
+import truonggg.Model.User;
 
 @Repository
 public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
@@ -27,4 +28,7 @@ public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
 
 	Page<Doctors> findByUserFullNameContainingIgnoreCase(String keyword, Pageable pageable);
 
+	Optional<Doctors> findByUser(final User user);
+
+	Optional<Doctors> findByUserUserId(Integer userId);
 }

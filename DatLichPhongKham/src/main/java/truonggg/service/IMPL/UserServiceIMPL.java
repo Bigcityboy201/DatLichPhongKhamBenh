@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
+import truonggg.Model.Doctors;
 import truonggg.Model.Role;
 import truonggg.Model.User;
 import truonggg.constant.SecurityRole;
@@ -22,6 +23,7 @@ import truonggg.dto.requestDTO.AssignRoleRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
 import truonggg.mapper.UserMapper;
+import truonggg.repo.DoctorsRepository;
 import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
@@ -34,6 +36,7 @@ public class UserServiceIMPL implements UserService {
 	private final UserMapper userMapper;
 	private final PasswordEncoder passwordEncoder;
 	private final RoleRepository roleRepository;
+	private final DoctorsRepository doctorsRepository;
 
 	@Override
 	@Transactional
@@ -113,19 +116,36 @@ public class UserServiceIMPL implements UserService {
 	@Override
 	@Transactional
 	public UserResponseDTO assignRole(AssignRoleRequestDTO dto) {
-		// Kiểm tra user tồn tại
-		User user = this.userRepository.findById(dto.getUserId())
+
+		// Lấy user
+		User user = userRepository.findById(dto.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		// Kiểm tra role tồn tại
-		Role role = this.roleRepository.findById(dto.getRoleId())
+		// Lấy role
+		Role role = roleRepository.findById(dto.getRoleId())
 				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
-		// Assign role mới (replace role cũ)
+		// Gán role mới
 		user.setRole(role);
-		user = this.userRepository.save(user);
+		user = userRepository.save(user);
 
-		return this.userMapper.toDTO(user);
+		final User finalUser = user;
+
+		if (role.getRoleName().equalsIgnoreCase("DOCTOR")) {
+			doctorsRepository.findByUser(finalUser).orElseGet(() -> {
+				Doctors doctor = new Doctors();
+				doctor.setUser(finalUser); // dùng finalUser
+				doctor.setDescription(null);
+				doctor.setExperienceYears(0);
+				doctor.setIsActive(false);
+				doctor.setDepartments(null);
+				doctor.setIsFeatured(false);
+				doctor.setImageUrl(null);
+				return doctorsRepository.save(doctor);
+			});
+		}
+
+		return userMapper.toDTO(user);
 	}
 
 	@Override
