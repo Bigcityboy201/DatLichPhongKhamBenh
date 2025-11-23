@@ -1,5 +1,6 @@
 package truonggg.service.IMPL;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +22,7 @@ import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.mapper.AppointmentsMapper;
 import truonggg.repo.AppointmentsRepository;
 import truonggg.repo.DoctorsRepository;
+import truonggg.repo.SchedulesRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.service.AppointmentsService;
@@ -33,8 +35,11 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 	private final DoctorsRepository doctorsRepository;
 	private final AppointmentsMapper appointmentsMapper;
 
+	private final SchedulesRepository schedulesRepository;
+
 	@Override
 	public AppointmentsResponseDTO createAppointments(AppointmentsRequestDTO dto) {
+		// Lấy user
 		User user = this.userRepository.findById(dto.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
@@ -43,28 +48,33 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 			doctors = this.doctorsRepository.findById(dto.getDoctorId())
 					.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 
-			boolean doctorBusy = this.appointmentsRepository
-					.existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(doctors.getId(),
-							dto.getAppointmentDateTime(), Appointments_Enum.CANCELLED);
+			LocalDateTime appointmentTime = dto.getAppointmentDateTime();
+
+			// Kiểm tra bác sĩ có lịch làm vào thời gian đó không
+			boolean hasSchedule = this.schedulesRepository
+					.existsByDoctors_IdAndStartAtLessThanEqualAndEndAtGreaterThanEqual(doctors.getId(), appointmentTime,
+							appointmentTime);
+
+			if (!hasSchedule) {
+				throw new IllegalArgumentException("Bác sĩ không có ca làm vào thời gian này");
+			}
+
+			// Kiểm tra bác sĩ có bận không
+			boolean doctorBusy = this.appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(
+					doctors.getId(), appointmentTime, Appointments_Enum.CANCELLED);
 			if (doctorBusy) {
 				throw new IllegalArgumentException("Bác sĩ đã có lịch hẹn tại khung giờ này");
 			}
 		}
 
-		Appointments appointments = this.appointmentsMapper.toEntity(dto);
-		appointments.setUser(user);
+		// Tạo lịch hẹn
+		Appointments appointment = new Appointments();
+		appointment.setUser(user);
+		appointment.setDoctors(doctors);
+		appointment.setAppointmentDateTime(dto.getAppointmentDateTime());
+		appointment.setStatus(Appointments_Enum.PENDING);
 
-		if (doctors != null) {
-			appointments.setDoctors(doctors);
-			if (appointments.getStatus() == null || appointments.getStatus() == Appointments_Enum.PENDING) {
-				appointments.setStatus(Appointments_Enum.CONFIRMED);
-			}
-		} else {
-			appointments.setDoctors(null);
-			appointments.setStatus(Appointments_Enum.PENDING);
-		}
-
-		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(appointments));
+		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(appointment));
 	}
 
 	@Override
@@ -191,9 +201,8 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 			return this.appointmentsMapper.toDTO(appointment);
 		}
 
-		boolean doctorBusy = this.appointmentsRepository
-				.existsByDoctors_IdAndAppointmentDateTimeAndStatusNotAndIdNot(doctorId,
-						appointment.getAppointmentDateTime(), Appointments_Enum.CANCELLED, appointment.getId());
+		boolean doctorBusy = this.appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNotAndIdNot(
+				doctorId, appointment.getAppointmentDateTime(), Appointments_Enum.CANCELLED, appointment.getId());
 		if (doctorBusy) {
 			throw new IllegalArgumentException("Bác sĩ đã có lịch hẹn tại khung giờ này");
 		}
