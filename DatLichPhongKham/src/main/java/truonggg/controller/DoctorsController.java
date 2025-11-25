@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
+import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.DoctorUpdateRequestDTO;
 import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DoctorsRequestDTO;
@@ -113,5 +116,32 @@ public class DoctorsController {
 		Pageable pageable = PageRequest.of(page, size);
 		PagedResult<DoctorsReponseDTO> pagedResult = doctorsService.searchDoctors(keyword, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
+	}
+
+	// GET /api/doctors/me - Xem profile bác sĩ đang đăng nhập
+	@GetMapping("/me")
+	@PreAuthorize("hasAnyAuthority('DOCTOR')")
+	public SuccessReponse<DoctorsReponseDTO> getMyProfile() {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		return SuccessReponse.of(this.doctorsService.findByUserName(username));
+	}
+
+	// GET /api/doctors/me/appointments - Xem cuộc hẹn của bác sĩ đang đăng nhập
+	@GetMapping("/me/appointments")
+	@PreAuthorize("hasAnyAuthority('DOCTOR')")
+	public SuccessReponse<?> getMyAppointments(@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<AppointmentsResponseDTO> pagedResult = doctorsService.getMyAppointments(username, pageable);
+		return SuccessReponse.ofPaged(pagedResult);
+	}
+
+	// GET /api/doctors/me/schedules - Xem lịch làm việc của bác sĩ đang đăng nhập
+	@GetMapping("/me/schedules")
+	@PreAuthorize("hasAnyAuthority('DOCTOR')")
+	public SuccessReponse<List<SchedulesReponseDTO>> getMySchedules() {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		return SuccessReponse.of(this.doctorsService.getMySchedules(username));
 	}
 }

@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.springframework.data.domain.Pageable;
 
+import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
+import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.DoctorUpdateRequestDTO;
 import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DoctorsRequestDTO;
@@ -31,4 +33,11 @@ public interface DoctorsService {
 	boolean deleteManually(Integer id);
 
 	PagedResult<DoctorsReponseDTO> searchDoctors(String keyword, Pageable pageable);
+
+	// Các method cho bác sĩ đang đăng nhập
+	DoctorsReponseDTO findByUserName(String userName);
+
+	PagedResult<AppointmentsResponseDTO> getMyAppointments(String userName, Pageable pageable);
+
+	List<SchedulesReponseDTO> getMySchedules(String userName);
 }

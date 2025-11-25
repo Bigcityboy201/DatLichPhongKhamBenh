@@ -15,6 +15,8 @@ public interface AppointmentsRepository extends JpaRepository<Appointments, Inte
 
 	Page<Appointments> findByUser_UserId(Integer userId, Pageable pageable);
 
+	Page<Appointments> findByDoctors_Id(Integer doctorId, Pageable pageable);
+
 	boolean existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(Integer doctorId, LocalDateTime appointmentDateTime,
 			Appointments_Enum status);
 

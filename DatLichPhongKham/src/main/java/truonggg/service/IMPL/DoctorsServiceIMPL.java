@@ -19,8 +19,14 @@ import truonggg.dto.requestDTO.DoctorUpdateRequestDTO;
 import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DoctorsRequestDTO;
 import truonggg.mapper.DoctorsMapper;
+import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.SchedulesReponseDTO;
+import truonggg.mapper.AppointmentsMapper;
+import truonggg.mapper.SchedulesMapper;
+import truonggg.repo.AppointmentsRepository;
 import truonggg.repo.DepartmentsRepository;
 import truonggg.repo.DoctorsRepository;
+import truonggg.repo.SchedulesRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.service.DoctorsService;
@@ -36,6 +42,10 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	private final UserRepository userRepository;
 	private final DepartmentsRepository departmentsRepository;
 	private final UserService userService;
+	private final AppointmentsRepository appointmentsRepository;
+	private final AppointmentsMapper appointmentsMapper;
+	private final SchedulesRepository schedulesRepository;
+	private final SchedulesMapper schedulesMapper;
 
 	@Override
 	public List<DoctorsReponseDTO> getAll(Boolean featured) {
@@ -241,5 +251,71 @@ public class DoctorsServiceIMPL implements DoctorsService {
 				.pageSize(doctorsPage.getSize()).build();
 
 		return pagedResult;
+	}
+
+	@Override
+	public DoctorsReponseDTO findByUserName(String userName) {
+		// Tìm user theo username
+		User user = this.userRepository.findByUserName(userName)
+				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+		
+		// Tìm doctor theo user
+		Doctors doctor = this.doctorsRepository.findByUser(user)
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found for this user"));
+		
+		// Lấy doctor với schedules
+		doctor = this.doctorsRepository.findByIdWithSchedules(doctor.getId())
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+		
+		return this.doctorsMapper.toDTO(doctor);
+	}
+
+	@Override
+	public PagedResult<AppointmentsResponseDTO> getMyAppointments(String userName, Pageable pageable) {
+		// Tìm user theo username
+		User user = this.userRepository.findByUserName(userName)
+				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+		
+		// Tìm doctor theo user
+		Doctors doctor = this.doctorsRepository.findByUser(user)
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found for this user"));
+		
+		// Lấy appointments theo doctor với phân trang
+		Page<truonggg.Model.Appointments> appointmentsPage = 
+				this.appointmentsRepository.findByDoctors_Id(doctor.getId(), pageable);
+		
+		// Chuyển đổi sang DTO
+		List<AppointmentsResponseDTO> dtoList = appointmentsPage.stream()
+				.map(appointmentsMapper::toDTO)
+				.collect(Collectors.toList());
+		
+		// Trả về PagedResult
+		PagedResult<AppointmentsResponseDTO> pagedResult = PagedResult.<AppointmentsResponseDTO>builder()
+				.content(dtoList)
+				.totalElements((int) appointmentsPage.getTotalElements())
+				.totalPages(appointmentsPage.getTotalPages())
+				.currentPage(appointmentsPage.getNumber())
+				.pageSize(appointmentsPage.getSize())
+				.build();
+		
+		return pagedResult;
+	}
+
+	@Override
+	public List<SchedulesReponseDTO> getMySchedules(String userName) {
+		// Tìm user theo username
+		User user = this.userRepository.findByUserName(userName)
+				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+		
+		// Tìm doctor theo user
+		Doctors doctor = this.doctorsRepository.findByUser(user)
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found for this user"));
+		
+		// Lấy schedules theo doctor
+		List<truonggg.Model.Schedules> schedules = 
+				this.schedulesRepository.findByDoctorsId(doctor.getId());
+		
+		// Chuyển đổi sang DTO
+		return this.schedulesMapper.toDTOList(schedules);
 	}
 }
