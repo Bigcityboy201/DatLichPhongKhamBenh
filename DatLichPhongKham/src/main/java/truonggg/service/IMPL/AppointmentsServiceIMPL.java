@@ -72,6 +72,7 @@ public class AppointmentsServiceIMPL implements AppointmentsService {
 		appointment.setUser(user);
 		appointment.setDoctors(doctors);
 		appointment.setAppointmentDateTime(dto.getAppointmentDateTime());
+		appointment.setNote(dto.getNote());
 		appointment.setStatus(Appointments_Enum.PENDING);
 
 		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(appointment));
