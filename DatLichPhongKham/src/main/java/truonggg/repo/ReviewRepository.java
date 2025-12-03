@@ -2,6 +2,8 @@ package truonggg.repo;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,4 +12,8 @@ import truonggg.Model.review;
 @Repository
 public interface ReviewRepository extends JpaRepository<review, Integer> {
 	List<review> findByDoctorsId(Integer doctorId);
+
+	Page<review> findByDoctorsId(Integer doctorId, Pageable pageable);
+
+	Page<review> findByUser_UserId(Integer userId, Pageable pageable);
 }

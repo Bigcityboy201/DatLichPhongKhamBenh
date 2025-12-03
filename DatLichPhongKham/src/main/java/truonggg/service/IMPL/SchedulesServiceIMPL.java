@@ -48,9 +48,19 @@ public class SchedulesServiceIMPL implements SchedulesService {
 	}
 
 	@Override
-	public List<SchedulesReponseDTO> getByDoctorId(Integer doctorId) {
-		List<Schedules> schedules = this.schedulesRepository.findByDoctorsId(doctorId);
-		return this.schedulesMapper.toDTOList(schedules);
+	public PagedResult<SchedulesReponseDTO> getByDoctorId(Integer doctorId, Pageable pageable) {
+		Page<Schedules> schedulesPage = this.schedulesRepository.findByDoctorsId(doctorId, pageable);
+		List<SchedulesReponseDTO> dtoList = schedulesPage.stream()
+				.map(schedulesMapper::toDTO)
+				.collect(Collectors.toList());
+		
+		return PagedResult.<SchedulesReponseDTO>builder()
+				.content(dtoList)
+				.totalElements((int) schedulesPage.getTotalElements())
+				.totalPages(schedulesPage.getTotalPages())
+				.currentPage(schedulesPage.getNumber())
+				.pageSize(schedulesPage.getSize())
+				.build();
 	}
 
 	@Override

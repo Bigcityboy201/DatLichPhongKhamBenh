@@ -1,7 +1,10 @@
 package truonggg.service.IMPL;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -14,6 +17,7 @@ import truonggg.dto.requestDTO.RoleUpdateRequestDTO;
 import truonggg.mapper.RoleMapper;
 import truonggg.repo.RoleRepository;
 import truonggg.service.RoleService;
+import truonggg.reponse.PagedResult;
 
 @Service
 @RequiredArgsConstructor
@@ -34,14 +38,22 @@ public class RoleServiceIMPL implements RoleService {
 	}
 
 	@Override
-	public List<RoleResponseDTO> getAll() {
-		List<Role> roles = this.roleRepository.findAll();
-		return roles.stream().map(role -> {
+	public PagedResult<RoleResponseDTO> getAll(Pageable pageable) {
+		Page<Role> rolesPage = this.roleRepository.findAll(pageable);
+		List<RoleResponseDTO> dtoList = rolesPage.stream().map(role -> {
 			RoleResponseDTO dto = roleMapper.toDTO(role);
 			dto.setDescription(role.getDescription());
 			dto.setIsActive(role.getIsActive());
 			return dto;
-		}).toList();
+		}).collect(Collectors.toList());
+		
+		return PagedResult.<RoleResponseDTO>builder()
+				.content(dtoList)
+				.totalElements((int) rolesPage.getTotalElements())
+				.totalPages(rolesPage.getTotalPages())
+				.currentPage(rolesPage.getNumber())
+				.pageSize(rolesPage.getSize())
+				.build();
 	}
 
 	@Override

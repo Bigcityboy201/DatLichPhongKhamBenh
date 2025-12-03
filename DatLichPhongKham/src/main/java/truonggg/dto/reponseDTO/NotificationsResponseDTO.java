@@ -14,6 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class NotificationsResponseDTO {
+
 	private Integer id;
 	private String message;
 	private Boolean isRead;

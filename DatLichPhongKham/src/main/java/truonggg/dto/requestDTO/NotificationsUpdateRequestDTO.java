@@ -15,9 +15,6 @@ import lombok.Setter;
 @Builder
 public class NotificationsUpdateRequestDTO {
 
-	@NotNull(message = "Notification ID is required")
-	private Integer id;
-
 	private Integer userId;
 
 	@Size(max = 1000, message = "Message cannot exceed 1000 characters")

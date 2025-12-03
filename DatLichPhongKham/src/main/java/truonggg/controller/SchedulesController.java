@@ -1,7 +1,5 @@
 package truonggg.controller;
 
-import java.util.List;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +31,7 @@ public class SchedulesController {
 
 	// GET /api/schedules - Lấy tất cả (phân trang)
 	@GetMapping
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<?> getAllSchedules(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
@@ -42,20 +41,24 @@ public class SchedulesController {
 
 	// GET /api/schedules/doctor/{doctorId} - Lấy theo Doctor ID
 	@GetMapping("/doctor/{doctorId}")
-	public SuccessReponse<List<SchedulesReponseDTO>> getSchedulesByDoctorId(@PathVariable Integer doctorId) {
-		return SuccessReponse.of(this.schedulesService.getByDoctorId(doctorId));
+	public SuccessReponse<?> getSchedulesByDoctorId(@PathVariable Integer doctorId,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<SchedulesReponseDTO> pagedResult = this.schedulesService.getByDoctorId(doctorId, pageable);
+		return SuccessReponse.ofPaged(pagedResult);
 	}
 
 	// POST /api/schedules - Tạo mới
 	@PostMapping
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<SchedulesReponseDTO> createSchedule(@RequestBody @Valid SchedulesRequestDTO dto) {
 		return SuccessReponse.of(this.schedulesService.save(dto));
 	}
 
 	// PUT /api/schedules - Cập nhật
 	@PutMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<SchedulesReponseDTO> updateSchedule(@RequestBody @Valid SchedulesUpdateRequestDTO dto,
 			@PathVariable Integer id) {
 		return SuccessReponse.of(this.schedulesService.update(id, dto));
@@ -63,7 +66,7 @@ public class SchedulesController {
 
 	// DELETE /api/schedules - Soft delete
 	@PutMapping("/status/{id}")
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<SchedulesReponseDTO> deleteSchedule(@RequestBody @Valid SchedulesUpdateRequestDTO dto,
 			@PathVariable Integer id) {
 		return SuccessReponse.of(this.schedulesService.delete(id, dto));
@@ -71,7 +74,7 @@ public class SchedulesController {
 
 	// DELETE /api/schedules/{id} - Hard delete
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('ADMIN')")
+	@PreAuthorize("hasAnyAuthority('ADMIN','EMPLOYEE')")
 	public SuccessReponse<String> hardDeleteSchedule(@PathVariable Integer id) {
 		this.schedulesService.delete(id);
 		return SuccessReponse.of("Xóa thành công lịch làm việc");

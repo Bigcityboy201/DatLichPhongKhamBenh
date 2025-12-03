@@ -27,11 +27,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
-	private static final String[] WHITE_LIST = { "/auth/**",
-			// Public endpoints cho frontend
-			"/api/doctors", "/api/doctors/*", "/api/doctors/department", "/api/departments", "/api/appointments",
-			"/api/siteinfos", "/api/reviews/doctor/**", "/api/schedules", "/api/departments/search",
-			"/api/schedules/doctor/**,/api/doctors/search", "/api/reviews" };
+	private static final String[] WHITE_LIST = { "/auth/**" };
 
 	private final JwtAuthenticationFilter jwtRequestFilter;
 	private final UserDetailsService userDetailsService;
@@ -91,74 +87,106 @@ public class SecurityConfiguration {
 
 		http.authorizeHttpRequests(auths -> auths
 				// Public endpoints - không cần xác thực
-				.requestMatchers(WHITE_LIST).permitAll()
+				.requestMatchers(WHITE_LIST).permitAll().requestMatchers(HttpMethod.POST, "/api/payments/momo-callback")
+				.permitAll() // MoMo callback
+				.requestMatchers(HttpMethod.GET, "/api/doctors/me", "/api/doctors/me/**").hasAuthority("DOCTOR")
+				.requestMatchers(HttpMethod.GET, "/api/doctors", "/api/doctors/*", "/api/doctors/department",
+						"/api/doctors/search")
+				.permitAll().requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/search").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/siteinfos").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/schedules/doctor/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/reviews/*", "/api/reviews/doctor/**").permitAll()
 
 				// ADMIN only - quản lý hệ thống
-				.requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN")
+				.requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
-				// EMPLOYEE + ADMIN - quản lý khoa và thông tin site
+				// User management (theo @PreAuthorize trong UserController)
+				.requestMatchers(HttpMethod.GET, "/api/users").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.GET, "/api/users/me").hasAnyAuthority("USER", "EMPLOYEE", "ADMIN", "DOCTOR")
+				.requestMatchers(HttpMethod.GET, "/api/users/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.POST, "/api/users").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.PATCH, "/api/users/*/status").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.PATCH, "/api/users/*").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.POST, "/api/users/assign-role").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/users/manually/*").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/users/profile").hasAnyAuthority("USER", "EMPLOYEE", "ADMIN")
+
+				// Doctor management
+				.requestMatchers(HttpMethod.POST, "/api/doctors").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/doctors/*/profile").hasAnyAuthority("DOCTOR", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/doctors/*").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.PATCH, "/api/doctors/*").hasAuthority("ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/doctors/*").hasAuthority("ADMIN")
+
+				// Schedule management
+				.requestMatchers(HttpMethod.GET, "/api/schedules").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.POST, "/api/schedules").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/schedules/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/schedules/status/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/schedules/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
+
+				// Department management
 				.requestMatchers(HttpMethod.POST, "/api/departments").hasAnyAuthority("EMPLOYEE", "ADMIN")
-				.requestMatchers(HttpMethod.PUT, "/api/departments").hasAnyAuthority("EMPLOYEE", "ADMIN")
-				.requestMatchers(HttpMethod.DELETE, "/api/departments/**").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/departments/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/departments/status/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/departments/manually/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
+
+				// Site info management
 				.requestMatchers(HttpMethod.POST, "/api/siteinfos").hasAnyAuthority("EMPLOYEE", "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/siteinfos").hasAnyAuthority("EMPLOYEE", "ADMIN")
-				.requestMatchers(HttpMethod.DELETE, "/api/siteinfos/**").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/siteinfos").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/siteinfos/*").hasAnyAuthority("EMPLOYEE", "ADMIN")
 
-				// DOCTOR + ADMIN - quản lý bác sĩ và lịch hẹn
-				.requestMatchers(HttpMethod.POST, "/api/doctors").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.PUT, "/api/doctors/**").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.DELETE, "/api/doctors/**").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.PUT, "/api/appointments").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.DELETE, "/api/appointments/**").hasAnyAuthority("DOCTOR", "ADMIN")
-				// GET /api/schedules/doctor/** đã được permitAll trong WHITE_LIST
-				.requestMatchers(HttpMethod.POST, "/api/schedules").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.PUT, "/api/schedules/**").hasAnyAuthority("DOCTOR", "ADMIN")
-				.requestMatchers(HttpMethod.DELETE, "/api/schedules/**").hasAnyAuthority("DOCTOR", "ADMIN")
-
-				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông tin cơ bản
-				.requestMatchers(HttpMethod.GET, "/api/appointments/{id}")
+				// Appointments
+				.requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyAuthority("EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.GET, "/api/appointments/*")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.POST, "/api/appointments").hasAnyAuthority("USER", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/appointments/*/assign-doctor")
+				.hasAnyAuthority("EMPLOYEE", "ADMIN").requestMatchers(HttpMethod.PUT, "/api/appointments/*/cancel-user")
+				.hasAuthority("USER").requestMatchers(HttpMethod.PUT, "/api/appointments/*")
+				.hasAnyAuthority("EMPLOYEE", "ADMIN").requestMatchers(HttpMethod.PUT, "/api/appointments/*/status")
+				.hasAnyAuthority("EMPLOYEE", "ADMIN").requestMatchers(HttpMethod.DELETE, "/api/appointments/*")
+				.hasAnyAuthority("EMPLOYEE", "ADMIN")
 
 				// NOTIFICATIONS - Bảo mật các API thông báo
-				// ADMIN + EMPLOYEE - xem tất cả thông báo
+				// Pattern cụ thể trước (me endpoints cho USER/DOCTOR)
+				.requestMatchers(HttpMethod.GET, "/api/notifications/me")
+				.hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.GET, "/api/notifications/me/unread")
+				.hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.PUT, "/api/notifications/me/*/read")
+				.hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.DELETE, "/api/notifications/me/*")
+				.hasAnyAuthority("USER", "DOCTOR")
+				// Pattern cụ thể trước (user endpoints)
+				.requestMatchers(HttpMethod.GET, "/api/notifications/user/*")
+				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.GET, "/api/notifications/user/*/unread")
+				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+				// Admin/Employee endpoints
 				.requestMatchers(HttpMethod.GET, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
-				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông báo theo ID (cần kiểm tra
-				// ownership trong service)
-				.requestMatchers(HttpMethod.GET, "/api/notifications/{id}")
-				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
-				// USER + DOCTOR + EMPLOYEE + ADMIN - xem thông báo của user (cần kiểm tra
-				// userId = authenticated user)
-				.requestMatchers(HttpMethod.GET, "/api/notifications/user/{userId}")
-				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
-				.requestMatchers(HttpMethod.GET, "/api/notifications/user/{userId}/unread")
-				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
-				// ADMIN + EMPLOYEE - tạo và quản lý thông báo
+				.requestMatchers(HttpMethod.GET, "/api/notifications/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
 				.requestMatchers(HttpMethod.POST, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
 				.requestMatchers(HttpMethod.PUT, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
-				// USER + DOCTOR + EMPLOYEE + ADMIN - đánh dấu đã đọc (cần kiểm tra ownership)
-				.requestMatchers(HttpMethod.PUT, "/api/notifications/{id}/read")
-				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
-				// ADMIN + EMPLOYEE - xóa thông báo
+				.requestMatchers(HttpMethod.PUT, "/api/notifications/*/read").hasAnyAuthority("ADMIN", "EMPLOYEE")
 				.requestMatchers(HttpMethod.DELETE, "/api/notifications").hasAnyAuthority("ADMIN", "EMPLOYEE")
-				.requestMatchers(HttpMethod.DELETE, "/api/notifications/{id}").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.DELETE, "/api/notifications/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
 
 				// REVIEWS - Bảo mật các API đánh giá
-				// Public - xem đánh giá theo doctor (đã có trong WHITE_LIST:
-				// /api/reviews/doctor/**)
-				// ADMIN + EMPLOYEE - xem tất cả đánh giá
-				.requestMatchers(HttpMethod.GET, "/api/reviews").hasAnyAuthority("ADMIN", "EMPLOYEE")
-				// Public - xem đánh giá theo ID (để hiển thị chi tiết)
-				.requestMatchers(HttpMethod.GET, "/api/reviews/{id}").permitAll()
-				// USER - tạo đánh giá mới
-				.requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyAuthority("USER", "ADMIN")
-				// USER + ADMIN + EMPLOYEE - cập nhật đánh giá (cần kiểm tra ownership trong
-				// service)
-				.requestMatchers(HttpMethod.PUT, "/api/reviews/{id}").hasAnyAuthority("USER", "ADMIN", "EMPLOYEE")
-				// ADMIN + EMPLOYEE - soft delete (thay đổi status)
-				.requestMatchers(HttpMethod.PUT, "/api/reviews/status/{id}").hasAnyAuthority("ADMIN", "EMPLOYEE")
-				// ADMIN + EMPLOYEE - hard delete
-				.requestMatchers(HttpMethod.DELETE, "/api/reviews/{id}").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.GET, "/api/reviews").permitAll()
+				// .requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyAuthority("USER",
+				// "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/reviews/me/**")
+				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.DELETE, "/api/reviews/me/**")
+				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/reviews/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.PUT, "/api/reviews/status/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
+				.requestMatchers(HttpMethod.DELETE, "/api/reviews/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
+
+				// Roles
+				.requestMatchers("/api/roles/**").hasAuthority("ADMIN")
 
 				// Tất cả request khác cần xác thực
 				.anyRequest().authenticated())

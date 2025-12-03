@@ -2,7 +2,11 @@ package truonggg.service.IMPL;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -12,11 +16,14 @@ import truonggg.Model.User;
 import truonggg.Model.review;
 import truonggg.dto.reponseDTO.ReviewResponseDTO;
 import truonggg.dto.requestDTO.ReviewRequestDTO;
+import truonggg.dto.requestDTO.ReviewSelfRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
+import truonggg.dto.requestDTO.ReviewUpdateRequestDTO_USER;
 import truonggg.mapper.ReviewMapper;
 import truonggg.repo.DoctorsRepository;
 import truonggg.repo.ReviewRepository;
 import truonggg.repo.UserRepository;
+import truonggg.reponse.PagedResult;
 import truonggg.service.ReviewService;
 
 @Service
@@ -40,33 +47,47 @@ public class ReviewServiceIMPL implements ReviewService {
 		review.setDoctors(doctors);
 		review.setCreateAt(new Date());
 		review = this.reviewRepository.save(review);
-		ReviewResponseDTO response = this.reviewMapper.toDTO(review);
-		response.setActive(review.getIsActive());
-		return response;
+		return toResponse(review);
 	}
 
 	@Override
-	public List<ReviewResponseDTO> getAll() {
-		List<review> reviews = this.reviewRepository.findAll();
-		return reviews.stream().map(review -> {
-			ReviewResponseDTO dto = reviewMapper.toDTO(review);
-			dto.setActive(review.getIsActive());
-			return dto;
-		}).toList();
+	public ReviewResponseDTO createReviewForCurrentUser(ReviewSelfRequestDTO dto, String userName) {
+		User user = getUserByUserName(userName);
+		Doctors doctors = this.doctorsRepository.findById(dto.getDoctorId())
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+
+		review review = this.reviewMapper.toEntity(dto);
+		review.setUser(user);
+		review.setDoctors(doctors);
+		review.setCreateAt(new Date());
+
+		return toResponse(this.reviewRepository.save(review));
 	}
 
 	@Override
-	public List<ReviewResponseDTO> getByDoctorId(Integer doctorId) {
-		return reviewRepository.findByDoctorsId(doctorId).stream().map(reviewMapper::toDTO).toList();
+	public PagedResult<ReviewResponseDTO> getAll(Pageable pageable) {
+		Page<review> reviewsPage = this.reviewRepository.findAll(pageable);
+		return toPagedResult(reviewsPage);
+	}
+
+	@Override
+	public PagedResult<ReviewResponseDTO> getByDoctorId(Integer doctorId, Pageable pageable) {
+		Page<review> reviewsPage = reviewRepository.findByDoctorsId(doctorId, pageable);
+		return toPagedResult(reviewsPage);
+	}
+
+	@Override
+	public PagedResult<ReviewResponseDTO> getByCurrentUser(String userName, Pageable pageable) {
+		User user = getUserByUserName(userName);
+		Page<review> reviewsPage = reviewRepository.findByUser_UserId(user.getUserId(), pageable);
+		return toPagedResult(reviewsPage);
 	}
 
 	@Override
 	public ReviewResponseDTO findById(Integer id) {
 		review review = this.reviewRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
-		ReviewResponseDTO dto = this.reviewMapper.toDTO(review);
-		dto.setActive(review.getIsActive());
-		return dto;
+		return toResponse(review);
 	}
 
 	@Override
@@ -95,10 +116,29 @@ public class ReviewServiceIMPL implements ReviewService {
 			foundReview.setDoctors(doctors);
 		}
 
-		review savedReview = this.reviewRepository.save(foundReview);
-		ReviewResponseDTO response = this.reviewMapper.toDTO(savedReview);
-		response.setActive(savedReview.getIsActive());
-		return response;
+		return toResponse(this.reviewRepository.save(foundReview));
+	}
+
+	@Override
+	public ReviewResponseDTO updateByCurrentUser(Integer id, ReviewUpdateRequestDTO_USER dto, String userName) {
+		review foundReview = this.reviewRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
+
+		// Chỉ cho phép user sở hữu review được sửa
+		if (!foundReview.getUser().getUserName().equals(userName)) {
+			throw new AccessDeniedException("You cannot modify this review");
+		}
+
+		if (dto.getRating() != null) {
+			foundReview.setRating(dto.getRating());
+		}
+		if (dto.getComment() != null) {
+			foundReview.setComment(dto.getComment());
+		}
+
+		// Không cho phép đổi user / doctor trong API tự sửa review của mình
+
+		return toResponse(this.reviewRepository.save(foundReview));
 	}
 
 	@Override
@@ -109,7 +149,8 @@ public class ReviewServiceIMPL implements ReviewService {
 		if (dto.getActive() != null) {
 			foundReview.setIsActive(dto.getActive());
 		}
-		return this.reviewMapper.toDTO(foundReview);
+
+		return toResponse(this.reviewRepository.save(foundReview));
 	}
 
 	@Override
@@ -119,5 +160,37 @@ public class ReviewServiceIMPL implements ReviewService {
 
 		this.reviewRepository.delete(foundReview);
 		return true;
+	}
+
+	@Override
+	public ReviewResponseDTO softDeleteByCurrentUser(Integer id, String userName) {
+		review foundReview = this.reviewRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
+
+		if (!foundReview.getUser().getUserName().equals(userName)) {
+			throw new AccessDeniedException("You cannot modify this review");
+		}
+
+		foundReview.setIsActive(true);
+		return toResponse(this.reviewRepository.save(foundReview));
+	}
+
+	private ReviewResponseDTO toResponse(review review) {
+		ReviewResponseDTO dto = this.reviewMapper.toDTO(review);
+		dto.setActive(review.getIsActive());
+		return dto;
+	}
+
+	private PagedResult<ReviewResponseDTO> toPagedResult(Page<review> reviewsPage) {
+		List<ReviewResponseDTO> dtoList = reviewsPage.stream().map(this::toResponse).collect(Collectors.toList());
+
+		return PagedResult.<ReviewResponseDTO>builder().content(dtoList)
+				.totalElements((int) reviewsPage.getTotalElements()).totalPages(reviewsPage.getTotalPages())
+				.currentPage(reviewsPage.getNumber()).pageSize(reviewsPage.getSize()).build();
+	}
+
+	private User getUserByUserName(String userName) {
+		return this.userRepository.findByUserName(userName)
+				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 	}
 }

@@ -15,7 +15,7 @@ public interface SchedulesService {
 
 	PagedResult<SchedulesReponseDTO> getAllPaged(Pageable pageable);
 
-	List<SchedulesReponseDTO> getByDoctorId(Integer doctorId);
+	PagedResult<SchedulesReponseDTO> getByDoctorId(Integer doctorId, Pageable pageable);
 
 	SchedulesReponseDTO save(final SchedulesRequestDTO dto);
 

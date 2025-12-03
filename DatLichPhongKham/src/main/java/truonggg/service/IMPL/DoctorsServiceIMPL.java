@@ -302,7 +302,7 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	}
 
 	@Override
-	public List<SchedulesReponseDTO> getMySchedules(String userName) {
+	public PagedResult<SchedulesReponseDTO> getMySchedules(String userName, Pageable pageable) {
 		// Tìm user theo username
 		User user = this.userRepository.findByUserName(userName)
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
@@ -311,11 +311,20 @@ public class DoctorsServiceIMPL implements DoctorsService {
 		Doctors doctor = this.doctorsRepository.findByUser(user)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found for this user"));
 		
-		// Lấy schedules theo doctor
-		List<truonggg.Model.Schedules> schedules = 
-				this.schedulesRepository.findByDoctorsId(doctor.getId());
+		// Lấy schedules theo doctor với phân trang
+		Page<truonggg.Model.Schedules> schedulesPage =
+				this.schedulesRepository.findByDoctorsId(doctor.getId(), pageable);
 		
-		// Chuyển đổi sang DTO
-		return this.schedulesMapper.toDTOList(schedules);
+		List<SchedulesReponseDTO> dtoList = schedulesPage.stream()
+				.map(schedulesMapper::toDTO)
+				.collect(Collectors.toList());
+		
+		return PagedResult.<SchedulesReponseDTO>builder()
+				.content(dtoList)
+				.totalElements((int) schedulesPage.getTotalElements())
+				.totalPages(schedulesPage.getTotalPages())
+				.currentPage(schedulesPage.getNumber())
+				.pageSize(schedulesPage.getSize())
+				.build();
 	}
 }

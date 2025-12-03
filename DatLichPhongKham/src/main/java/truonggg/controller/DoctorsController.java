@@ -71,7 +71,7 @@ public class DoctorsController {
 
 	// POST /api/doctors - Tạo mới
 	@PostMapping
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<DoctorsReponseDTO> createDoctor(@RequestBody @Valid final DoctorsRequestDTO dto) {
 		return SuccessReponse.of(this.doctorsService.createDoctor(dto));
 	}
@@ -140,8 +140,11 @@ public class DoctorsController {
 	// GET /api/doctors/me/schedules - Xem lịch làm việc của bác sĩ đang đăng nhập
 	@GetMapping("/me/schedules")
 	@PreAuthorize("hasAnyAuthority('DOCTOR')")
-	public SuccessReponse<List<SchedulesReponseDTO>> getMySchedules() {
+	public SuccessReponse<?> getMySchedules(@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.doctorsService.getMySchedules(username));
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<SchedulesReponseDTO> pagedResult = this.doctorsService.getMySchedules(username, pageable);
+		return SuccessReponse.ofPaged(pagedResult);
 	}
 }

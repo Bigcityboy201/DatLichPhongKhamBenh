@@ -1,17 +1,24 @@
 package truonggg.service;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 import truonggg.dto.reponseDTO.ReviewResponseDTO;
 import truonggg.dto.requestDTO.ReviewRequestDTO;
+import truonggg.dto.requestDTO.ReviewSelfRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
+import truonggg.dto.requestDTO.ReviewUpdateRequestDTO_USER;
+import truonggg.reponse.PagedResult;
 
 public interface ReviewService {
 	ReviewResponseDTO createReview(ReviewRequestDTO dto);
 
-	List<ReviewResponseDTO> getAll();
+	ReviewResponseDTO createReviewForCurrentUser(ReviewSelfRequestDTO dto, String userName);
 
-	List<ReviewResponseDTO> getByDoctorId(Integer doctorId);
+	PagedResult<ReviewResponseDTO> getAll(Pageable pageable);
+
+	PagedResult<ReviewResponseDTO> getByDoctorId(Integer doctorId, Pageable pageable);
+
+	PagedResult<ReviewResponseDTO> getByCurrentUser(String userName, Pageable pageable);
 
 	ReviewResponseDTO findById(Integer id);
 
@@ -20,4 +27,8 @@ public interface ReviewService {
 	ReviewResponseDTO delete(Integer id, ReviewUpdateRequestDTO dto);
 
 	boolean delete(Integer id);
+
+	ReviewResponseDTO updateByCurrentUser(Integer id, ReviewUpdateRequestDTO_USER dto, String userName);
+
+	ReviewResponseDTO softDeleteByCurrentUser(Integer id, String userName);
 }

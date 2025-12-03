@@ -1,0 +1,70 @@
+{
+	"id": "payment-test-environment",
+	"name": "Payment API Test Environment",
+	"values": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true,
+			"description": "JWT token của user - Lấy từ API /api/auth/login"
+		},
+		{
+			"key": "admin_jwt_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true,
+			"description": "JWT token của admin - Lấy từ API /api/auth/login với tài khoản admin"
+		},
+		{
+			"key": "payment_id",
+			"value": "1",
+			"type": "default",
+			"enabled": true,
+			"description": "ID của payment để test các API GET"
+		},
+		{
+			"key": "appointment_id",
+			"value": "1",
+			"type": "default",
+			"enabled": true,
+			"description": "ID của appointment để test tạo payment"
+		},
+		{
+			"key": "username",
+			"value": "",
+			"type": "default",
+			"enabled": true,
+			"description": "Username để đăng nhập (dùng cho request Login - User)"
+		},
+		{
+			"key": "password",
+			"value": "",
+			"type": "secret",
+			"enabled": true,
+			"description": "Password để đăng nhập (dùng cho request Login - User)"
+		},
+		{
+			"key": "admin_username",
+			"value": "quangtruongngo2012004",
+			"type": "default",
+			"enabled": true,
+			"description": "Username của admin (mặc định từ application.properties)"
+		},
+		{
+			"key": "admin_password",
+			"value": "quangtruong1",
+			"type": "secret",
+			"enabled": true,
+			"description": "Password của admin (mặc định từ application.properties)"
+		}
+	],
+	"_postman_variable_scope": "environment"
+}
+

@@ -86,14 +86,14 @@ public class UserController {
 	}
 
 	@GetMapping("/me")
-	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('USER','EMPLOYEE', 'ADMIN','DOCTOR')")
 	public SuccessReponse<UserResponseDTO> getMyProfile() {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		return SuccessReponse.of(this.userService.findByUserName(username));
 	}
 
 	@PutMapping("/profile")
-	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('USER', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<UserResponseDTO> updateMyProfile(@RequestBody @Valid UserUpdateRequestDTO dto) {
 		// Lấy username từ token đã được JwtAuthenticationFilter set vào SecurityContext
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();

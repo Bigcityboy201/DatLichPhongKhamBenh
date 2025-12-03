@@ -1,7 +1,8 @@
 package truonggg.service;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
+import truonggg.reponse.PagedResult;
 import truonggg.dto.reponseDTO.RoleResponseDTO;
 import truonggg.dto.requestDTO.RoleDeleteRequestDTO;
 import truonggg.dto.requestDTO.RoleRequestDTO;
@@ -10,7 +11,7 @@ import truonggg.dto.requestDTO.RoleUpdateRequestDTO;
 public interface RoleService {
 	RoleResponseDTO createRole(RoleRequestDTO dto);
 
-	List<RoleResponseDTO> getAll();
+	PagedResult<RoleResponseDTO> getAll(Pageable pageable);
 
 	RoleResponseDTO findById(Integer id);
 

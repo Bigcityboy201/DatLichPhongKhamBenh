@@ -36,7 +36,7 @@ public class AppointmentsController {
 
 	// GET /api/appointments - Lấy tất cả (phân trang)
 	@GetMapping
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('ADMIN','EMPLOYEE')")
 	public SuccessReponse<?> getAllAppointments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
@@ -69,7 +69,7 @@ public class AppointmentsController {
 
 	// PUT /api/appointments - Cập nhật
 	@PutMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> updateAppointment(@PathVariable Integer id,
 			@RequestBody @Valid AppointmentsUpdateRequestDTO dto) {
 		return SuccessReponse.of(this.appointmentsService.update(id, dto));
@@ -77,14 +77,14 @@ public class AppointmentsController {
 
 	// DELETE /api/appointments - Soft delete
 	@PutMapping("/{id}/status")
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> deleteAppointment(@PathVariable Integer id) {
 		return SuccessReponse.of(this.appointmentsService.delete(id));
 	}
 
 	// DELETE /api/appointments/{id} - Hard delete
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<String> hardDeleteAppointment(@PathVariable Integer id) {
 		this.appointmentsService.deleteManually(id);
 		return SuccessReponse.of("Xóa thành công!");

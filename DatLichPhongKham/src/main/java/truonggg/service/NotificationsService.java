@@ -1,9 +1,9 @@
 package truonggg.service;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
+import truonggg.reponse.PagedResult;
 import truonggg.dto.reponseDTO.NotificationsResponseDTO;
-import truonggg.dto.requestDTO.NotificationsDeleteRequestDTO;
 import truonggg.dto.requestDTO.NotificationsRequestDTO;
 import truonggg.dto.requestDTO.NotificationsUpdateRequestDTO;
 
@@ -11,19 +11,28 @@ public interface NotificationsService {
 
 	NotificationsResponseDTO createNotification(NotificationsRequestDTO dto);
 
-	List<NotificationsResponseDTO> getAll();
+	PagedResult<NotificationsResponseDTO> getAll(Pageable pageable);
 
-	List<NotificationsResponseDTO> getByUserId(Integer userId);
+	PagedResult<NotificationsResponseDTO> getByUserId(Integer userId, Pageable pageable);
 
-	List<NotificationsResponseDTO> getUnreadByUserId(Integer userId);
+	PagedResult<NotificationsResponseDTO> getUnreadByUserId(Integer userId, Pageable pageable);
 
 	NotificationsResponseDTO findById(Integer id);
 
-	NotificationsResponseDTO update(NotificationsUpdateRequestDTO dto);
+	NotificationsResponseDTO update(Integer id, NotificationsUpdateRequestDTO dto);
 
-	boolean delete(NotificationsDeleteRequestDTO dto);
+	NotificationsResponseDTO delete(Integer id);
 
-	boolean delete(Integer id);
+	boolean hardDelete(Integer id);
 
-	boolean markAsRead(Integer id);
+	NotificationsResponseDTO markAsRead(Integer id);
+
+	// Methods for current user (USER/DOCTOR)
+	PagedResult<NotificationsResponseDTO> getByCurrentUser(String username, Pageable pageable);
+
+	PagedResult<NotificationsResponseDTO> getUnreadByCurrentUser(String username, Pageable pageable);
+
+	boolean markAsReadByCurrentUser(Integer id, String username);
+
+	boolean softDeleteByCurrentUser(Integer id, String username);
 }

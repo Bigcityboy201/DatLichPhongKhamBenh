@@ -1,7 +1,10 @@
 package truonggg.service.IMPL;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,6 +19,7 @@ import truonggg.dto.requestDTO.SiteInfoUpdateRequestDTO;
 import truonggg.mapper.SiteInfoMapper;
 import truonggg.repo.SiteInfoRepository;
 import truonggg.service.SiteInfoService;
+import truonggg.reponse.PagedResult;
 
 @Service
 @RequiredArgsConstructor
@@ -24,9 +28,19 @@ public class SiteInfoServiceIMPL implements SiteInfoService {
 	private final SiteInfoMapper siteInfoMapper;
 
 	@Override
-	public List<SiteInfoResponseDTO> getAll() {
-		List<SiteInfo> siteInfo = this.siteInfoRepository.findAll();
-		return this.siteInfoMapper.toDTOList(siteInfo);
+	public PagedResult<SiteInfoResponseDTO> getAll(Pageable pageable) {
+		Page<SiteInfo> siteInfoPage = this.siteInfoRepository.findAll(pageable);
+		List<SiteInfoResponseDTO> dtoList = siteInfoPage.stream()
+				.map(siteInfoMapper::toDTO)
+				.collect(Collectors.toList());
+		
+		return PagedResult.<SiteInfoResponseDTO>builder()
+				.content(dtoList)
+				.totalElements((int) siteInfoPage.getTotalElements())
+				.totalPages(siteInfoPage.getTotalPages())
+				.currentPage(siteInfoPage.getNumber())
+				.pageSize(siteInfoPage.getSize())
+				.build();
 	}
 
 	@Override

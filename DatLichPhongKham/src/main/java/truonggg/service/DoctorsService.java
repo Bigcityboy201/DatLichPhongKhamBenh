@@ -39,5 +39,5 @@ public interface DoctorsService {
 
 	PagedResult<AppointmentsResponseDTO> getMyAppointments(String userName, Pageable pageable);
 
-	List<SchedulesReponseDTO> getMySchedules(String userName);
+	PagedResult<SchedulesReponseDTO> getMySchedules(String userName, Pageable pageable);
 }
