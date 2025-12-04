@@ -34,7 +34,10 @@ import truonggg.utils.MomoUtils;
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceIMPL implements PaymentService {
-	
+
+	// Số tiền cọc mặc định cho thanh toán chuyển khoản (QR)
+	private static final double DEFAULT_DEPOSIT_AMOUNT = 2000.0;
+
 	private final PaymentsRepository paymentsRepository;
 	private final AppointmentsRepository appointmentsRepository;
 	private final UserRepository userRepository;
@@ -42,112 +45,102 @@ public class PaymentServiceIMPL implements PaymentService {
 	private final MomoUtils momoUtils;
 	private final ObjectMapper objectMapper;
 	private final QRCodeService qrCodeService;
-	
+
 	@Override
 	@Transactional
 	public PaymentResponseDTO createPayment(PaymentRequestDTO dto, String username) {
-		// Lấy user
+
+		// Lấy user đang thao tác
 		User user = userRepository.findByUserName(username)
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
-		
+
 		// Lấy appointment
 		Appointments appointment = appointmentsRepository.findById(dto.getAppointmentId())
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment not found"));
-		
-		// Kiểm tra quyền: user chỉ có thể thanh toán cho appointment của chính mình
-		// Trừ ADMIN/EMPLOYEE có quyền thanh toán cho bất kỳ appointment nào
-		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
-		boolean isAdminOrEmployee = user.getRole() != null && 
-				!user.getRole().getIsActive() && // Role phải đang hoạt động (isActive = false)
-				(user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
-		
+
+		// Kiểm tra quyền
+		boolean isAdminOrEmployee = user.getRole() != null && !user.getRole().getIsActive()
+				&& (user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
+
 		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {
 			throw new AccessDeniedException("Bạn không có quyền thanh toán cho appointment này");
 		}
-		
-		// Kiểm tra appointment status
+
+		// Kiểm tra trạng thái appointment
 		if (appointment.getStatus() == Appointments_Enum.CANCELLED) {
 			throw new IllegalArgumentException("Không thể thanh toán cho appointment đã bị hủy");
 		}
-		
-		// Validate amount > 0
-		if (dto.getAmount() <= 0) {
-			throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0");
-		}
-		
+
 		// Validate payment method
 		PaymentMethod paymentMethod;
 		try {
 			paymentMethod = PaymentMethod.valueOf(dto.getPaymentMethod().toUpperCase());
 		} catch (IllegalArgumentException e) {
-			throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: MOMO, CASH, BANK_TRANSFER");
+			throw new IllegalArgumentException(
+					"Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: MOMO, CASH, BANK_TRANSFER");
 		}
-		
+
+		// BẮT ĐẦU: Backend hoàn toàn tự quyết định amount
+		double amount;
+
+		switch (paymentMethod) {
+		case BANK_TRANSFER -> amount = DEFAULT_DEPOSIT_AMOUNT; // ví dụ 2000
+		case MOMO -> amount = DEFAULT_DEPOSIT_AMOUNT; // cũng dùng mức cọc mặc định
+		case CASH -> amount = DEFAULT_DEPOSIT_AMOUNT; // hoặc set theo quy tắc riêng
+		default -> throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ");
+		}
+
+		if (amount <= 0) {
+			throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0");
+		}
+		// KẾT THÚC xử lý amount
+
 		// Tạo payment record
-		Payments payment = Payments.builder()
-				.amount(dto.getAmount())
-				.paymentDate(new Date())
-				.paymentMethod(paymentMethod)
-				.isDeposit(true) // Mặc định là đặt cọc
-				.status(Appointments_Enum.PENDING)
-				.appointments(appointment)
-				.build();
-		
-		// Xử lý theo phương thức thanh toán
+		Payments payment = Payments.builder().amount(amount).paymentDate(new Date()).paymentMethod(paymentMethod)
+				.isDeposit(true).status(Appointments_Enum.PENDING).appointments(appointment).build();
+
 		String paymentUrl = null;
 		String transactionId = null;
-		
-		if (dto.getPaymentMethod().toUpperCase().equals("MOMO")) {
-			// Tạo orderId
+
+		// Xử lý theo phương thức
+		switch (paymentMethod) {
+		case MOMO -> {
 			transactionId = momoUtils.generateOrderId(dto.getAppointmentId());
 			payment.setTransactionId(transactionId);
-			
-			// Tạo payment request data từ MoMo
-			Long amountLong = (long) (dto.getAmount() * 100); // MoMo yêu cầu amount tính bằng xu
+
+			Long amountLong = (long) (amount * 100);
 			String orderInfo = "Thanh toan dat coc cho lich hen #" + dto.getAppointmentId();
 			Map<String, String> paymentRequest = momoUtils.createPaymentRequest(transactionId, amountLong, orderInfo);
-			
-			// Lưu payment request data dưới dạng JSON string vào paymentUrl
-			// Frontend sẽ dùng data này để gọi MoMo API
 			paymentUrl = convertMapToJsonString(paymentRequest);
 			payment.setPaymentUrl(paymentUrl);
-		} else if (dto.getPaymentMethod().toUpperCase().equals("BANK_TRANSFER")) {
-			// Thanh toán chuyển khoản (Timo) - tạo QR code
+		}
+
+		case BANK_TRANSFER -> {
 			transactionId = "BANK_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
 			payment.setTransactionId(transactionId);
-			// Giữ status là PENDING cho đến khi xác nhận thanh toán
-			payment.setStatus(Appointments_Enum.PENDING);
-			
-			// Tạo QR code URL cho Timo
+
 			try {
-				var qrCodeResponse = qrCodeService.getQRCode("TIMO", dto.getAmount(), dto.getAppointmentId());
+				var qrCodeResponse = qrCodeService.getQRCode("TIMO", amount, dto.getAppointmentId());
 				paymentUrl = qrCodeResponse.getQrCodeUrl();
 				payment.setPaymentUrl(paymentUrl);
-			} catch (Exception e) {
-				// Nếu không tạo được QR code, vẫn lưu payment nhưng không có URL
-				// Admin/Employee có thể xác nhận thủ công sau
+			} catch (Exception ignored) {
 			}
-		} else if (dto.getPaymentMethod().toUpperCase().equals("CASH")) {
-			// Thanh toán tiền mặt - xác nhận ngay
+		}
+
+		case CASH -> {
 			transactionId = "CASH_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
 			payment.setTransactionId(transactionId);
 			payment.setStatus(Appointments_Enum.CONFIRMED);
-		} else {
-			// Đảm bảo transactionId luôn được set (fallback)
-			transactionId = "PAYMENT_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
-			payment.setTransactionId(transactionId);
 		}
-		
-		// Lưu payment
+		}
+
 		payment = paymentsRepository.save(payment);
-		
-		// Map sang DTO
+
 		PaymentResponseDTO response = paymentMapper.toDTO(payment);
 		response.setPaymentUrl(paymentUrl);
-		
 		return response;
 	}
-	
+
 	@Override
 	@Transactional
 	public PaymentResponseDTO handleMomoCallback(Map<String, String> callbackParams) {
@@ -156,25 +149,25 @@ public class PaymentServiceIMPL implements PaymentService {
 		if (orderId == null) {
 			throw new IllegalArgumentException("orderId không được bỏ trống");
 		}
-		
+
 		// Tìm payment theo transactionId (orderId)
 		Payments payment = paymentsRepository.findByTransactionId(orderId)
 				.orElseThrow(() -> new NotFoundException("payment", "Payment not found"));
-		
+
 		// Verify signature
 		String signature = callbackParams.get("signature");
 		if (!momoUtils.verifySignature(callbackParams, signature)) {
 			throw new SecurityException("Signature không hợp lệ");
 		}
-		
+
 		// Lấy resultCode
 		Integer resultCode = Integer.parseInt(callbackParams.get("resultCode"));
-		
+
 		// Cập nhật payment
 		payment.setGatewayTransactionNo(callbackParams.get("transId"));
 		payment.setResponseCode(String.valueOf(resultCode));
 		payment.setSecureHash(signature);
-		
+
 		if (resultCode == 0) {
 			// Thanh toán thành công
 			payment.setStatus(Appointments_Enum.CONFIRMED);
@@ -188,74 +181,77 @@ public class PaymentServiceIMPL implements PaymentService {
 			// Thanh toán thất bại
 			payment.setStatus(Appointments_Enum.CANCELLED);
 		}
-		
+
 		payment = paymentsRepository.save(payment);
 		return paymentMapper.toDTO(payment);
 	}
-	
+
 	@Override
 	public PagedResult<PaymentResponseDTO> getMyPayments(String username, Pageable pageable) {
 		User user = userRepository.findByUserName(username)
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
-		
+
 		Page<Payments> paymentsPage = paymentsRepository.findByAppointments_User_UserId(user.getUserId(), pageable);
 		return convertToPagedResult(paymentsPage);
 	}
-	
+
 	@Override
 	public PagedResult<PaymentResponseDTO> getAllPayments(Pageable pageable) {
 		Page<Payments> paymentsPage = paymentsRepository.findAll(pageable);
 		return convertToPagedResult(paymentsPage);
 	}
-	
+
 	@Override
 	public PaymentResponseDTO getPaymentById(Integer paymentId, String username) {
 		Payments payment = paymentsRepository.findById(paymentId)
 				.orElseThrow(() -> new NotFoundException("payment", "Payment not found"));
-		
+
 		User user = userRepository.findByUserName(username)
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
-		
+
 		// Kiểm tra quyền: user chỉ xem được payment của chính mình, trừ ADMIN/EMPLOYEE
 		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
-		boolean isAdminOrEmployee = user.getRole() != null && 
-				!user.getRole().getIsActive() && // Role phải đang hoạt động (isActive = false)
+		boolean isAdminOrEmployee = user.getRole() != null && !user.getRole().getIsActive() && // Role phải đang hoạt
+																								// động (isActive =
+																								// false)
 				(user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
-		
+
 		if (!isAdminOrEmployee && !payment.getAppointments().getUser().getUserId().equals(user.getUserId())) {
 			throw new AccessDeniedException("Bạn không có quyền xem payment này");
 		}
-		
+
 		return paymentMapper.toDTO(payment);
 	}
-	
+
 	@Override
-	public PagedResult<PaymentResponseDTO> getPaymentsByAppointment(Integer appointmentId, String username, Pageable pageable) {
+	public PagedResult<PaymentResponseDTO> getPaymentsByAppointment(Integer appointmentId, String username,
+			Pageable pageable) {
 		Appointments appointment = appointmentsRepository.findById(appointmentId)
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment not found"));
-		
+
 		User user = userRepository.findByUserName(username)
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
-		
+
 		// Kiểm tra quyền
 		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
-		boolean isAdminOrEmployee = user.getRole() != null && 
-				!user.getRole().getIsActive() && // Role phải đang hoạt động (isActive = false)
+		boolean isAdminOrEmployee = user.getRole() != null && !user.getRole().getIsActive() && // Role phải đang hoạt
+																								// động (isActive =
+																								// false)
 				(user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
-		
+
 		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {
 			throw new AccessDeniedException("Bạn không có quyền xem payment của appointment này");
 		}
-		
+
 		Page<Payments> paymentsPage = paymentsRepository.findByAppointments_Id(appointmentId, pageable);
 		return convertToPagedResult(paymentsPage);
 	}
-	
+
 	@Override
 	public PaymentResponseDTO checkPaymentStatus(Integer paymentId, String username) {
 		return getPaymentById(paymentId, username);
 	}
-	
+
 	@Override
 	@Transactional
 	public PaymentResponseDTO confirmBankTransferPayment(BankTransferCallbackDTO callbackDTO) {
@@ -266,7 +262,7 @@ public class PaymentServiceIMPL implements PaymentService {
 		if (callbackDTO.getAmount() == null || callbackDTO.getAmount() <= 0) {
 			throw new IllegalArgumentException("Số tiền không hợp lệ");
 		}
-		
+
 		// Parse appointmentId từ nội dung chuyển khoản
 		// Format: "COC_LK_1" -> appointmentId = 1
 		Integer appointmentId = null;
@@ -297,49 +293,50 @@ public class PaymentServiceIMPL implements PaymentService {
 				}
 			}
 		} catch (Exception e) {
-			throw new IllegalArgumentException("Không thể parse appointmentId từ nội dung chuyển khoản: " + callbackDTO.getContent());
+			throw new IllegalArgumentException(
+					"Không thể parse appointmentId từ nội dung chuyển khoản: " + callbackDTO.getContent());
 		}
-		
+
 		if (appointmentId == null) {
 			throw new IllegalArgumentException("Không tìm thấy appointmentId trong nội dung chuyển khoản");
 		}
-		
-		// Tìm payment theo appointmentId, paymentMethod = BANK_TRANSFER, status = PENDING
-		List<Payments> pendingPayments = paymentsRepository.findByAppointments_Id(appointmentId)
-				.stream()
-				.filter(p -> p.getPaymentMethod() == PaymentMethod.BANK_TRANSFER 
-						&& p.getStatus() == Appointments_Enum.PENDING)
+
+		// Tìm payment theo appointmentId, paymentMethod = BANK_TRANSFER, status =
+		// PENDING
+		List<Payments> pendingPayments = paymentsRepository.findByAppointments_Id(appointmentId).stream().filter(
+				p -> p.getPaymentMethod() == PaymentMethod.BANK_TRANSFER && p.getStatus() == Appointments_Enum.PENDING)
 				.sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate())) // Lấy payment mới nhất
 				.toList();
-		
+
 		if (pendingPayments.isEmpty()) {
-			throw new NotFoundException("payment", "Không tìm thấy payment đang chờ thanh toán cho appointment " + appointmentId);
+			throw new NotFoundException("payment",
+					"Không tìm thấy payment đang chờ thanh toán cho appointment " + appointmentId);
 		}
-		
+
 		// Tìm payment có số tiền khớp (cho phép sai số nhỏ do làm tròn)
 		Payments matchedPayment = null;
 		double tolerance = 0.01; // Cho phép sai số 1 xu
-		
+
 		for (Payments payment : pendingPayments) {
 			if (Math.abs(payment.getAmount() - callbackDTO.getAmount()) <= tolerance) {
 				matchedPayment = payment;
 				break;
 			}
 		}
-		
+
 		if (matchedPayment == null) {
-			throw new IllegalArgumentException(
-					"Không tìm thấy payment với số tiền khớp. Số tiền trong hệ thống: " 
+			throw new IllegalArgumentException("Không tìm thấy payment với số tiền khớp. Số tiền trong hệ thống: "
 					+ pendingPayments.get(0).getAmount() + ", Số tiền nhận được: " + callbackDTO.getAmount());
 		}
-		
+
 		// Cập nhật payment status
 		matchedPayment.setStatus(Appointments_Enum.CONFIRMED);
 		if (callbackDTO.getBankTransactionId() != null) {
 			matchedPayment.setGatewayTransactionNo(callbackDTO.getBankTransactionId());
 		}
 		if (callbackDTO.getFromAccount() != null) {
-			// Ghi nhận thông tin người chuyển trên bank statement cùng fullname trong hệ thống
+			// Ghi nhận thông tin người chuyển trên bank statement cùng fullname trong hệ
+			// thống
 			String responseCodeValue = "STK: " + callbackDTO.getFromAccount();
 			String payerName = matchedPayment.getAppointments().getUser() != null
 					? matchedPayment.getAppointments().getUser().getFullName()
@@ -358,35 +355,31 @@ public class PaymentServiceIMPL implements PaymentService {
 			}
 			matchedPayment.setResponseCode(responseCodeValue);
 		}
-		
+
 		// Lưu và flush ngay để đảm bảo thay đổi được ghi vào database
 		matchedPayment = paymentsRepository.saveAndFlush(matchedPayment);
-		
+
 		// Cập nhật appointment status nếu đang PENDING
 		Appointments appointment = matchedPayment.getAppointments();
-		if (appointment.getStatus() == Appointments_Enum.PENDING || 
-			appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT) {
+		if (appointment.getStatus() == Appointments_Enum.PENDING
+				|| appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT) {
 			appointment.setStatus(Appointments_Enum.CONFIRMED);
 			appointmentsRepository.saveAndFlush(appointment);
 		}
-		
+
 		// Reload entity từ database để đảm bảo đọc đúng giá trị mới nhất
 		matchedPayment = paymentsRepository.findById(matchedPayment.getId())
 				.orElseThrow(() -> new NotFoundException("payment", "Payment not found after update"));
-		
+
 		return paymentMapper.toDTO(matchedPayment);
 	}
-	
+
 	private PagedResult<PaymentResponseDTO> convertToPagedResult(Page<Payments> paymentsPage) {
-		return PagedResult.<PaymentResponseDTO>builder()
-				.content(paymentsPage.map(paymentMapper::toDTO).toList())
-				.totalElements((int) paymentsPage.getTotalElements())
-				.totalPages(paymentsPage.getTotalPages())
-				.currentPage(paymentsPage.getNumber())
-				.pageSize(paymentsPage.getSize())
-				.build();
+		return PagedResult.<PaymentResponseDTO>builder().content(paymentsPage.map(paymentMapper::toDTO).toList())
+				.totalElements((int) paymentsPage.getTotalElements()).totalPages(paymentsPage.getTotalPages())
+				.currentPage(paymentsPage.getNumber()).pageSize(paymentsPage.getSize()).build();
 	}
-	
+
 	private String convertMapToJsonString(Map<String, String> map) {
 		try {
 			return objectMapper.writeValueAsString(map);
@@ -395,4 +388,3 @@ public class PaymentServiceIMPL implements PaymentService {
 		}
 	}
 }
-

@@ -30,11 +30,23 @@ public class PaymentController {
 
 	private final PaymentService paymentService;
 
+//	@PostMapping
+//	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
+//	public SuccessReponse<PaymentResponseDTO> createPayment(@RequestBody @Valid PaymentRequestDTO dto) {
+//		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+//		return SuccessReponse.of(paymentService.createPayment(dto, username));
+//	}
+
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<PaymentResponseDTO> createPayment(@RequestBody @Valid PaymentRequestDTO dto) {
+		// Lấy username của người đang đăng nhập
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(paymentService.createPayment(dto, username));
+
+		// Gọi service tạo payment
+		PaymentResponseDTO payment = paymentService.createPayment(dto, username);
+
+		return SuccessReponse.of(payment);
 	}
 
 	// POST /api/payments/momo-callback - Callback từ MoMo

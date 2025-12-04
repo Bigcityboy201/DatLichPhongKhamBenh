@@ -29,3 +29,4 @@ public class BankTransferCallbackDTO {
 
 	private String bankTransactionId;
 }
+

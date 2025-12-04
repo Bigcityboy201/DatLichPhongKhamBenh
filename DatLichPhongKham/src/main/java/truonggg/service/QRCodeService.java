@@ -22,3 +22,4 @@ public interface QRCodeService {
 	QRCodeResponseDTO getQRCode(String paymentMethod, Double amount, Integer appointmentId);
 }
 
+
