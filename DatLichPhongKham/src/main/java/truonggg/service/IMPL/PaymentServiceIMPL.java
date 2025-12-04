@@ -1,6 +1,7 @@
 package truonggg.service.IMPL;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import truonggg.Model.Appointments;
 import truonggg.Model.Payments;
 import truonggg.Model.User;
 import truonggg.dto.reponseDTO.PaymentResponseDTO;
+import truonggg.dto.requestDTO.BankTransferCallbackDTO;
 import truonggg.dto.requestDTO.PaymentRequestDTO;
 import truonggg.mapper.PaymentMapper;
 import truonggg.repo.AppointmentsRepository;
@@ -26,6 +28,7 @@ import truonggg.repo.PaymentsRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.service.PaymentService;
+import truonggg.service.QRCodeService;
 import truonggg.utils.MomoUtils;
 
 @Service
@@ -38,6 +41,7 @@ public class PaymentServiceIMPL implements PaymentService {
 	private final PaymentMapper paymentMapper;
 	private final MomoUtils momoUtils;
 	private final ObjectMapper objectMapper;
+	private final QRCodeService qrCodeService;
 	
 	@Override
 	@Transactional
@@ -51,7 +55,13 @@ public class PaymentServiceIMPL implements PaymentService {
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment not found"));
 		
 		// Kiểm tra quyền: user chỉ có thể thanh toán cho appointment của chính mình
-		if (!appointment.getUser().getUserId().equals(user.getUserId())) {
+		// Trừ ADMIN/EMPLOYEE có quyền thanh toán cho bất kỳ appointment nào
+		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
+		boolean isAdminOrEmployee = user.getRole() != null && 
+				!user.getRole().getIsActive() && // Role phải đang hoạt động (isActive = false)
+				(user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
+		
+		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {
 			throw new AccessDeniedException("Bạn không có quyền thanh toán cho appointment này");
 		}
 		
@@ -101,9 +111,25 @@ public class PaymentServiceIMPL implements PaymentService {
 			// Frontend sẽ dùng data này để gọi MoMo API
 			paymentUrl = convertMapToJsonString(paymentRequest);
 			payment.setPaymentUrl(paymentUrl);
-		} else if (dto.getPaymentMethod().toUpperCase().equals("CASH") || dto.getPaymentMethod().toUpperCase().equals("BANK_TRANSFER")) {
-			// Thanh toán offline - không cần URL
-			transactionId = "OFFLINE_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
+		} else if (dto.getPaymentMethod().toUpperCase().equals("BANK_TRANSFER")) {
+			// Thanh toán chuyển khoản (Timo) - tạo QR code
+			transactionId = "BANK_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
+			payment.setTransactionId(transactionId);
+			// Giữ status là PENDING cho đến khi xác nhận thanh toán
+			payment.setStatus(Appointments_Enum.PENDING);
+			
+			// Tạo QR code URL cho Timo
+			try {
+				var qrCodeResponse = qrCodeService.getQRCode("TIMO", dto.getAmount(), dto.getAppointmentId());
+				paymentUrl = qrCodeResponse.getQrCodeUrl();
+				payment.setPaymentUrl(paymentUrl);
+			} catch (Exception e) {
+				// Nếu không tạo được QR code, vẫn lưu payment nhưng không có URL
+				// Admin/Employee có thể xác nhận thủ công sau
+			}
+		} else if (dto.getPaymentMethod().toUpperCase().equals("CASH")) {
+			// Thanh toán tiền mặt - xác nhận ngay
+			transactionId = "CASH_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
 			payment.setTransactionId(transactionId);
 			payment.setStatus(Appointments_Enum.CONFIRMED);
 		} else {
@@ -191,7 +217,9 @@ public class PaymentServiceIMPL implements PaymentService {
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
 		
 		// Kiểm tra quyền: user chỉ xem được payment của chính mình, trừ ADMIN/EMPLOYEE
+		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
 		boolean isAdminOrEmployee = user.getRole() != null && 
+				!user.getRole().getIsActive() && // Role phải đang hoạt động (isActive = false)
 				(user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
 		
 		if (!isAdminOrEmployee && !payment.getAppointments().getUser().getUserId().equals(user.getUserId())) {
@@ -210,7 +238,9 @@ public class PaymentServiceIMPL implements PaymentService {
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
 		
 		// Kiểm tra quyền
+		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
 		boolean isAdminOrEmployee = user.getRole() != null && 
+				!user.getRole().getIsActive() && // Role phải đang hoạt động (isActive = false)
 				(user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
 		
 		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {
@@ -224,6 +254,127 @@ public class PaymentServiceIMPL implements PaymentService {
 	@Override
 	public PaymentResponseDTO checkPaymentStatus(Integer paymentId, String username) {
 		return getPaymentById(paymentId, username);
+	}
+	
+	@Override
+	@Transactional
+	public PaymentResponseDTO confirmBankTransferPayment(BankTransferCallbackDTO callbackDTO) {
+		// Validate input
+		if (callbackDTO.getContent() == null || callbackDTO.getContent().isEmpty()) {
+			throw new IllegalArgumentException("Nội dung chuyển khoản không được bỏ trống");
+		}
+		if (callbackDTO.getAmount() == null || callbackDTO.getAmount() <= 0) {
+			throw new IllegalArgumentException("Số tiền không hợp lệ");
+		}
+		
+		// Parse appointmentId từ nội dung chuyển khoản
+		// Format: "COC_LK_1" -> appointmentId = 1
+		Integer appointmentId = null;
+		try {
+			String content = callbackDTO.getContent();
+			// Tìm pattern "COC_LK_" hoặc "LK_" hoặc chỉ số
+			if (content.contains("COC_LK_")) {
+				String[] parts = content.split("COC_LK_");
+				if (parts.length > 1) {
+					// Lấy số sau "COC_LK_"
+					String idStr = parts[1].trim();
+					// Loại bỏ các ký tự không phải số ở đầu
+					idStr = idStr.replaceAll("^[^0-9]+", "");
+					appointmentId = Integer.parseInt(idStr);
+				}
+			} else if (content.contains("LK_")) {
+				String[] parts = content.split("LK_");
+				if (parts.length > 1) {
+					String idStr = parts[1].trim();
+					idStr = idStr.replaceAll("^[^0-9]+", "");
+					appointmentId = Integer.parseInt(idStr);
+				}
+			} else {
+				// Thử parse trực tiếp số từ content
+				String idStr = content.replaceAll("[^0-9]", "");
+				if (!idStr.isEmpty()) {
+					appointmentId = Integer.parseInt(idStr);
+				}
+			}
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Không thể parse appointmentId từ nội dung chuyển khoản: " + callbackDTO.getContent());
+		}
+		
+		if (appointmentId == null) {
+			throw new IllegalArgumentException("Không tìm thấy appointmentId trong nội dung chuyển khoản");
+		}
+		
+		// Tìm payment theo appointmentId, paymentMethod = BANK_TRANSFER, status = PENDING
+		List<Payments> pendingPayments = paymentsRepository.findByAppointments_Id(appointmentId)
+				.stream()
+				.filter(p -> p.getPaymentMethod() == PaymentMethod.BANK_TRANSFER 
+						&& p.getStatus() == Appointments_Enum.PENDING)
+				.sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate())) // Lấy payment mới nhất
+				.toList();
+		
+		if (pendingPayments.isEmpty()) {
+			throw new NotFoundException("payment", "Không tìm thấy payment đang chờ thanh toán cho appointment " + appointmentId);
+		}
+		
+		// Tìm payment có số tiền khớp (cho phép sai số nhỏ do làm tròn)
+		Payments matchedPayment = null;
+		double tolerance = 0.01; // Cho phép sai số 1 xu
+		
+		for (Payments payment : pendingPayments) {
+			if (Math.abs(payment.getAmount() - callbackDTO.getAmount()) <= tolerance) {
+				matchedPayment = payment;
+				break;
+			}
+		}
+		
+		if (matchedPayment == null) {
+			throw new IllegalArgumentException(
+					"Không tìm thấy payment với số tiền khớp. Số tiền trong hệ thống: " 
+					+ pendingPayments.get(0).getAmount() + ", Số tiền nhận được: " + callbackDTO.getAmount());
+		}
+		
+		// Cập nhật payment status
+		matchedPayment.setStatus(Appointments_Enum.CONFIRMED);
+		if (callbackDTO.getBankTransactionId() != null) {
+			matchedPayment.setGatewayTransactionNo(callbackDTO.getBankTransactionId());
+		}
+		if (callbackDTO.getFromAccount() != null) {
+			// Ghi nhận thông tin người chuyển trên bank statement cùng fullname trong hệ thống
+			String responseCodeValue = "STK: " + callbackDTO.getFromAccount();
+			String payerName = matchedPayment.getAppointments().getUser() != null
+					? matchedPayment.getAppointments().getUser().getFullName()
+					: null;
+			if (payerName == null || payerName.isBlank()) {
+				payerName = callbackDTO.getFromName();
+			}
+			if (payerName != null && !payerName.isBlank()) {
+				if (payerName.length() > 50) {
+					payerName = payerName.substring(0, 50);
+				}
+				responseCodeValue += " | Tên: " + payerName;
+			}
+			if (responseCodeValue.length() > 100) {
+				responseCodeValue = responseCodeValue.substring(0, 100);
+			}
+			matchedPayment.setResponseCode(responseCodeValue);
+		}
+		
+		// Lưu và flush ngay để đảm bảo thay đổi được ghi vào database
+		matchedPayment = paymentsRepository.saveAndFlush(matchedPayment);
+		
+		// Cập nhật appointment status nếu đang PENDING
+		Appointments appointment = matchedPayment.getAppointments();
+		if (appointment.getStatus() == Appointments_Enum.PENDING || 
+			appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT) {
+			appointment.setStatus(Appointments_Enum.CONFIRMED);
+			appointmentsRepository.saveAndFlush(appointment);
+		}
+		
+		// Reload entity từ database để đảm bảo đọc đúng giá trị mới nhất
+		matchedPayment = paymentsRepository.findById(matchedPayment.getId())
+				.orElseThrow(() -> new NotFoundException("payment", "Payment not found after update"));
+		
+		return paymentMapper.toDTO(matchedPayment);
 	}
 	
 	private PagedResult<PaymentResponseDTO> convertToPagedResult(Page<Payments> paymentsPage) {

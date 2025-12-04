@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.PaymentResponseDTO;
+import truonggg.dto.requestDTO.BankTransferCallbackDTO;
 import truonggg.dto.requestDTO.PaymentRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
@@ -26,22 +27,18 @@ import truonggg.service.PaymentService;
 @RequestMapping(path = "/api/payments")
 @RequiredArgsConstructor
 public class PaymentController {
-	
+
 	private final PaymentService paymentService;
-	
-	/**
-	 * POST /api/payments - Tạo thanh toán (đặt cọc)
-	 */
+
 	@PostMapping
-	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<PaymentResponseDTO> createPayment(@RequestBody @Valid PaymentRequestDTO dto) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		return SuccessReponse.of(paymentService.createPayment(dto, username));
 	}
-	
-	/**
-	 * POST /api/payments/momo-callback - Callback từ MoMo
-	 */
+
+	// POST /api/payments/momo-callback - Callback từ MoMo
+
 	@PostMapping("/momo-callback")
 	public SuccessReponse<PaymentResponseDTO> handleMomoCallback(@RequestBody Map<String, Object> callbackParams) {
 		// Convert Map<String, Object> sang Map<String, String>
@@ -53,67 +50,101 @@ public class PaymentController {
 		}
 		return SuccessReponse.of(paymentService.handleMomoCallback(stringParams));
 	}
-	
-	/**
-	 * GET /api/payments/me - Lấy danh sách thanh toán của user hiện tại
-	 */
+
+	// GET /api/payments/me - Lấy danh sách thanh toán của user hiện tại
+
 	@GetMapping("/me")
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
-	public SuccessReponse<?> getMyPayments(
-			@RequestParam(value = "page", defaultValue = "0") int page,
+	public SuccessReponse<?> getMyPayments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		Pageable pageable = PageRequest.of(page, size);
 		PagedResult<PaymentResponseDTO> pagedResult = paymentService.getMyPayments(username, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
-	
-	/**
-	 * GET /api/payments - Lấy tất cả thanh toán (ADMIN, EMPLOYEE)
-	 */
+
+	// GET /api/payments - Lấy tất cả thanh toán (ADMIN, EMPLOYEE)
 	@GetMapping
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
-	public SuccessReponse<?> getAllPayments(
-			@RequestParam(value = "page", defaultValue = "0") int page,
+	public SuccessReponse<?> getAllPayments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		PagedResult<PaymentResponseDTO> pagedResult = paymentService.getAllPayments(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
-	
-	/**
-	 * GET /api/payments/{id} - Lấy chi tiết thanh toán
-	 */
+
+	// GET /api/payments/{id} - Lấy chi tiết thanh toán
+
 	@GetMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<PaymentResponseDTO> getPaymentById(@PathVariable Integer id) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		return SuccessReponse.of(paymentService.getPaymentById(id, username));
 	}
-	
-	/**
-	 * GET /api/payments/appointment/{appointmentId} - Lấy thanh toán theo appointment
-	 */
+
+	// GET /api/payments/appointment/{appointmentId} - Lấy thanh toán theo
+	// appointment
+
 	@GetMapping("/appointment/{appointmentId}")
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
-	public SuccessReponse<?> getPaymentsByAppointment(
-			@PathVariable Integer appointmentId,
+	public SuccessReponse<?> getPaymentsByAppointment(@PathVariable Integer appointmentId,
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<PaymentResponseDTO> pagedResult = paymentService.getPaymentsByAppointment(appointmentId, username, pageable);
+		PagedResult<PaymentResponseDTO> pagedResult = paymentService.getPaymentsByAppointment(appointmentId, username,
+				pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
-	
-	/**
-	 * GET /api/payments/{id}/status - Kiểm tra trạng thái thanh toán
-	 */
+
+	// GET /api/payments/{id}/status - Kiểm tra trạng thái thanh toán
 	@GetMapping("/{id}/status")
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<PaymentResponseDTO> checkPaymentStatus(@PathVariable Integer id) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		return SuccessReponse.of(paymentService.checkPaymentStatus(id, username));
 	}
-}
 
+	@PostMapping("/bank-transfer-callback")
+	public SuccessReponse<PaymentResponseDTO> handleBankTransferCallback(
+			@RequestBody BankTransferCallbackDTO callbackDTO) {
+		// Không cần authentication vì đây là webhook từ external service
+		return SuccessReponse.of(paymentService.confirmBankTransferPayment(callbackDTO));
+	}
+
+	@PostMapping("/casso-webhook")
+	public SuccessReponse<PaymentResponseDTO> handleCassoWebhook(@RequestBody Map<String, Object> cassoData) {
+		// Không cần authentication vì đây là webhook từ external service
+		try {
+			// Parse dữ liệu từ Casso
+			String description = cassoData.get("description") != null ? cassoData.get("description").toString() : null;
+
+			Double amount = null;
+			if (cassoData.get("amount") != null) {
+				Object amountObj = cassoData.get("amount");
+				if (amountObj instanceof Number) {
+					amount = ((Number) amountObj).doubleValue();
+				} else {
+					amount = Double.parseDouble(amountObj.toString());
+				}
+			}
+
+			String subAccId = cassoData.get("subAccId") != null ? cassoData.get("subAccId").toString() : null;
+
+			String tid = cassoData.get("tid") != null ? cassoData.get("tid").toString() : null;
+
+			String when = cassoData.get("when") != null ? cassoData.get("when").toString() : null;
+
+			// Chuyển đổi sang BankTransferCallbackDTO
+			BankTransferCallbackDTO callbackDTO = BankTransferCallbackDTO.builder().content(description).amount(amount)
+					.fromAccount(subAccId).fromName(subAccId) // Casso có thể không có tên riêng, dùng STK
+					.transactionDate(when).bankTransactionId(tid).build();
+
+			// Xử lý payment
+			return SuccessReponse.of(paymentService.confirmBankTransferPayment(callbackDTO));
+
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Lỗi xử lý webhook từ Casso: " + e.getMessage());
+		}
+	}
+}

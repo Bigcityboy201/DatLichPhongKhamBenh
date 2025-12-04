@@ -5,6 +5,7 @@ import java.util.Map;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.dto.reponseDTO.PaymentResponseDTO;
+import truonggg.dto.requestDTO.BankTransferCallbackDTO;
 import truonggg.dto.requestDTO.PaymentRequestDTO;
 import truonggg.reponse.PagedResult;
 
@@ -44,5 +45,11 @@ public interface PaymentService {
 	 * Kiểm tra trạng thái thanh toán
 	 */
 	PaymentResponseDTO checkPaymentStatus(Integer paymentId, String username);
+	
+	/**
+	 * Xác nhận thanh toán chuyển khoản từ webhook (Google Apps Script/Casso)
+	 * Tìm payment theo nội dung chuyển khoản và số tiền, sau đó cập nhật status
+	 */
+	PaymentResponseDTO confirmBankTransferPayment(BankTransferCallbackDTO callbackDTO);
 }
 

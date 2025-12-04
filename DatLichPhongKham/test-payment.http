@@ -7,11 +7,11 @@
 @appointmentId = 1
 
 ### 1. Login để lấy JWT Token
-POST {{baseUrl}}/api/auth/login
+POST {{baseUrl}}/api/auth/signIn
 Content-Type: application/json
 
 {
-  "username": "your_username",
+  "userName": "your_username",
   "password": "your_password"
 }
 
@@ -26,7 +26,18 @@ Content-Type: application/json
   "paymentMethod": "MOMO"
 }
 
-### 3. Tạo Payment Request (CASH - Offline)
+### 3. Tạo Payment Request (BANK_TRANSFER - Chuyển khoản)
+POST {{baseUrl}}/api/payments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "appointmentId": {{appointmentId}},
+  "amount": 2000,
+  "paymentMethod": "BANK_TRANSFER"
+}
+
+### 4. Tạo Payment Request (CASH - Offline)
 POST {{baseUrl}}/api/payments
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -37,27 +48,82 @@ Content-Type: application/json
   "paymentMethod": "CASH"
 }
 
-### 4. Xem danh sách payments của user hiện tại
+### 5. Lấy QR Code đặt cọc (mặc định 2000 VNĐ)
+GET {{baseUrl}}/api/qrcode/deposit?paymentMethod=TIMO&appointmentId={{appointmentId}}
+Authorization: Bearer {{token}}
+
+### 6. Lấy QR Code với số tiền tùy chỉnh
+GET {{baseUrl}}/api/qrcode?paymentMethod=TIMO&amount=50000&appointmentId={{appointmentId}}
+Authorization: Bearer {{token}}
+
+### 7. Xem danh sách payments của user hiện tại
 GET {{baseUrl}}/api/payments/me?page=0&size=10
 Authorization: Bearer {{token}}
 
-### 5. Xem chi tiết payment
+### 8. Xem chi tiết payment
 GET {{baseUrl}}/api/payments/{{paymentId}}
 Authorization: Bearer {{token}}
 
-### 6. Kiểm tra trạng thái payment
+### 9. Kiểm tra trạng thái payment
 GET {{baseUrl}}/api/payments/{{paymentId}}/status
 Authorization: Bearer {{token}}
 
-### 7. Xem payments theo appointment
+### 10. Xem payments theo appointment
 GET {{baseUrl}}/api/payments/appointment/{{appointmentId}}?page=0&size=10
 Authorization: Bearer {{token}}
 
-### 8. Xem tất cả payments (ADMIN/EMPLOYEE only)
+### 11. Xem tất cả payments (ADMIN/EMPLOYEE only)
 GET {{baseUrl}}/api/payments?page=0&size=10
 Authorization: Bearer {{token}}
 
-### 9. Test MoMo Callback (Thành công)
+### 12. Test Bank Transfer Callback (Webhook từ Google Apps Script/Casso)
+### Lưu ý: Endpoint này không cần authentication vì là webhook từ external service
+### 
+### ⚠️ QUAN TRỌNG: Khi TEST, bạn có thể dùng DATA GIẢ cho các field optional!
+### - fromAccount: Có thể dùng bất kỳ số nào (ví dụ: "1234567890")
+### - fromName: Có thể dùng bất kỳ tên nào (ví dụ: "Nguyen Van A")
+### - bankTransactionId: Có thể dùng bất kỳ mã nào (ví dụ: "TXN123456")
+### 
+### Chỉ cần đảm bảo:
+### - content: Phải khớp với nội dung chuyển khoản (ví dụ: "COC_LK_1")
+### - amount: Phải khớp với số tiền trong payment (ví dụ: 2000.0)
+### 
+### Nếu muốn dùng thông tin thật: Xem trong app ngân hàng sau khi chuyển khoản
+POST {{baseUrl}}/api/payments/bank-transfer-callback
+Content-Type: application/json
+
+{
+  "content": "COC_LK_{{appointmentId}}",
+  "amount": 2000.0,
+  "fromAccount": "1234567890",
+  "fromName": "Nguyen Van A",
+  "transactionDate": "2024-12-20T10:35:00",
+  "bankTransactionId": "TXN123456"
+}
+
+### 13. Test Bank Transfer Callback - Format khác (LK_)
+POST {{baseUrl}}/api/payments/bank-transfer-callback
+Content-Type: application/json
+
+{
+  "content": "LK_{{appointmentId}}",
+  "amount": 2000.0,
+  "fromAccount": "9876543210",
+  "fromName": "Tran Thi B",
+  "bankTransactionId": "TXN789012"
+}
+
+### 14. Test Bank Transfer Callback - Chỉ có số trong content (Tối thiểu)
+### Chỉ cần content và amount, các field khác là optional
+POST {{baseUrl}}/api/payments/bank-transfer-callback
+Content-Type: application/json
+
+{
+  "content": "{{appointmentId}}",
+  "amount": 2000.0
+}
+
+### 15. Test MoMo Callback (Thành công)
 POST {{baseUrl}}/api/payments/momo-callback
 Content-Type: application/json
 
@@ -77,7 +143,7 @@ Content-Type: application/json
   "signature": "calculated_signature_here"
 }
 
-### 10. Test MoMo Callback (Thất bại - User cancel)
+### 16. Test MoMo Callback (Thất bại - User cancel)
 POST {{baseUrl}}/api/payments/momo-callback
 Content-Type: application/json
 
@@ -95,6 +161,34 @@ Content-Type: application/json
   "responseTime": "2024-12-20T10:35:00",
   "extraData": "",
   "signature": "calculated_signature_here"
+}
+
+### 17. Test Casso Webhook (Tự động hóa chuyển khoản)
+### Endpoint riêng cho Casso API - Tự động chuyển đổi format
+### Xem hướng dẫn: HUONG_DAN_TU_DONG_HOA_CHUYEN_KHOAN.md
+POST {{baseUrl}}/api/payments/casso-webhook
+Content-Type: application/json
+
+{
+  "id": "123456",
+  "tid": "TXN123456",
+  "amount": 2000,
+  "description": "COC_LK_{{appointmentId}}",
+  "when": "2024-12-20T10:35:00",
+  "subAccId": "1234567890",
+  "bankSubAccId": "1234567890",
+  "cusum_balance": 1000000,
+  "cusum_balanceEnd": 1002000
+}
+
+### 18. Test Casso Webhook - Format tối thiểu
+POST {{baseUrl}}/api/payments/casso-webhook
+Content-Type: application/json
+
+{
+  "tid": "TXN789012",
+  "amount": 2000,
+  "description": "COC_LK_{{appointmentId}}"
 }
 
 
