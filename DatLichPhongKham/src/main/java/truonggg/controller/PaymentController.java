@@ -30,13 +30,6 @@ public class PaymentController {
 
 	private final PaymentService paymentService;
 
-//	@PostMapping
-//	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
-//	public SuccessReponse<PaymentResponseDTO> createPayment(@RequestBody @Valid PaymentRequestDTO dto) {
-//		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-//		return SuccessReponse.of(paymentService.createPayment(dto, username));
-//	}
-
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<PaymentResponseDTO> createPayment(@RequestBody @Valid PaymentRequestDTO dto) {
@@ -124,39 +117,39 @@ public class PaymentController {
 		return SuccessReponse.of(paymentService.confirmBankTransferPayment(callbackDTO));
 	}
 
-	@PostMapping("/casso-webhook")
-	public SuccessReponse<PaymentResponseDTO> handleCassoWebhook(@RequestBody Map<String, Object> cassoData) {
-		// Không cần authentication vì đây là webhook từ external service
-		try {
-			// Parse dữ liệu từ Casso
-			String description = cassoData.get("description") != null ? cassoData.get("description").toString() : null;
-
-			Double amount = null;
-			if (cassoData.get("amount") != null) {
-				Object amountObj = cassoData.get("amount");
-				if (amountObj instanceof Number) {
-					amount = ((Number) amountObj).doubleValue();
-				} else {
-					amount = Double.parseDouble(amountObj.toString());
-				}
-			}
-
-			String subAccId = cassoData.get("subAccId") != null ? cassoData.get("subAccId").toString() : null;
-
-			String tid = cassoData.get("tid") != null ? cassoData.get("tid").toString() : null;
-
-			String when = cassoData.get("when") != null ? cassoData.get("when").toString() : null;
-
-			// Chuyển đổi sang BankTransferCallbackDTO
-			BankTransferCallbackDTO callbackDTO = BankTransferCallbackDTO.builder().content(description).amount(amount)
-					.fromAccount(subAccId).fromName(subAccId) // Casso có thể không có tên riêng, dùng STK
-					.transactionDate(when).bankTransactionId(tid).build();
-
-			// Xử lý payment
-			return SuccessReponse.of(paymentService.confirmBankTransferPayment(callbackDTO));
-
-		} catch (Exception e) {
-			throw new IllegalArgumentException("Lỗi xử lý webhook từ Casso: " + e.getMessage());
-		}
-	}
+//	@PostMapping("/casso-webhook")
+//	public SuccessReponse<PaymentResponseDTO> handleCassoWebhook(@RequestBody Map<String, Object> cassoData) {
+//		// Không cần authentication vì đây là webhook từ external service
+//		try {
+//			// Parse dữ liệu từ Casso
+//			String description = cassoData.get("description") != null ? cassoData.get("description").toString() : null;
+//
+//			Double amount = null;
+//			if (cassoData.get("amount") != null) {
+//				Object amountObj = cassoData.get("amount");
+//				if (amountObj instanceof Number) {
+//					amount = ((Number) amountObj).doubleValue();
+//				} else {
+//					amount = Double.parseDouble(amountObj.toString());
+//				}
+//			}
+//
+//			String subAccId = cassoData.get("subAccId") != null ? cassoData.get("subAccId").toString() : null;
+//
+//			String tid = cassoData.get("tid") != null ? cassoData.get("tid").toString() : null;
+//
+//			String when = cassoData.get("when") != null ? cassoData.get("when").toString() : null;
+//
+//			// Chuyển đổi sang BankTransferCallbackDTO
+//			BankTransferCallbackDTO callbackDTO = BankTransferCallbackDTO.builder().content(description).amount(amount)
+//					.fromAccount(subAccId).fromName(subAccId) // Casso có thể không có tên riêng, dùng STK
+//					.transactionDate(when).bankTransactionId(tid).build();
+//
+//			// Xử lý payment
+//			return SuccessReponse.of(paymentService.confirmBankTransferPayment(callbackDTO));
+//
+//		} catch (Exception e) {
+//			throw new IllegalArgumentException("Lỗi xử lý webhook từ Casso: " + e.getMessage());
+//		}
+//	}
 }

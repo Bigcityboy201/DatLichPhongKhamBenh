@@ -6,10 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * DTO để nhận callback từ Google Apps Script hoặc Casso API khi có giao dịch
- * chuyển khoản mới
- */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,4 +25,3 @@ public class BankTransferCallbackDTO {
 
 	private String bankTransactionId;
 }
-

@@ -80,7 +80,6 @@ public class PaymentServiceIMPL implements PaymentService {
 					"Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: MOMO, CASH, BANK_TRANSFER");
 		}
 
-		// BẮT ĐẦU: Backend hoàn toàn tự quyết định amount
 		double amount;
 
 		switch (paymentMethod) {

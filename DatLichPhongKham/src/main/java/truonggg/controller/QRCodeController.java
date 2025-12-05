@@ -15,15 +15,9 @@ import truonggg.service.QRCodeService;
 @RequestMapping(path = "/api/qrcode")
 @RequiredArgsConstructor
 public class QRCodeController {
-	
+
 	private final QRCodeService qrCodeService;
-	
-	/**
-	 * GET /api/qrcode/deposit - Lấy QR code cho đặt cọc mặc định 2000 đồng
-	 * @param paymentMethod TIMO hoặc BANK_TRANSFER (cho Timo), MOMO (không hỗ trợ QR tĩnh)
-	 * @param appointmentId ID của appointment (optional, để tạo nội dung chuyển khoản)
-	 * @return QRCodeResponseDTO
-	 */
+
 	@GetMapping("/deposit")
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<QRCodeResponseDTO> getDepositQRCode(
@@ -32,14 +26,7 @@ public class QRCodeController {
 		QRCodeResponseDTO qrCode = qrCodeService.getDepositQRCode(paymentMethod, appointmentId);
 		return SuccessReponse.of(qrCode);
 	}
-	
-	/**
-	 * GET /api/qrcode - Lấy QR code với số tiền tùy chỉnh
-	 * @param paymentMethod TIMO hoặc BANK_TRANSFER
-	 * @param amount Số tiền (mặc định 2000)
-	 * @param appointmentId ID của appointment (optional)
-	 * @return QRCodeResponseDTO
-	 */
+
 	@GetMapping
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<QRCodeResponseDTO> getQRCode(
@@ -50,5 +37,3 @@ public class QRCodeController {
 		return SuccessReponse.of(qrCode);
 	}
 }
-
-
