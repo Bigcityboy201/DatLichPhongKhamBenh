@@ -110,6 +110,34 @@
 		    <artifactId>json</artifactId>
 		    <version>20230227</version>
 		</dependency>
+		<!-- Spring Boot Test -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<!-- Mockito (đã bao gồm trong spring-boot-starter-test, nhưng nếu muốn riêng) -->
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <version>5.6.0</version>
+    <scope>test</scope>
+</dependency>
+
+<!-- Spring Security Test -->
+<dependency>
+    <groupId>org.springframework.security</groupId>
+    <artifactId>spring-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<!-- Jackson (nếu dùng ObjectMapper để serialize/deserialize JSON trong test) -->
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+</dependency>
+
 	</dependencies>
 
 	<build>
