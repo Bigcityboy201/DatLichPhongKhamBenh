@@ -22,5 +22,7 @@ public interface DepartmentsService {
 
 	boolean delete(Integer id);
 
+	DepartmentsResponseDTO findById(final Integer id);
+
 	PagedResult<DepartmentsResponseDTO> searchDepartments(String keyword, Pageable pageable);
 }

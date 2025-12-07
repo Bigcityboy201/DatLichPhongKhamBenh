@@ -53,11 +53,6 @@ public class SecurityConfiguration {
 		return new BCryptPasswordEncoder(); // salt
 	}
 
-//	@Bean
-//	PasswordEncoder passwordEncoder2() {
-//		return new BCryptPasswordEncoder(); // salt
-//	}
-
 	@Bean
 	AuthenticationProvider authenticationProvider() {
 		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -92,8 +87,9 @@ public class SecurityConfiguration {
 				.requestMatchers(HttpMethod.GET, "/api/doctors/me", "/api/doctors/me/**").hasAuthority("DOCTOR")
 				.requestMatchers(HttpMethod.GET, "/api/doctors", "/api/doctors/*", "/api/doctors/department",
 						"/api/doctors/search")
-				.permitAll().requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/search").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/siteinfos").permitAll()
+				.permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/*", "/api/departments/search")
+				.permitAll().requestMatchers(HttpMethod.GET, "/api/siteinfos").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/schedules/doctor/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/reviews/*", "/api/reviews/doctor/**").permitAll()
 
@@ -151,14 +147,10 @@ public class SecurityConfiguration {
 
 				// NOTIFICATIONS - Bảo mật các API thông báo
 				// Pattern cụ thể trước (me endpoints cho USER/DOCTOR)
-				.requestMatchers(HttpMethod.GET, "/api/notifications/me")
-				.hasAnyAuthority("USER", "DOCTOR")
-				.requestMatchers(HttpMethod.GET, "/api/notifications/me/unread")
-				.hasAnyAuthority("USER", "DOCTOR")
-				.requestMatchers(HttpMethod.PUT, "/api/notifications/me/*/read")
-				.hasAnyAuthority("USER", "DOCTOR")
-				.requestMatchers(HttpMethod.DELETE, "/api/notifications/me/*")
-				.hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.GET, "/api/notifications/me").hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.GET, "/api/notifications/me/unread").hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.PUT, "/api/notifications/me/*/read").hasAnyAuthority("USER", "DOCTOR")
+				.requestMatchers(HttpMethod.DELETE, "/api/notifications/me/*").hasAnyAuthority("USER", "DOCTOR")
 				// Pattern cụ thể trước (user endpoints)
 				.requestMatchers(HttpMethod.GET, "/api/notifications/user/*")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")

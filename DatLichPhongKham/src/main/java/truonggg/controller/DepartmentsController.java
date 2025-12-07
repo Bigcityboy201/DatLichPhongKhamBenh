@@ -50,6 +50,11 @@ public class DepartmentsController {
 		return SuccessReponse.of(this.departmentsService.createDepartment(dto));
 	}
 
+	@GetMapping("/{id}")
+	public SuccessReponse<DepartmentsResponseDTO> findById(@PathVariable Integer id) {
+		return SuccessReponse.of(this.departmentsService.findById(id));
+	}
+
 	// PUT /api/departments - Cập nhật
 	@PutMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
