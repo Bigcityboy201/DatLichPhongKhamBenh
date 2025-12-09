@@ -81,7 +81,8 @@ public class DoctorsController {
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
 	public SuccessReponse<DoctorsReponseDTO> updateDoctorProfile(@PathVariable Integer id,
 			@RequestBody @Valid DoctorUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.updateProfile(id, dto));
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		return SuccessReponse.of(this.doctorsService.updateProfile(id, dto, username));
 	}
 
 	// PUT /api/doctors - Cập nhật (cho ADMIN/EMPLOYEE)

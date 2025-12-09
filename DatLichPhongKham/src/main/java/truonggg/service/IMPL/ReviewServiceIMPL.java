@@ -79,7 +79,20 @@ public class ReviewServiceIMPL implements ReviewService {
 	@Override
 	public PagedResult<ReviewResponseDTO> getByCurrentUser(String userName, Pageable pageable) {
 		User user = getUserByUserName(userName);
-		Page<review> reviewsPage = reviewRepository.findByUser_UserId(user.getUserId(), pageable);
+
+		boolean isAdmin = "ADMIN".equalsIgnoreCase(user.getRole().getRoleName())
+				|| "EMPLOYEE".equalsIgnoreCase(user.getRole().getRoleName());
+
+		Page<review> reviewsPage;
+
+		if (isAdmin) {
+			// Admin thấy tất cả review, kể cả bị khóa
+			reviewsPage = reviewRepository.findByUser_UserId(user.getUserId(), pageable);
+		} else {
+			// User bình thường chỉ thấy review chưa bị khóa (isActive = false)
+			reviewsPage = reviewRepository.findByUser_UserIdAndIsActiveFalse(user.getUserId(), pageable);
+		}
+
 		return toPagedResult(reviewsPage);
 	}
 
