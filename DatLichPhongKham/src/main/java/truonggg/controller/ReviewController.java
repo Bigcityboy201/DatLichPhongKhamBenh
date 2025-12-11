@@ -33,7 +33,7 @@ public class ReviewController {
 
 	// GET /api/reviews - Lấy tất cả
 	@GetMapping
-	// @PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<?> getAllReviews(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
@@ -108,16 +108,6 @@ public class ReviewController {
 		return SuccessReponse.of(this.reviewService.delete(id, dto));
 	}
 
-	// PUT /api/reviews/me/{id}/delete - User tự soft delete review của mình
-//	@PutMapping("/me/{id}/delete")
-//	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
-//	public SuccessReponse<ReviewResponseDTO> deleteReviewByCurrentUser(@PathVariable Integer id) {
-//		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-//		return SuccessReponse.of(this.reviewService.softDeleteByCurrentUser(id, username));
-//	}
-
-	// DELETE /api/reviews/me/{id} - User tự soft delete review của mình (HTTP
-	// DELETE)
 	@DeleteMapping("/me/{id}")
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<ReviewResponseDTO> deleteReviewByCurrentUserUsingDelete(@PathVariable Integer id) {

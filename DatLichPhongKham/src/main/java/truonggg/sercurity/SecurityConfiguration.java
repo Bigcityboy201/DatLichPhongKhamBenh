@@ -166,7 +166,8 @@ public class SecurityConfiguration {
 				.requestMatchers(HttpMethod.DELETE, "/api/notifications/*").hasAnyAuthority("ADMIN", "EMPLOYEE")
 
 				// REVIEWS - Bảo mật các API đánh giá
-				.requestMatchers(HttpMethod.GET, "/api/reviews").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/reviews").hasAnyAuthority("EMPLOYEE", "ADMIN")
+
 				// .requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyAuthority("USER",
 				// "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/reviews/me/**")
