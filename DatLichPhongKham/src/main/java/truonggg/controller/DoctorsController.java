@@ -77,12 +77,11 @@ public class DoctorsController {
 	}
 
 	// PUT /api/doctors/profile - Cập nhật profile (cho DOCTOR)
-	@PutMapping("/{id}/profile")
+	@PutMapping("/profile")
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
-	public SuccessReponse<DoctorsReponseDTO> updateDoctorProfile(@PathVariable Integer id,
-			@RequestBody @Valid DoctorUpdateRequestDTO dto) {
+	public SuccessReponse<DoctorsReponseDTO> updateDoctorProfile(@RequestBody @Valid DoctorUpdateRequestDTO dto) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.doctorsService.updateProfile(id, dto, username));
+		return SuccessReponse.of(this.doctorsService.updateProfile(dto, username));
 	}
 
 	// PUT /api/doctors - Cập nhật (cho ADMIN/EMPLOYEE)

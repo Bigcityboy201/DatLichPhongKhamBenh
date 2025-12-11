@@ -31,4 +31,7 @@ public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
 	Optional<Doctors> findByUser(final User user);
 
 	Optional<Doctors> findByUserUserId(Integer userId);
+
+	Optional<Doctors> findByUser_UserName(String userName);
+
 }

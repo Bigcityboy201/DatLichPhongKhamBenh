@@ -109,7 +109,7 @@ public class SecurityConfiguration {
 
 				// Doctor management
 				.requestMatchers(HttpMethod.POST, "/api/doctors").hasAuthority("ADMIN")
-				.requestMatchers(HttpMethod.PUT, "/api/doctors/*/profile").hasAnyAuthority("DOCTOR", "ADMIN")
+				.requestMatchers(HttpMethod.PUT, "/api/doctors/profile").hasAnyAuthority("DOCTOR", "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/doctors/*").hasAuthority("ADMIN")
 				.requestMatchers(HttpMethod.PATCH, "/api/doctors/*").hasAuthority("ADMIN")
 				.requestMatchers(HttpMethod.DELETE, "/api/doctors/*").hasAuthority("ADMIN")

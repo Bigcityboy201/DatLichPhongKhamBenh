@@ -24,7 +24,7 @@ public interface DoctorsService {
 
 	DoctorsReponseDTO findById(Integer id);
 
-	DoctorsReponseDTO updateProfile(Integer id, DoctorUpdateRequestDTO dto, String userName);
+	DoctorsReponseDTO updateProfile(DoctorUpdateRequestDTO dto, String userName);
 
 	DoctorsReponseDTO updateWithUser(Integer id, DoctorUpdateRequestDTO dto);
 

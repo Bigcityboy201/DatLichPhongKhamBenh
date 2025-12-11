@@ -120,9 +120,9 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	}
 
 	@Override
-	public DoctorsReponseDTO updateProfile(Integer id, DoctorUpdateRequestDTO dto, String userName) {
+	public DoctorsReponseDTO updateProfile(DoctorUpdateRequestDTO dto, String userName) {
 		// Tìm doctor hiện tại
-		Doctors foundDoctor = this.doctorsRepository.findById(id)
+		Doctors foundDoctor = this.doctorsRepository.findByUser_UserName(userName)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 		// Cập nhật thông tin User
 		User user = foundDoctor.getUser();
