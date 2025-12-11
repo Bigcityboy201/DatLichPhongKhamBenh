@@ -19,4 +19,6 @@ public interface ReviewRepository extends JpaRepository<review, Integer> {
 
 	Page<review> findByUser_UserIdAndIsActiveFalse(Integer userId, Pageable pageable);
 
+	Page<review> findByDoctorsIdAndIsActive(Integer doctorId, boolean isActive, Pageable pageable);
+
 }

@@ -72,7 +72,25 @@ public class ReviewServiceIMPL implements ReviewService {
 
 	@Override
 	public PagedResult<ReviewResponseDTO> getByDoctorId(Integer doctorId, Pageable pageable) {
-		Page<review> reviewsPage = reviewRepository.findByDoctorsId(doctorId, pageable);
+		// Lấy doctor theo ID
+		Doctors doctor = doctorsRepository.findById(doctorId)
+				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+
+		User user = doctor.getUser();
+
+		boolean isAdmin = "ADMIN".equalsIgnoreCase(user.getRole().getRoleName())
+				|| "EMPLOYEE".equalsIgnoreCase(user.getRole().getRoleName());
+
+		Page<review> reviewsPage;
+
+		if (isAdmin) {
+			// Admin thấy tất cả
+			reviewsPage = reviewRepository.findByDoctorsId(doctorId, pageable);
+		} else {
+			// Doctor chỉ thấy active
+			reviewsPage = reviewRepository.findByDoctorsIdAndIsActive(doctorId, false, pageable);
+		}
+
 		return toPagedResult(reviewsPage);
 	}
 
