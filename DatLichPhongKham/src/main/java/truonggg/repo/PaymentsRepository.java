@@ -35,6 +35,17 @@ public interface PaymentsRepository extends JpaRepository<Payments, Integer> {
 	
 	// Tìm payments theo payment method
 	Page<Payments> findByPaymentMethod(PaymentMethod paymentMethod, Pageable pageable);
+	
+	// Tìm payment theo gatewayTransactionNo (bank transaction ID)
+	Optional<Payments> findByGatewayTransactionNo(String gatewayTransactionNo);
+	
+	// Tìm payment theo description và amount (dùng cho fallback matching)
+	// Note: description sẽ được normalize và so sánh với transactionId hoặc parse từ content
+	List<Payments> findByPaymentMethodAndAmountAndStatus(
+		PaymentMethod paymentMethod, 
+		Double amount, 
+		Appointments_Enum status
+	);
 }
 
 

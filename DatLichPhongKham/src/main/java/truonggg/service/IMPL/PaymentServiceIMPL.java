@@ -2,15 +2,12 @@ package truonggg.service.IMPL;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import truonggg.Enum.Appointments_Enum;
@@ -29,7 +26,6 @@ import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.service.PaymentService;
 import truonggg.service.QRCodeService;
-import truonggg.utils.MomoUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -42,8 +38,6 @@ public class PaymentServiceIMPL implements PaymentService {
 	private final AppointmentsRepository appointmentsRepository;
 	private final UserRepository userRepository;
 	private final PaymentMapper paymentMapper;
-	private final MomoUtils momoUtils;
-	private final ObjectMapper objectMapper;
 	private final QRCodeService qrCodeService;
 
 	@Override
@@ -71,23 +65,24 @@ public class PaymentServiceIMPL implements PaymentService {
 			throw new IllegalArgumentException("Không thể thanh toán cho appointment đã bị hủy");
 		}
 
-		// Validate payment method
-		PaymentMethod paymentMethod;
-		try {
-			paymentMethod = PaymentMethod.valueOf(dto.getPaymentMethod().toUpperCase());
-		} catch (IllegalArgumentException e) {
-			throw new IllegalArgumentException(
-					"Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: MOMO, CASH, BANK_TRANSFER");
+		// Chỉ cho phép thanh toán chuyển khoản qua MB (BANK_TRANSFER)
+		PaymentMethod paymentMethod = PaymentMethod.BANK_TRANSFER;
+
+		// Nếu client truyền method khác BANK_TRANSFER thì từ chối
+		if (dto.getPaymentMethod() != null && !dto.getPaymentMethod().isBlank()) {
+			PaymentMethod requestedMethod;
+			try {
+				requestedMethod = PaymentMethod.valueOf(dto.getPaymentMethod().toUpperCase());
+			} catch (IllegalArgumentException e) {
+				throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ. Hệ thống chỉ hỗ trợ MB BANK.");
+			}
+
+			if (requestedMethod != PaymentMethod.BANK_TRANSFER) {
+				throw new IllegalArgumentException("Hệ thống hiện chỉ hỗ trợ thanh toán chuyển khoản MB BANK.");
+			}
 		}
 
-		double amount;
-
-		switch (paymentMethod) {
-		case BANK_TRANSFER -> amount = DEFAULT_DEPOSIT_AMOUNT; // ví dụ 2000
-		case MOMO -> amount = DEFAULT_DEPOSIT_AMOUNT; // cũng dùng mức cọc mặc định
-		case CASH -> amount = DEFAULT_DEPOSIT_AMOUNT; // hoặc set theo quy tắc riêng
-		default -> throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ");
-		}
+		double amount = DEFAULT_DEPOSIT_AMOUNT;
 
 		if (amount <= 0) {
 			throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0");
@@ -101,88 +96,23 @@ public class PaymentServiceIMPL implements PaymentService {
 		String paymentUrl = null;
 		String transactionId = null;
 
-		// Xử lý theo phương thức
-		switch (paymentMethod) {
-		case MOMO -> {
-			transactionId = momoUtils.generateOrderId(dto.getAppointmentId());
-			payment.setTransactionId(transactionId);
+		// Chỉ xử lý chuyển khoản MB
+		transactionId = "BANK_MB_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
+		payment.setTransactionId(transactionId);
 
-			Long amountLong = (long) (amount * 100);
-			String orderInfo = "Thanh toan dat coc cho lich hen #" + dto.getAppointmentId();
-			Map<String, String> paymentRequest = momoUtils.createPaymentRequest(transactionId, amountLong, orderInfo);
-			paymentUrl = convertMapToJsonString(paymentRequest);
-			payment.setPaymentUrl(paymentUrl);
-		}
+		String paymentCode = "COCLK" + dto.getAppointmentId();
+		payment.setPaymentCode(paymentCode); // Bắt buộc để đối soát
 
-		case BANK_TRANSFER -> {
-			transactionId = "BANK_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
-			payment.setTransactionId(transactionId);
-
-			try {
-				var qrCodeResponse = qrCodeService.getQRCode("TIMO", amount, dto.getAppointmentId());
-				paymentUrl = qrCodeResponse.getQrCodeUrl();
-				payment.setPaymentUrl(paymentUrl);
-			} catch (Exception ignored) {
-			}
-		}
-
-		case CASH -> {
-			transactionId = "CASH_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
-			payment.setTransactionId(transactionId);
-			payment.setStatus(Appointments_Enum.CONFIRMED);
-		}
-		}
+		// Gọi QRCodeService với bankCode = "MB"
+		var qrCodeResponse = qrCodeService.getQRCode("MB", amount, dto.getAppointmentId());
+		paymentUrl = qrCodeResponse.getQrCodeUrl();
+		payment.setPaymentUrl(paymentUrl);
 
 		payment = paymentsRepository.save(payment);
 
 		PaymentResponseDTO response = paymentMapper.toDTO(payment);
 		response.setPaymentUrl(paymentUrl);
 		return response;
-	}
-
-	@Override
-	@Transactional
-	public PaymentResponseDTO handleMomoCallback(Map<String, String> callbackParams) {
-		// Lấy orderId từ callback
-		String orderId = callbackParams.get("orderId");
-		if (orderId == null) {
-			throw new IllegalArgumentException("orderId không được bỏ trống");
-		}
-
-		// Tìm payment theo transactionId (orderId)
-		Payments payment = paymentsRepository.findByTransactionId(orderId)
-				.orElseThrow(() -> new NotFoundException("payment", "Payment not found"));
-
-		// Verify signature
-		String signature = callbackParams.get("signature");
-		if (!momoUtils.verifySignature(callbackParams, signature)) {
-			throw new SecurityException("Signature không hợp lệ");
-		}
-
-		// Lấy resultCode
-		Integer resultCode = Integer.parseInt(callbackParams.get("resultCode"));
-
-		// Cập nhật payment
-		payment.setGatewayTransactionNo(callbackParams.get("transId"));
-		payment.setResponseCode(String.valueOf(resultCode));
-		payment.setSecureHash(signature);
-
-		if (resultCode == 0) {
-			// Thanh toán thành công
-			payment.setStatus(Appointments_Enum.CONFIRMED);
-			// Cập nhật appointment status
-			Appointments appointment = payment.getAppointments();
-			if (appointment.getStatus() == Appointments_Enum.PENDING) {
-				appointment.setStatus(Appointments_Enum.CONFIRMED);
-				appointmentsRepository.save(appointment);
-			}
-		} else {
-			// Thanh toán thất bại
-			payment.setStatus(Appointments_Enum.CANCELLED);
-		}
-
-		payment = paymentsRepository.save(payment);
-		return paymentMapper.toDTO(payment);
 	}
 
 	@Override
@@ -254,91 +184,51 @@ public class PaymentServiceIMPL implements PaymentService {
 	@Override
 	@Transactional
 	public PaymentResponseDTO confirmBankTransferPayment(BankTransferCallbackDTO callbackDTO) {
-		// Validate input
-		if (callbackDTO.getContent() == null || callbackDTO.getContent().isEmpty()) {
-			throw new IllegalArgumentException("Nội dung chuyển khoản không được bỏ trống");
-		}
-		if (callbackDTO.getAmount() == null || callbackDTO.getAmount() <= 0) {
-			throw new IllegalArgumentException("Số tiền không hợp lệ");
+		Payments payment = null;
+
+		// 1️⃣ Khớp theo gatewayTransactionNo (tid từ bank)
+		if (callbackDTO.getBankTransactionId() != null && !callbackDTO.getBankTransactionId().isEmpty()) {
+			payment = paymentsRepository.findByGatewayTransactionNo(callbackDTO.getBankTransactionId()).orElse(null);
 		}
 
-		// Parse appointmentId từ nội dung chuyển khoản
-		// Format: "COC_LK_1" -> appointmentId = 1
-		Integer appointmentId = null;
-		try {
-			String content = callbackDTO.getContent();
-			// Tìm pattern "COC_LK_" hoặc "LK_" hoặc chỉ số
-			if (content.contains("COC_LK_")) {
-				String[] parts = content.split("COC_LK_");
-				if (parts.length > 1) {
-					// Lấy số sau "COC_LK_"
-					String idStr = parts[1].trim();
-					// Loại bỏ các ký tự không phải số ở đầu
-					idStr = idStr.replaceAll("^[^0-9]+", "");
-					appointmentId = Integer.parseInt(idStr);
-				}
-			} else if (content.contains("LK_")) {
-				String[] parts = content.split("LK_");
-				if (parts.length > 1) {
-					String idStr = parts[1].trim();
-					idStr = idStr.replaceAll("^[^0-9]+", "");
-					appointmentId = Integer.parseInt(idStr);
-				}
-			} else {
-				// Thử parse trực tiếp số từ content
-				String idStr = content.replaceAll("[^0-9]", "");
-				if (!idStr.isEmpty()) {
-					appointmentId = Integer.parseInt(idStr);
+		// 2️⃣ Nếu không tìm thấy, parse appointmentId từ content và tìm payment
+		if (payment == null && callbackDTO.getContent() != null && !callbackDTO.getContent().isEmpty()) {
+			Integer appointmentId = parseAppointmentIdFromContent(callbackDTO.getContent());
+
+			if (appointmentId != null) {
+				// Tìm payment theo appointmentId, amount, paymentMethod = BANK_TRANSFER, status
+				// = PENDING
+				List<Payments> pendingPayments = paymentsRepository
+						.findByPaymentMethodAndAmountAndStatus(PaymentMethod.BANK_TRANSFER, callbackDTO.getAmount(),
+								Appointments_Enum.PENDING)
+						.stream()
+						.filter(p -> p.getAppointments() != null && p.getAppointments().getId().equals(appointmentId))
+						.sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate())) // Lấy payment mới nhất
+						.toList();
+
+				if (!pendingPayments.isEmpty()) {
+					payment = pendingPayments.get(0);
 				}
 			}
-		} catch (Exception e) {
-			throw new IllegalArgumentException(
-					"Không thể parse appointmentId từ nội dung chuyển khoản: " + callbackDTO.getContent());
 		}
 
-		if (appointmentId == null) {
-			throw new IllegalArgumentException("Không tìm thấy appointmentId trong nội dung chuyển khoản");
+		if (payment == null) {
+			return null;
 		}
 
-		// Tìm payment theo appointmentId, paymentMethod = BANK_TRANSFER, status =
-		// PENDING
-		List<Payments> pendingPayments = paymentsRepository.findByAppointments_Id(appointmentId).stream().filter(
-				p -> p.getPaymentMethod() == PaymentMethod.BANK_TRANSFER && p.getStatus() == Appointments_Enum.PENDING)
-				.sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate())) // Lấy payment mới nhất
-				.toList();
+		// ✅ Cập nhật trạng thái payment
+		payment.setStatus(Appointments_Enum.CONFIRMED);
 
-		if (pendingPayments.isEmpty()) {
-			throw new NotFoundException("payment",
-					"Không tìm thấy payment đang chờ thanh toán cho appointment " + appointmentId);
+		// Lưu gatewayTransactionNo nếu có
+		if (callbackDTO.getBankTransactionId() != null && payment.getGatewayTransactionNo() == null) {
+			payment.setGatewayTransactionNo(callbackDTO.getBankTransactionId());
 		}
 
-		// Tìm payment có số tiền khớp (cho phép sai số nhỏ do làm tròn)
-		Payments matchedPayment = null;
-		double tolerance = 0.01; // Cho phép sai số 1 xu
-
-		for (Payments payment : pendingPayments) {
-			if (Math.abs(payment.getAmount() - callbackDTO.getAmount()) <= tolerance) {
-				matchedPayment = payment;
-				break;
-			}
-		}
-
-		if (matchedPayment == null) {
-			throw new IllegalArgumentException("Không tìm thấy payment với số tiền khớp. Số tiền trong hệ thống: "
-					+ pendingPayments.get(0).getAmount() + ", Số tiền nhận được: " + callbackDTO.getAmount());
-		}
-
-		// Cập nhật payment status
-		matchedPayment.setStatus(Appointments_Enum.CONFIRMED);
-		if (callbackDTO.getBankTransactionId() != null) {
-			matchedPayment.setGatewayTransactionNo(callbackDTO.getBankTransactionId());
-		}
+		// Lưu thông tin người chuyển nếu có
 		if (callbackDTO.getFromAccount() != null) {
-			// Ghi nhận thông tin người chuyển trên bank statement cùng fullname trong hệ
-			// thống
 			String responseCodeValue = "STK: " + callbackDTO.getFromAccount();
-			String payerName = matchedPayment.getAppointments().getUser() != null
-					? matchedPayment.getAppointments().getUser().getFullName()
+			String payerName = payment.getAppointments() != null && payment.getAppointments().getUser() != null
+					? payment.getAppointments().getUser().getFullName()
 					: null;
 			if (payerName == null || payerName.isBlank()) {
 				payerName = callbackDTO.getFromName();
@@ -352,38 +242,53 @@ public class PaymentServiceIMPL implements PaymentService {
 			if (responseCodeValue.length() > 100) {
 				responseCodeValue = responseCodeValue.substring(0, 100);
 			}
-			matchedPayment.setResponseCode(responseCodeValue);
+			payment.setResponseCode(responseCodeValue);
 		}
 
-		// Lưu và flush ngay để đảm bảo thay đổi được ghi vào database
-		matchedPayment = paymentsRepository.saveAndFlush(matchedPayment);
+		payment = paymentsRepository.saveAndFlush(payment);
 
-		// Cập nhật appointment status nếu đang PENDING
-		Appointments appointment = matchedPayment.getAppointments();
-		if (appointment.getStatus() == Appointments_Enum.PENDING
-				|| appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT) {
+		// Cập nhật appointment status nếu đang PENDING hoặc AWAITING_DEPOSIT
+		Appointments appointment = payment.getAppointments();
+		if (appointment != null && (appointment.getStatus() == Appointments_Enum.PENDING
+				|| appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT)) {
 			appointment.setStatus(Appointments_Enum.CONFIRMED);
 			appointmentsRepository.saveAndFlush(appointment);
 		}
 
-		// Reload entity từ database để đảm bảo đọc đúng giá trị mới nhất
-		matchedPayment = paymentsRepository.findById(matchedPayment.getId())
-				.orElseThrow(() -> new NotFoundException("payment", "Payment not found after update"));
+		return paymentMapper.toDTO(payment);
+	}
 
-		return paymentMapper.toDTO(matchedPayment);
+	/**
+	 * Parse appointmentId từ nội dung chuyển khoản Hỗ trợ format: "COC_LK_19",
+	 * "COCLK19", "LK_19", "LK19", hoặc chỉ số
+	 */
+	private Integer parseAppointmentIdFromContent(String content) {
+		if (content == null || content.isBlank())
+			return null;
+
+		// Remove all non-digit characters at the start, extract digits at the beginning
+		String digits = "";
+		for (char c : content.toCharArray()) {
+			if (Character.isDigit(c)) {
+				digits += c;
+			} else if (!digits.isEmpty()) {
+				break; // Dừng khi gặp ký tự đầu tiên không phải số sau khi đã bắt đầu lấy số
+			}
+		}
+
+		if (digits.isEmpty())
+			return null;
+
+		try {
+			return Integer.parseInt(digits);
+		} catch (NumberFormatException e) {
+			return null;
+		}
 	}
 
 	private PagedResult<PaymentResponseDTO> convertToPagedResult(Page<Payments> paymentsPage) {
 		return PagedResult.<PaymentResponseDTO>builder().content(paymentsPage.map(paymentMapper::toDTO).toList())
 				.totalElements((int) paymentsPage.getTotalElements()).totalPages(paymentsPage.getTotalPages())
 				.currentPage(paymentsPage.getNumber()).pageSize(paymentsPage.getSize()).build();
-	}
-
-	private String convertMapToJsonString(Map<String, String> map) {
-		try {
-			return objectMapper.writeValueAsString(map);
-		} catch (Exception e) {
-			throw new RuntimeException("Error converting Map to JSON", e);
-		}
 	}
 }

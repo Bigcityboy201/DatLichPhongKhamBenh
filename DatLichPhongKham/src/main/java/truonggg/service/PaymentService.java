@@ -1,7 +1,5 @@
 package truonggg.service;
 
-import java.util.Map;
-
 import org.springframework.data.domain.Pageable;
 
 import truonggg.dto.reponseDTO.PaymentResponseDTO;
@@ -15,11 +13,6 @@ public interface PaymentService {
 	 * Tạo thanh toán (tạo payment record và trả về URL thanh toán nếu là online)
 	 */
 	PaymentResponseDTO createPayment(PaymentRequestDTO dto, String username);
-	
-	/**
-	 * Xử lý callback từ MoMo
-	 */
-	PaymentResponseDTO handleMomoCallback(Map<String, String> callbackParams);
 	
 	/**
 	 * Lấy danh sách thanh toán của user hiện tại

@@ -80,10 +80,16 @@ public class SecurityConfiguration {
 		http.csrf(AbstractHttpConfigurer::disable);
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-		http.authorizeHttpRequests(auths -> auths
+			http.authorizeHttpRequests(auths -> auths
 				// Public endpoints - không cần xác thực
-				.requestMatchers(WHITE_LIST).permitAll().requestMatchers(HttpMethod.POST, "/api/payments/momo-callback")
-				.permitAll() // MoMo callback
+				.requestMatchers(WHITE_LIST).permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/payments/momo-callback").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/payments/bank-transfer-callback").permitAll()
+				// Casso webhook: allow POST + health check GET/HEAD
+				.requestMatchers(HttpMethod.POST, "/api/payments/casso-webhook").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/payments/casso-webhook").permitAll()
+				.requestMatchers(HttpMethod.HEAD, "/api/payments/casso-webhook").permitAll()
+
 				.requestMatchers(HttpMethod.GET, "/api/doctors/me", "/api/doctors/me/**").hasAuthority("DOCTOR")
 				.requestMatchers(HttpMethod.GET, "/api/doctors", "/api/doctors/*", "/api/doctors/department",
 						"/api/doctors/search")

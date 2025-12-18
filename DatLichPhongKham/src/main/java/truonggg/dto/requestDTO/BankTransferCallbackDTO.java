@@ -24,4 +24,5 @@ public class BankTransferCallbackDTO {
 	private String transactionDate;
 
 	private String bankTransactionId;
+
 }

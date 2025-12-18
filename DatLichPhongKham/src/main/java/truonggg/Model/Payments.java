@@ -2,16 +2,17 @@ package truonggg.Model;
 
 import java.util.Date;
 
+import org.hibernate.annotations.Check;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import org.hibernate.annotations.Check;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,7 +44,7 @@ public class Payments {
 	private boolean isDeposit;// 1=dat coc
 	@Enumerated(EnumType.ORDINAL)
 	private Appointments_Enum status;
-	
+
 	// Payment gateway fields (dùng cho MoMo)
 	@Column(unique = true, length = 50)
 	private String transactionId; // Mã giao dịch unique (orderId cho MoMo)
@@ -55,7 +56,10 @@ public class Payments {
 	private String secureHash; // Hash để verify (signature cho MoMo)
 	@Column(length = 1000)
 	private String paymentUrl; // URL thanh toán (cho MoMo)
-	
+
+	@Column(length = 50, unique = true)
+	private String paymentCode;
+
 	@ManyToOne
 	@JoinColumn(name = "appointment_id", referencedColumnName = "id")
 	private Appointments appointments;
