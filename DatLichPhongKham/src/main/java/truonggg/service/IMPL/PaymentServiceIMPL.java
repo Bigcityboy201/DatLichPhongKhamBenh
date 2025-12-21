@@ -2,6 +2,7 @@ package truonggg.service.IMPL;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +53,30 @@ public class PaymentServiceIMPL implements PaymentService {
 		Appointments appointment = appointmentsRepository.findById(dto.getAppointmentId())
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment not found"));
 
+		// ==================== 🔥 [THÊM] KIỂM TRA PAYMENT SUCCESS ====================
+		boolean hasSuccessPayment = paymentsRepository.existsByAppointmentsAndStatus(appointment,
+				Appointments_Enum.CONFIRMED);
+
+		if (hasSuccessPayment) {
+			throw new IllegalStateException("Appointment này đã được thanh toán");
+		}
+		// ==================== 🔥 KẾT THÚC PHẦN THÊM ====================
+
+		// ==================== 🔥 [THÊM] KIỂM TRA PAYMENT PENDING ====================
+		Optional<Payments> pendingPaymentOpt = paymentsRepository.findByAppointmentsAndStatus(appointment,
+				Appointments_Enum.PENDING);
+
+		if (pendingPaymentOpt.isPresent()) {
+			Payments pendingPayment = pendingPaymentOpt.get();
+
+			// 👉 TRẢ LẠI QR CŨ – KHÔNG TẠO PAYMENT MỚI
+			PaymentResponseDTO response = paymentMapper.toDTO(pendingPayment);
+			response.setPaymentUrl(pendingPayment.getPaymentUrl());
+
+			return response;
+		}
+		// ==================== 🔥 KẾT THÚC PHẦN THÊM ====================
+
 		// Kiểm tra quyền
 		boolean isAdminOrEmployee = user.getRole() != null && !user.getRole().getIsActive()
 				&& (user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
@@ -65,10 +90,9 @@ public class PaymentServiceIMPL implements PaymentService {
 			throw new IllegalArgumentException("Không thể thanh toán cho appointment đã bị hủy");
 		}
 
-		// Chỉ cho phép thanh toán chuyển khoản qua MB (BANK_TRANSFER)
+		// Chỉ cho phép thanh toán chuyển khoản qua MB
 		PaymentMethod paymentMethod = PaymentMethod.BANK_TRANSFER;
 
-		// Nếu client truyền method khác BANK_TRANSFER thì từ chối
 		if (dto.getPaymentMethod() != null && !dto.getPaymentMethod().isBlank()) {
 			PaymentMethod requestedMethod;
 			try {
@@ -83,35 +107,27 @@ public class PaymentServiceIMPL implements PaymentService {
 		}
 
 		double amount = DEFAULT_DEPOSIT_AMOUNT;
-
 		if (amount <= 0) {
 			throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0");
 		}
-		// KẾT THÚC xử lý amount
 
-		// Tạo payment record
+		// ==================== 🔥 [GIỮ NGUYÊN] TẠO PAYMENT MỚI ====================
 		Payments payment = Payments.builder().amount(amount).paymentDate(new Date()).paymentMethod(paymentMethod)
 				.isDeposit(true).status(Appointments_Enum.PENDING).appointments(appointment).build();
 
-		String paymentUrl = null;
-		String transactionId = null;
-
-		// Chỉ xử lý chuyển khoản MB
-		transactionId = "BANK_MB_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
+		String transactionId = "BANK_MB_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
 		payment.setTransactionId(transactionId);
 
 		String paymentCode = "COCLK" + dto.getAppointmentId();
-		payment.setPaymentCode(paymentCode); // Bắt buộc để đối soát
+		payment.setPaymentCode(paymentCode);
 
-		// Gọi QRCodeService với bankCode = "MB"
 		var qrCodeResponse = qrCodeService.getQRCode("MB", amount, dto.getAppointmentId());
-		paymentUrl = qrCodeResponse.getQrCodeUrl();
-		payment.setPaymentUrl(paymentUrl);
+		payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
 
 		payment = paymentsRepository.save(payment);
 
 		PaymentResponseDTO response = paymentMapper.toDTO(payment);
-		response.setPaymentUrl(paymentUrl);
+		response.setPaymentUrl(payment.getPaymentUrl());
 		return response;
 	}
 
