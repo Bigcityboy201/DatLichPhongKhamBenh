@@ -1,0 +1,45 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  COMPOSE_PROJECT_NAME: datlichphongkham
+  # ... (giữ nguyên các variables khác của bạn)
+
+# Job Build
+build_job:
+  stage: build
+  tags:
+    - local
+  script:
+    - echo "===== BUILD PROJECT ====="
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - "target/*.jar"
+    expire_in: 1 hour
+
+# Job Test
+test_job:
+  stage: test
+  tags:
+    - local
+  script:
+    - echo "===== RUN TESTS ====="
+    - mvn test
+
+# Job Deploy
+deploy_job:
+  stage: deploy
+  tags:
+    - local
+  only:
+    - main
+  script:
+    - echo "===== RESTARTING CONTAINERS ====="
+    - docker-compose down
+    - docker-compose up -d --build
+    - Start-Sleep -Seconds 10
+    - docker ps -a
