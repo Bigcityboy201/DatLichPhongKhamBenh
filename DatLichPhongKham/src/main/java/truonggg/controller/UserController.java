@@ -33,7 +33,7 @@ public class UserController {
 	private final UserService userService;
 
 	// GET /api/users - Lấy tất cả (phân trang)
-	// 12345
+	// 1234
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	@GetMapping
 	public SuccessReponse<?> getAllUsers(@RequestParam(value = "page", defaultValue = "0") int page,
