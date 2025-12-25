@@ -13,8 +13,41 @@ build_job:
   stage: build
   tags:
     - local
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+  before_script:
+    - echo "===== CHECKING ENVIRONMENT ====="
+    - pwd
+    - echo "===== LISTING FILES ====="
+    - Get-ChildItem -Force | Select-Object Name, Length
+    - echo "===== CHECKING POM.XML ====="
+    - if (Test-Path pom.xml) { 
+        Write-Output "✅ pom.xml exists"; 
+        Get-Item pom.xml | Select-Object FullName, Length 
+      } else { 
+        Write-Output "❌ pom.xml NOT FOUND in current directory";
+        Write-Output "Searching in subdirectories...";
+        Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object FullName
+        Write-Output "Checking git status...";
+        git status
+        Write-Output "Checking git files...";
+        git ls-files | Select-String pom
+      }
+    - echo "===== CHECKING GIT STATUS ====="
+    - git status
+    - git log --oneline -3
+    - echo "===== FORCING GIT CHECKOUT ====="
+    - git checkout -f HEAD
+    - git reset --hard HEAD
+    - echo "===== VERIFYING POM.XML AFTER CHECKOUT ====="
+    - if (Test-Path pom.xml) { Write-Output "✅ pom.xml exists after checkout" } else { Write-Output "❌ pom.xml still NOT FOUND" }
   script:
     - echo "===== BUILD PROJECT ====="
+    - if (-not (Test-Path pom.xml)) { 
+        Write-Output "ERROR: pom.xml not found! Cannot build.";
+        exit 1;
+      }
     - mvn clean package -DskipTests
   artifacts:
     paths:
