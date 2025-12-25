@@ -19,35 +19,51 @@ build_job:
   before_script:
     - echo "===== CHECKING ENVIRONMENT ====="
     - pwd
-    - echo "===== LISTING FILES ====="
+    - echo "===== LISTING ROOT FILES ====="
     - Get-ChildItem -Force | Select-Object Name, Length
-    - echo "===== CHECKING POM.XML ====="
-    - if (Test-Path pom.xml) { 
-        Write-Output "✅ pom.xml exists"; 
-        Get-Item pom.xml | Select-Object FullName, Length 
-      } else { 
-        Write-Output "❌ pom.xml NOT FOUND in current directory";
-        Write-Output "Searching in subdirectories...";
-        Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object FullName
-        Write-Output "Checking git status...";
-        git status
+    - echo "===== SEARCHING FOR POM.XML ====="
+    - $pomPath = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    - if ($pomPath) {
+        Write-Output "✅ Found pom.xml at: $pomPath";
+        $pomDir = Split-Path -Parent $pomPath;
+        Write-Output "📁 pom.xml directory: $pomDir";
+        Write-Output "📁 Current directory: $(Get-Location)";
+        if ($pomDir -ne (Get-Location).Path) {
+          Write-Output "🔄 Changing to pom.xml directory...";
+          Set-Location $pomDir;
+          Write-Output "✅ Changed to: $(Get-Location)";
+        }
+      } else {
+        Write-Output "❌ pom.xml NOT FOUND anywhere!";
         Write-Output "Checking git files...";
         git ls-files | Select-String pom
+        Write-Output "Checking git status...";
+        git status
+        Write-Output "Forcing git checkout...";
+        git checkout -f HEAD
+        git reset --hard HEAD
+        $pomPath = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+        if ($pomPath) {
+          Write-Output "✅ Found pom.xml after checkout at: $pomPath";
+          $pomDir = Split-Path -Parent $pomPath;
+          Set-Location $pomDir;
+        } else {
+          Write-Output "❌ pom.xml still NOT FOUND after checkout!";
+          exit 1;
+        }
       }
-    - echo "===== CHECKING GIT STATUS ====="
-    - git status
-    - git log --oneline -3
-    - echo "===== FORCING GIT CHECKOUT ====="
-    - git checkout -f HEAD
-    - git reset --hard HEAD
-    - echo "===== VERIFYING POM.XML AFTER CHECKOUT ====="
-    - if (Test-Path pom.xml) { Write-Output "✅ pom.xml exists after checkout" } else { Write-Output "❌ pom.xml still NOT FOUND" }
-  script:
-    - echo "===== BUILD PROJECT ====="
-    - if (-not (Test-Path pom.xml)) { 
-        Write-Output "ERROR: pom.xml not found! Cannot build.";
+    - echo "===== VERIFYING POM.XML ====="
+    - if (Test-Path pom.xml) {
+        Write-Output "✅ pom.xml verified at: $(Resolve-Path pom.xml)";
+        Get-Item pom.xml | Select-Object FullName, Length
+      } else {
+        Write-Output "❌ pom.xml verification failed!";
         exit 1;
       }
+  script:
+    - echo "===== BUILD PROJECT ====="
+    - echo "Current directory: $(Get-Location)"
+    - echo "POM file: $(Resolve-Path pom.xml)"
     - mvn clean package -DskipTests
   artifacts:
     paths:
@@ -59,6 +75,14 @@ test_job:
   stage: test
   tags:
     - local
+  before_script:
+    - $pomPath = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    - if ($pomPath) {
+        $pomDir = Split-Path -Parent $pomPath;
+        if ($pomDir -ne (Get-Location).Path) {
+          Set-Location $pomDir;
+        }
+      }
   script:
     - echo "===== RUN TESTS ====="
     - mvn test
