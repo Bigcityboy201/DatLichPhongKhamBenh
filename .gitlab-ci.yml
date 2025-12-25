@@ -3,34 +3,32 @@ stages:
   - test
   - deploy
 
-variables:
-  DOCKER_DRIVER: overlay2
-  COMPOSE_PROJECT_NAME: datlichphongkham
-  # ... (giữ nguyên các variables khác của bạn)
-
-# Job Build
+# ================= BUILD =================
 build_job:
   stage: build
   tags:
     - local
   script:
-    - echo "===== BUILD PROJECT ====="
+    - echo "===== VAO THU MUC CHUA CODE ====="
+    - cd DatLichPhongKham  # <<< LENH QUAN TRONG NHAT
+    - echo "===== BAT DAU BUILD ====="
     - mvn clean package -DskipTests
   artifacts:
     paths:
-      - "target/*.jar"
+      - "DatLichPhongKham/target/*.jar"
     expire_in: 1 hour
 
-# Job Test
+# ================= TEST =================
 test_job:
   stage: test
   tags:
     - local
   script:
+    - cd DatLichPhongKham  # Cung phai vao thu muc nay moi test duoc
     - echo "===== RUN TESTS ====="
     - mvn test
 
-# Job Deploy
+# ================= DEPLOY =================
 deploy_job:
   stage: deploy
   tags:
@@ -38,6 +36,7 @@ deploy_job:
   only:
     - main
   script:
+    - cd DatLichPhongKham # Vao day de docker-compose thay file docker-compose.yml
     - echo "===== RESTARTING CONTAINERS ====="
     - docker-compose down
     - docker-compose up -d --build
