@@ -15,7 +15,7 @@ public class QRCodeResponseDTO {
 	
 	private String qrCodeUrl; // URL của QR code image
 	private Double amount; // Số tiền (2000 đồng mặc định)
-	private String paymentMethod; // TIMO, MOMO
+	private String paymentMethod; // BANK_TRANSFER
 	private String accountNumber; // Số tài khoản
 	private String bankName; // Tên ngân hàng
 	private String content; // Nội dung chuyển khoản (để verify)

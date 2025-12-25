@@ -8,8 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import truonggg.Enum.Appointments_Enum;
 import truonggg.Enum.PaymentMethod;
+import truonggg.Enum.PaymentStatus;
 import truonggg.Model.Appointments;
 import truonggg.Model.Payments;
 
@@ -32,7 +32,7 @@ public interface PaymentsRepository extends JpaRepository<Payments, Integer> {
 	Page<Payments> findAll(Pageable pageable);
 
 	// Tìm payments theo status
-	Page<Payments> findByStatus(Appointments_Enum status, Pageable pageable);
+	Page<Payments> findByStatus(PaymentStatus status, Pageable pageable);
 
 	// Tìm payments theo payment method
 	Page<Payments> findByPaymentMethod(PaymentMethod paymentMethod, Pageable pageable);
@@ -44,10 +44,10 @@ public interface PaymentsRepository extends JpaRepository<Payments, Integer> {
 	// Note: description sẽ được normalize và so sánh với transactionId hoặc parse
 	// từ content
 	List<Payments> findByPaymentMethodAndAmountAndStatus(PaymentMethod paymentMethod, Double amount,
-			Appointments_Enum status);
+			PaymentStatus status);
 
-	Optional<Payments> findByAppointmentsAndStatus(Appointments appointment, Appointments_Enum status);
+	Optional<Payments> findByAppointmentsAndStatus(Appointments appointment, PaymentStatus status);
 
-	boolean existsByAppointmentsAndStatus(Appointments appointment, Appointments_Enum status);
+	boolean existsByAppointmentsAndStatus(Appointments appointment, PaymentStatus status);
 
 }

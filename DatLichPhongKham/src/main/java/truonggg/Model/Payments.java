@@ -18,15 +18,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import truonggg.Enum.Appointments_Enum;
 import truonggg.Enum.PaymentMethod;
+import truonggg.Enum.PaymentStatus;
 
 @Entity
-@Check(constraints = "payment_method BETWEEN 0 AND 2 AND status BETWEEN 0 AND 7")
-// Check constraint: payment_method (0-2), status (0-7)
-// PaymentMethod: MOMO(0), CASH(1), BANK_TRANSFER(2)
-// Appointments_Enum: PENDING(0), CONFIRMED(1), CANCELLED(2), COMPLETED(3), 
-//                    AWAITING_DEPOSIT(4), DEPOSIT_PAID(5), CANCELLED_REFUND(6), CANCELLED_NO_REFUND(7)
+@Check(constraints = "payment_method BETWEEN 0 AND 1 AND status BETWEEN 0 AND 2")
+// Check constraint: payment_method (0-1), status (0-2)
+// PaymentMethod: CASH(0), BANK_TRANSFER(1)
+// PaymentStatus: PENDING(0), CONFIRMED(1), CANCELLED(2)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,19 +42,19 @@ public class Payments {
 	@Column(columnDefinition = "BIT DEFAULT 0")
 	private boolean isDeposit;// 1=dat coc
 	@Enumerated(EnumType.ORDINAL)
-	private Appointments_Enum status;
+	private PaymentStatus status;
 
-	// Payment gateway fields (dùng cho MoMo)
+	// Payment gateway fields (dùng cho Bank Transfer)
 	@Column(unique = true, length = 50)
-	private String transactionId; // Mã giao dịch unique (orderId cho MoMo)
+	private String transactionId; // Mã giao dịch unique
 	@Column(length = 100)
-	private String gatewayTransactionNo; // Mã giao dịch từ gateway (transId cho MoMo)
+	private String gatewayTransactionNo; // Mã giao dịch từ gateway (tid từ bank)
 	@Column(length = 100)
-	private String responseCode; // Mã phản hồi (resultCode cho MoMo, hoặc thông tin người gửi cho Bank Transfer)
+	private String responseCode; // Thông tin người gửi cho Bank Transfer
 	@Column(length = 500)
-	private String secureHash; // Hash để verify (signature cho MoMo)
+	private String secureHash; // Hash để verify (nếu cần)
 	@Column(length = 1000)
-	private String paymentUrl; // URL thanh toán (cho MoMo)
+	private String paymentUrl; // URL QR code thanh toán (cho Bank Transfer)
 
 	@Column(length = 50, unique = true)
 	private String paymentCode;

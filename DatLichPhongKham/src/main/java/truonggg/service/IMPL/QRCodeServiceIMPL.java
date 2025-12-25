@@ -17,9 +17,9 @@ public class QRCodeServiceIMPL implements QRCodeService {
 
 	private final AppointmentsRepository appointmentsRepository;
 
-	// Bank Configuration (Timo/MB Bank)
+	// Bank Configuration (MB Bank)
 	@Value("${qrcode.bank.bank-id:970422}")
-	private String bankId; // MB Bank: 970422, Timo: 970415
+	private String bankId; // MB Bank: 970422
 
 	@Value("${qrcode.bank.account:}")
 	private String bankAccount;
@@ -42,13 +42,11 @@ public class QRCodeServiceIMPL implements QRCodeService {
 	public QRCodeResponseDTO getQRCode(String paymentMethod, Double amount, Integer appointmentId) {
 		String method = paymentMethod.toUpperCase();
 
-		if ("TIMO".equals(method) || "BANK_TRANSFER".equals(method) || "MB".equals(method)) {
+		if ("BANK_TRANSFER".equals(method) || "MB".equals(method)) {
 			return generateBankQRCode(amount, appointmentId);
-		} else if ("MOMO".equals(method)) {
-			throw new IllegalArgumentException("MoMo không hỗ trợ QR code tĩnh.");
 		} else {
 			throw new IllegalArgumentException(
-					"Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: TIMO, BANK_TRANSFER, MB, MOMO");
+					"Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: BANK_TRANSFER, MB");
 		}
 	}
 

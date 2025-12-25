@@ -21,7 +21,7 @@ public class QRCodeController {
 	@GetMapping("/deposit")
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<QRCodeResponseDTO> getDepositQRCode(
-			@RequestParam(value = "paymentMethod", defaultValue = "TIMO") String paymentMethod,
+			@RequestParam(value = "paymentMethod", defaultValue = "BANK_TRANSFER") String paymentMethod,
 			@RequestParam(value = "appointmentId", required = false) Integer appointmentId) {
 		QRCodeResponseDTO qrCode = qrCodeService.getDepositQRCode(paymentMethod, appointmentId);
 		return SuccessReponse.of(qrCode);
@@ -30,7 +30,7 @@ public class QRCodeController {
 	@GetMapping
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<QRCodeResponseDTO> getQRCode(
-			@RequestParam(value = "paymentMethod", defaultValue = "TIMO") String paymentMethod,
+			@RequestParam(value = "paymentMethod", defaultValue = "BANK_TRANSFER") String paymentMethod,
 			@RequestParam(value = "amount", defaultValue = "2000") Double amount,
 			@RequestParam(value = "appointmentId", required = false) Integer appointmentId) {
 		QRCodeResponseDTO qrCode = qrCodeService.getQRCode(paymentMethod, amount, appointmentId);

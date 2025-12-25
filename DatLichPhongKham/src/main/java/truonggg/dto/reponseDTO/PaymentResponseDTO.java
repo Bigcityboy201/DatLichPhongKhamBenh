@@ -7,8 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import truonggg.Enum.Appointments_Enum;
 import truonggg.Enum.PaymentMethod;
+import truonggg.Enum.PaymentStatus;
 
 @Getter
 @Setter
@@ -22,7 +22,7 @@ public class PaymentResponseDTO {
 	private Date paymentDate;
 	private PaymentMethod paymentMethod;
 	private Boolean isDeposit;
-	private Appointments_Enum status;
+	private PaymentStatus status;
 	
 	// Payment gateway fields
 	private String transactionId;

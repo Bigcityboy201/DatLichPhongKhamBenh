@@ -1,7 +1,7 @@
 {
   "appointmentId": 1,
-  "amount": 50000,
-  "paymentMethod": "MOMO"
+  "amount": 2000,
+  "paymentMethod": "BANK_TRANSFER"
 }
 
 

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import truonggg.Enum.Appointments_Enum;
 import truonggg.Enum.PaymentMethod;
+import truonggg.Enum.PaymentStatus;
 import truonggg.Exception.NotFoundException;
 import truonggg.Model.Appointments;
 import truonggg.Model.Payments;
@@ -55,7 +56,7 @@ public class PaymentServiceIMPL implements PaymentService {
 
 		// ==================== 🔥 [THÊM] KIỂM TRA PAYMENT SUCCESS ====================
 		boolean hasSuccessPayment = paymentsRepository.existsByAppointmentsAndStatus(appointment,
-				Appointments_Enum.CONFIRMED);
+				PaymentStatus.CONFIRMED);
 
 		if (hasSuccessPayment) {
 			throw new IllegalStateException("Appointment này đã được thanh toán");
@@ -64,7 +65,7 @@ public class PaymentServiceIMPL implements PaymentService {
 
 		// ==================== 🔥 [THÊM] KIỂM TRA PAYMENT PENDING ====================
 		Optional<Payments> pendingPaymentOpt = paymentsRepository.findByAppointmentsAndStatus(appointment,
-				Appointments_Enum.PENDING);
+				PaymentStatus.PENDING);
 
 		if (pendingPaymentOpt.isPresent()) {
 			Payments pendingPayment = pendingPaymentOpt.get();
@@ -90,44 +91,68 @@ public class PaymentServiceIMPL implements PaymentService {
 			throw new IllegalArgumentException("Không thể thanh toán cho appointment đã bị hủy");
 		}
 
-		// Chỉ cho phép thanh toán chuyển khoản qua MB
-		PaymentMethod paymentMethod = PaymentMethod.BANK_TRANSFER;
-
+		// Xác định phương thức thanh toán: CASH hoặc BANK_TRANSFER
+		PaymentMethod paymentMethod;
 		if (dto.getPaymentMethod() != null && !dto.getPaymentMethod().isBlank()) {
-			PaymentMethod requestedMethod;
 			try {
-				requestedMethod = PaymentMethod.valueOf(dto.getPaymentMethod().toUpperCase());
+				paymentMethod = PaymentMethod.valueOf(dto.getPaymentMethod().toUpperCase());
+				if (paymentMethod != PaymentMethod.CASH && paymentMethod != PaymentMethod.BANK_TRANSFER) {
+					throw new IllegalArgumentException(
+							"Phương thức thanh toán không hợp lệ. Chỉ hỗ trợ: CASH, BANK_TRANSFER");
+				}
 			} catch (IllegalArgumentException e) {
-				throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ. Hệ thống chỉ hỗ trợ MB BANK.");
+				throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ. Chỉ hỗ trợ: CASH, BANK_TRANSFER");
 			}
-
-			if (requestedMethod != PaymentMethod.BANK_TRANSFER) {
-				throw new IllegalArgumentException("Hệ thống hiện chỉ hỗ trợ thanh toán chuyển khoản MB BANK.");
-			}
+		} else {
+			// Mặc định là BANK_TRANSFER
+			paymentMethod = PaymentMethod.BANK_TRANSFER;
 		}
 
+		// Sử dụng số tiền cọc mặc định
 		double amount = DEFAULT_DEPOSIT_AMOUNT;
-		if (amount <= 0) {
-			throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0");
-		}
 
-		// ==================== 🔥 [GIỮ NGUYÊN] TẠO PAYMENT MỚI ====================
-		Payments payment = Payments.builder().amount(amount).paymentDate(new Date()).paymentMethod(paymentMethod)
-				.isDeposit(true).status(Appointments_Enum.PENDING).appointments(appointment).build();
+		// Tạo payment
+		PaymentStatus initialStatus = paymentMethod == PaymentMethod.CASH 
+				? PaymentStatus.CONFIRMED  // CASH được xác nhận ngay
+				: PaymentStatus.PENDING;   // BANK_TRANSFER cần chờ xác nhận
 
-		String transactionId = "BANK_MB_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
+		Payments payment = Payments.builder()
+				.amount(amount)
+				.paymentDate(new Date())
+				.paymentMethod(paymentMethod)
+				.isDeposit(true)
+				.status(initialStatus)
+				.appointments(appointment)
+				.build();
+
+		String transactionId = paymentMethod == PaymentMethod.CASH
+				? "CASH_" + dto.getAppointmentId() + "_" + System.currentTimeMillis()
+				: "BANK_MB_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
 		payment.setTransactionId(transactionId);
 
 		String paymentCode = "COCLK" + dto.getAppointmentId();
 		payment.setPaymentCode(paymentCode);
 
-		var qrCodeResponse = qrCodeService.getQRCode("MB", amount, dto.getAppointmentId());
-		payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
+		// Chỉ tạo QR code cho BANK_TRANSFER
+		if (paymentMethod == PaymentMethod.BANK_TRANSFER) {
+			var qrCodeResponse = qrCodeService.getQRCode("BANK_TRANSFER", amount, dto.getAppointmentId());
+			payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
+		}
 
 		payment = paymentsRepository.save(payment);
 
+		// Cập nhật appointment status nếu là CASH
+		if (paymentMethod == PaymentMethod.CASH && 
+				(appointment.getStatus() == Appointments_Enum.PENDING
+						|| appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT)) {
+			appointment.setStatus(Appointments_Enum.CONFIRMED);
+			appointmentsRepository.saveAndFlush(appointment);
+		}
+
 		PaymentResponseDTO response = paymentMapper.toDTO(payment);
-		response.setPaymentUrl(payment.getPaymentUrl());
+		if (payment.getPaymentUrl() != null) {
+			response.setPaymentUrl(payment.getPaymentUrl());
+		}
 		return response;
 	}
 
@@ -216,7 +241,7 @@ public class PaymentServiceIMPL implements PaymentService {
 				// = PENDING
 				List<Payments> pendingPayments = paymentsRepository
 						.findByPaymentMethodAndAmountAndStatus(PaymentMethod.BANK_TRANSFER, callbackDTO.getAmount(),
-								Appointments_Enum.PENDING)
+								PaymentStatus.PENDING)
 						.stream()
 						.filter(p -> p.getAppointments() != null && p.getAppointments().getId().equals(appointmentId))
 						.sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate())) // Lấy payment mới nhất
@@ -233,7 +258,7 @@ public class PaymentServiceIMPL implements PaymentService {
 		}
 
 		// ✅ Cập nhật trạng thái payment
-		payment.setStatus(Appointments_Enum.CONFIRMED);
+		payment.setStatus(PaymentStatus.CONFIRMED);
 
 		// Lưu gatewayTransactionNo nếu có
 		if (callbackDTO.getBankTransactionId() != null && payment.getGatewayTransactionNo() == null) {

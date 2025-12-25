@@ -28,42 +28,19 @@ $headers = @{
 
 # Menu
 Write-Host "`n=== MENU TEST ===" -ForegroundColor Cyan
-Write-Host "1. Tạo payment MOMO"
-Write-Host "2. Tạo payment BANK_TRANSFER"
-Write-Host "3. Tạo payment CASH"
-Write-Host "4. Lấy QR Code đặt cọc"
-Write-Host "5. Lấy QR Code tùy chỉnh"
-Write-Host "6. Xem danh sách payments của tôi"
-Write-Host "7. Kiểm tra trạng thái payment"
-Write-Host "8. Test Bank Transfer Callback"
+Write-Host "1. Tạo payment BANK_TRANSFER"
+Write-Host "2. Tạo payment CASH"
+Write-Host "3. Lấy QR Code đặt cọc"
+Write-Host "4. Lấy QR Code tùy chỉnh"
+Write-Host "5. Xem danh sách payments của tôi"
+Write-Host "6. Kiểm tra trạng thái payment"
+Write-Host "7. Test Bank Transfer Callback"
 Write-Host "0. Thoát"
 
-$choice = Read-Host "`nChọn chức năng (0-8)"
+$choice = Read-Host "`nChọn chức năng (0-7)"
 
 switch ($choice) {
     "1" {
-        Write-Host "`n=== TẠO PAYMENT MOMO ===" -ForegroundColor Cyan
-        $appointmentId = Read-Host "Nhập appointmentId"
-        $amount = Read-Host "Nhập số tiền (VNĐ)"
-        
-        $body = @{
-            appointmentId = [int]$appointmentId
-            amount = [double]$amount
-            paymentMethod = "MOMO"
-        } | ConvertTo-Json
-        
-        $response = Invoke-RestMethod -Uri "$baseUrl/api/payments" `
-            -Method POST `
-            -Headers $headers `
-            -Body $body
-        
-        Write-Host "✅ Tạo payment thành công!" -ForegroundColor Green
-        Write-Host "Payment ID: $($response.data.id)" -ForegroundColor Yellow
-        Write-Host "Status: $($response.data.status)" -ForegroundColor Yellow
-        Write-Host "Payment URL: $($response.data.paymentUrl)" -ForegroundColor Yellow
-    }
-    
-    "2" {
         Write-Host "`n=== TẠO PAYMENT BANK_TRANSFER ===" -ForegroundColor Cyan
         $appointmentId = Read-Host "Nhập appointmentId"
         $amount = Read-Host "Nhập số tiền (VNĐ)"
@@ -86,7 +63,7 @@ switch ($choice) {
         Write-Host "Nội dung chuyển khoản: COC_LK_$appointmentId" -ForegroundColor Yellow
     }
     
-    "3" {
+    "2" {
         Write-Host "`n=== TẠO PAYMENT CASH ===" -ForegroundColor Cyan
         $appointmentId = Read-Host "Nhập appointmentId"
         $amount = Read-Host "Nhập số tiền (VNĐ)"
@@ -107,13 +84,13 @@ switch ($choice) {
         Write-Host "Status: $($response.data.status)" -ForegroundColor Yellow
     }
     
-    "4" {
+    "3" {
         Write-Host "`n=== LẤY QR CODE ĐẶT CỌC ===" -ForegroundColor Cyan
         $appointmentId = Read-Host "Nhập appointmentId (Enter để bỏ qua)"
-        $paymentMethod = Read-Host "Nhập paymentMethod (TIMO/BANK_TRANSFER, mặc định: TIMO)"
+        $paymentMethod = Read-Host "Nhập paymentMethod (BANK_TRANSFER/MB, mặc định: BANK_TRANSFER)"
         
         if ([string]::IsNullOrWhiteSpace($paymentMethod)) {
-            $paymentMethod = "TIMO"
+            $paymentMethod = "BANK_TRANSFER"
         }
         
         $url = "$baseUrl/api/qrcode/deposit?paymentMethod=$paymentMethod"
@@ -132,17 +109,17 @@ switch ($choice) {
         Write-Host "Số tài khoản: $($response.data.accountNumber)" -ForegroundColor Yellow
     }
     
-    "5" {
+    "4" {
         Write-Host "`n=== LẤY QR CODE TÙY CHỈNH ===" -ForegroundColor Cyan
         $appointmentId = Read-Host "Nhập appointmentId (Enter để bỏ qua)"
         $amount = Read-Host "Nhập số tiền (VNĐ, mặc định: 2000)"
-        $paymentMethod = Read-Host "Nhập paymentMethod (TIMO/BANK_TRANSFER, mặc định: TIMO)"
+        $paymentMethod = Read-Host "Nhập paymentMethod (BANK_TRANSFER/MB, mặc định: BANK_TRANSFER)"
         
         if ([string]::IsNullOrWhiteSpace($amount)) {
             $amount = "2000"
         }
         if ([string]::IsNullOrWhiteSpace($paymentMethod)) {
-            $paymentMethod = "TIMO"
+            $paymentMethod = "BANK_TRANSFER"
         }
         
         $url = "$baseUrl/api/qrcode?paymentMethod=$paymentMethod&amount=$amount"
@@ -160,7 +137,7 @@ switch ($choice) {
         Write-Host "Nội dung: $($response.data.content)" -ForegroundColor Yellow
     }
     
-    "6" {
+    "5" {
         Write-Host "`n=== DANH SÁCH PAYMENTS CỦA TÔI ===" -ForegroundColor Cyan
         $page = Read-Host "Nhập page (mặc định: 0)"
         $size = Read-Host "Nhập size (mặc định: 10)"
@@ -185,7 +162,7 @@ switch ($choice) {
         }
     }
     
-    "7" {
+    "6" {
         Write-Host "`n=== KIỂM TRA TRẠNG THÁI PAYMENT ===" -ForegroundColor Cyan
         $paymentId = Read-Host "Nhập paymentId"
         
@@ -200,7 +177,7 @@ switch ($choice) {
         Write-Host "Payment Method: $($response.data.paymentMethod)" -ForegroundColor Yellow
     }
     
-    "8" {
+    "7" {
         Write-Host "`n=== TEST BANK TRANSFER CALLBACK ===" -ForegroundColor Cyan
         $appointmentId = Read-Host "Nhập appointmentId"
         $amount = Read-Host "Nhập số tiền (VNĐ)"

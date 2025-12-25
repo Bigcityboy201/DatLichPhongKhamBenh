@@ -83,7 +83,6 @@ public class SecurityConfiguration {
 			http.authorizeHttpRequests(auths -> auths
 				// Public endpoints - không cần xác thực
 				.requestMatchers(WHITE_LIST).permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/payments/momo-callback").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/payments/bank-transfer-callback").permitAll()
 				// Casso webhook: allow POST + health check GET/HEAD
 				.requestMatchers(HttpMethod.POST, "/api/payments/casso-webhook").permitAll()
