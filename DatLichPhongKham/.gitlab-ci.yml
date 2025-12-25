@@ -6,89 +6,51 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   COMPOSE_PROJECT_NAME: datlichphongkham
-  # ... (giữ nguyên các variables khác của bạn)
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 0
 
 # Job Build
 build_job:
   stage: build
   tags:
     - local
-  variables:
-    GIT_STRATEGY: clone
-    GIT_DEPTH: 0
   before_script:
     - echo "===== CHECKING ENVIRONMENT ====="
-    - pwd
-    - echo "===== LISTING ROOT FILES ====="
-    - Get-ChildItem -Force | Select-Object Name, Length
-    - echo "===== SEARCHING FOR POM.XML ====="
-    - $pomPath = $null
-    - # Tìm pom.xml trong root trước
+    - Write-Output "Current directory: $(Get-Location)"
+    - Write-Output "===== LISTING FILES ====="
+    - Get-ChildItem | Select-Object Name
+    - Write-Output "===== CHECKING FOR POM.XML ====="
     - if (Test-Path "pom.xml") {
-        $pomPath = (Resolve-Path "pom.xml").Path
-        Write-Output "✅ Found pom.xml in root: $pomPath"
-      }
-    - # Nếu không có, tìm trong subdirectories
-    - if (-not $pomPath) {
-        Write-Output "Searching in subdirectories..."
-        $pomPath = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-        if ($pomPath) {
-          Write-Output "✅ Found pom.xml at: $pomPath"
-        }
-      }
-    - # Kiểm tra DatLichPhongKham/ subdirectory (cấu trúc trên GitLab)
-    - if (-not $pomPath -and (Test-Path "DatLichPhongKham")) {
-        Write-Output "Checking DatLichPhongKham subdirectory..."
-        if (Test-Path "DatLichPhongKham/pom.xml") {
-          $pomPath = (Resolve-Path "DatLichPhongKham/pom.xml").Path
-          Write-Output "✅ Found pom.xml in DatLichPhongKham/: $pomPath"
-        }
-      }
-    - # Nếu tìm thấy, cd vào thư mục đó
-    - if ($pomPath) {
-        $pomDir = Split-Path -Parent $pomPath
-        Write-Output "📁 pom.xml directory: $pomDir"
-        Write-Output "📁 Current directory: $(Get-Location)"
-        if ($pomDir -ne (Get-Location).Path) {
-          Write-Output "🔄 Changing to pom.xml directory..."
-          Set-Location $pomDir
-          Write-Output "✅ Changed to: $(Get-Location)"
-        }
+        Write-Output "✅ pom.xml found in root"
+      } elseif (Test-Path "DatLichPhongKham/pom.xml") {
+        Write-Output "✅ pom.xml found in DatLichPhongKham/"
+        Set-Location "DatLichPhongKham"
+        Write-Output "Changed to: $(Get-Location)"
       } else {
-        Write-Output "❌ pom.xml NOT FOUND anywhere!"
-        Write-Output "Checking git files..."
-        git ls-files | Select-String pom
-        Write-Output "Checking git tree..."
-        git ls-tree -r HEAD --name-only | Select-String pom
-        Write-Output "Forcing git checkout..."
-        git checkout -f HEAD
-        git reset --hard HEAD
-        # Thử lại sau checkout
-        if (Test-Path "pom.xml") {
-          $pomPath = (Resolve-Path "pom.xml").Path
-        } elseif (Test-Path "DatLichPhongKham/pom.xml") {
-          $pomPath = (Resolve-Path "DatLichPhongKham/pom.xml").Path
-          Set-Location "DatLichPhongKham"
+        Write-Output "❌ pom.xml NOT FOUND"
+        Write-Output "Searching recursively..."
+        $found = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+          Write-Output "✅ Found at: $($found.FullName)"
+          Set-Location (Split-Path -Parent $found.FullName)
         } else {
-          Write-Output "❌ pom.xml still NOT FOUND after checkout!"
+          Write-Output "❌ pom.xml NOT FOUND anywhere!"
+          Write-Output "Git files:"
+          git ls-files | Select-String pom
           exit 1
         }
       }
-    - echo "===== VERIFYING POM.XML ====="
-    - if (Test-Path pom.xml) {
-        Write-Output "✅ pom.xml verified at: $(Resolve-Path pom.xml)"
-        Get-Item pom.xml | Select-Object FullName, Length
+    - Write-Output "===== FINAL VERIFICATION ====="
+    - Write-Output "Current directory: $(Get-Location)"
+    - if (Test-Path "pom.xml") {
+        Write-Output "✅ pom.xml verified: $(Resolve-Path pom.xml)"
       } else {
-        Write-Output "❌ pom.xml verification failed!"
-        Write-Output "Current directory: $(Get-Location)"
-        Write-Output "Files in current directory:"
-        Get-ChildItem | Select-Object Name
+        Write-Output "❌ pom.xml verification FAILED!"
         exit 1
       }
   script:
     - echo "===== BUILD PROJECT ====="
-    - echo "Current directory: $(Get-Location)"
-    - echo "POM file: $(Resolve-Path pom.xml)"
+    - Write-Output "Building in: $(Get-Location)"
     - mvn clean package -DskipTests
   artifacts:
     paths:
@@ -101,17 +63,14 @@ test_job:
   tags:
     - local
   before_script:
-    - $pomPath = $null
     - if (Test-Path "pom.xml") {
-        $pomPath = (Resolve-Path "pom.xml").Path
+        Write-Output "pom.xml in root"
       } elseif (Test-Path "DatLichPhongKham/pom.xml") {
-        $pomPath = (Resolve-Path "DatLichPhongKham/pom.xml").Path
         Set-Location "DatLichPhongKham"
       } else {
-        $pomPath = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-        if ($pomPath) {
-          $pomDir = Split-Path -Parent $pomPath
-          Set-Location $pomDir
+        $found = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+          Set-Location (Split-Path -Parent $found.FullName)
         }
       }
   script:
@@ -125,6 +84,7 @@ deploy_job:
     - local
   only:
     - main
+    - master
   script:
     - echo "===== RESTARTING CONTAINERS ====="
     - docker-compose down
