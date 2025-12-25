@@ -1,0 +1,134 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  COMPOSE_PROJECT_NAME: datlichphongkham
+  # Database Configuration
+  MYSQL_ROOT_PASSWORD: "quangtruong1"
+  MYSQL_DATABASE: "phongkhambenh"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/phongkhambenh?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh"
+  SPRING_DATASOURCE_USERNAME: "root"
+  SPRING_DATASOURCE_PASSWORD: "quangtruong1"
+  # JWT Configuration
+  JWT_SECRET: "YnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8x"
+  JWT_DURATION: "604800"
+  # Admin Configuration
+  ADMIN_USERNAME: "quangtruongngo2012004"
+  ADMIN_PASSWORD: "quangtruong1"
+  ADMIN_EMAIL: "quangtruong2012004@gmail.com"
+  # Spring Configuration
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  SPRING_PROFILES_ACTIVE: "prod"
+
+services:
+  - docker:dind
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .m2/repository/
+
+# ================= BUILD =================
+build_job:
+  stage: build
+  tags:
+    - local
+  script:
+    - echo "===== BUILD PROJECT ====="
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - "target/*.jar"
+    expire_in: 1 hour
+
+# ================= TEST =================
+test_job:
+  stage: test
+  tags:
+    - local
+  script:
+    - echo "===== RUN TESTS ====="
+    - mvn test
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week
+
+# ================= DEPLOY =================
+deploy_job:
+  stage: deploy
+  tags:
+    - local
+  only:
+    - main
+    - master
+  before_script:
+    - echo "===== SETUP DOCKER ENVIRONMENT ====="
+    - docker --version
+    - docker-compose --version
+  script:
+    - echo "===== DỪNG CÁC CONTAINER HIỆN CÓ ====="
+    - |
+      try { 
+        docker-compose down 
+      } catch { 
+        Write-Output "Không có container nào để dừng hoặc có lỗi xảy ra" 
+      }
+
+    - echo "===== XÂY DỰNG VÀ KHỞI CHẠY CONTAINER ====="
+    - docker-compose up -d --build
+
+    - echo "===== KIỂM TRA TRẠNG THÁI CONTAINER ====="
+    - docker ps -a
+
+    - echo "===== ĐANG CHỜ CÁC DỊCH VỤ KHỞI ĐỘNG ====="
+    - Start-Sleep -Seconds 30
+
+    - echo "===== KIỂM TRA TRẠNG THÁI DỊCH VỤ ====="
+    - docker-compose ps
+
+    - echo "===== KIỂM TRA HEALTH CHECK ====="
+    - |
+      try { 
+        Write-Output "Kiểm tra MySQL..."
+        docker-compose exec -T mysql mysqladmin ping -h localhost -u root -p$env:MYSQL_ROOT_PASSWORD
+        Write-Output "MySQL đang chạy tốt"
+      } catch { 
+        Write-Output "MySQL chưa sẵn sàng hoặc có lỗi: $_" 
+      }
+
+    - |
+      try { 
+        Write-Output "Kiểm tra Spring Boot App..."
+        $response = Invoke-WebRequest -Uri "http://localhost:8080/api/health" -UseBasicParsing -TimeoutSec 10
+        Write-Output "App Health Check: $($response.StatusCode) - $($response.Content)"
+      } catch { 
+        Write-Output "Không thể kết nối /api/health, thử /actuator/health..."
+        try {
+          $response = Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -UseBasicParsing -TimeoutSec 10
+          Write-Output "Actuator Health Check: $($response.StatusCode) - $($response.Content)"
+        } catch {
+          Write-Output "App chưa sẵn sàng hoặc health endpoint không tồn tại: $_"
+        }
+      }
+
+    - echo "===== XEM LOGS CỦA APP ====="
+    - docker-compose logs --tail=50 app
+
+    - echo "===== XEM LOGS CỦA MYSQL ====="
+    - docker-compose logs --tail=20 mysql
+
+    - echo "===== DEPLOYMENT HOÀN TẤT ====="
+    - Write-Output "Application đang chạy tại: http://localhost:8080"
+  environment:
+    name: production
+    url: http://localhost:8080
