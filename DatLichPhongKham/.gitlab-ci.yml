@@ -5,32 +5,10 @@ stages:
 
 variables:
   DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: ""
   COMPOSE_PROJECT_NAME: datlichphongkham
-  # Database & App Config (Giữ nguyên của bạn)
-  MYSQL_ROOT_PASSWORD: "quangtruong1"
-  MYSQL_DATABASE: "phongkhambenh"
-  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/phongkhambenh?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh"
-  SPRING_DATASOURCE_USERNAME: "root"
-  SPRING_DATASOURCE_PASSWORD: "quangtruong1"
-  JWT_SECRET: "YnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8x"
-  JWT_DURATION: "604800"
-  ADMIN_USERNAME: "quangtruongngo2012004"
-  ADMIN_PASSWORD: "quangtruong1"
-  ADMIN_EMAIL: "quangtruong2012004@gmail.com"
-  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
-  SPRING_JPA_SHOW_SQL: "false"
-  SPRING_PROFILES_ACTIVE: "prod"
+  # ... (giữ nguyên các variables khác của bạn)
 
-# Runner của bạn chạy trực tiếp trên Windows nên thường không cần service docker:dind 
-# trừ khi bạn chạy runner dạng Docker-in-Docker. Nếu chạy shell local thì có thể bỏ qua.
-
-cache:
-  key: "$CI_COMMIT_REF_SLUG"
-  paths:
-    - .m2/repository/
-
-# ================= BUILD =================
+# Job Build
 build_job:
   stage: build
   tags:
@@ -43,7 +21,7 @@ build_job:
       - "target/*.jar"
     expire_in: 1 hour
 
-# ================= TEST =================
+# Job Test
 test_job:
   stage: test
   tags:
@@ -51,36 +29,17 @@ test_job:
   script:
     - echo "===== RUN TESTS ====="
     - mvn test
-  artifacts:
-    when: always
-    reports:
-      junit:
-        - target/surefire-reports/TEST-*.xml
-    paths:
-      - target/surefire-reports/
-    expire_in: 1 week
 
-# ================= DEPLOY =================
+# Job Deploy
 deploy_job:
   stage: deploy
   tags:
     - local
   only:
     - main
-    - master
-  before_script:
-    - echo "===== SETUP DOCKER ENVIRONMENT ====="
-    - docker --version
-    - docker-compose --version
   script:
-    - echo "===== DỪNG CÁC CONTAINER HIỆN CÓ ====="
-    # Sử dụng lệnh đơn giản để tránh lỗi cú pháp Shell nếu không chắc chắn về PowerShell
-    - docker-compose down --remove-orphans
-    - echo "===== XÂY DỰNG VÀ KHỞI CHẠY CONTAINER ====="
+    - echo "===== RESTARTING CONTAINERS ====="
+    - docker-compose down
     - docker-compose up -d --build
-    - echo "===== KIỂM TRA TRẠNG THÁI ====="
+    - Start-Sleep -Seconds 10
     - docker ps -a
-    - echo "===== DEPLOYMENT HOÀN TẤT ====="
-  environment:
-    name: production
-    url: http://localhost:8080
