@@ -3,73 +3,41 @@ stages:
   - test
   - deploy
 
-variables:
-  DOCKER_DRIVER: overlay2
-  GIT_DEPTH: 0
-
-# Job Build
+# ================= BUILD =================
 build_job:
   stage: build
   tags:
     - local
-  before_script:
-    - Write-Output "===== CHECKING FOR POM.XML ====="
-    # Tìm pom.xml trong root
-    - if (Test-Path "pom.xml") {
-        Write-Output "✅ pom.xml found in root"
-      }
-      # Nếu trong thư mục DatLichPhongKham
-      elseif (Test-Path "DatLichPhongKham/pom.xml") {
-        Write-Output "✅ pom.xml found in DatLichPhongKham/"
-        Set-Location "DatLichPhongKham"
-        Write-Output "Changed to: $(Get-Location)"
-      }
-      else {
-        Write-Output "❌ pom.xml NOT FOUND anywhere!"
-        # Tìm recursively
-        $found = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($found) {
-          Write-Output "✅ Found at: $($found.FullName)"
-          Set-Location (Split-Path -Parent $found.FullName)
-        } else {
-          Write-Output "❌ pom.xml NOT FOUND!"
-          exit 1
-        }
-      }
   script:
-    - Write-Output "===== BUILD PROJECT ====="
-    - Write-Output "Building in: $(Get-Location)"
+    - echo "===== VAO THU MUC CHUA CODE ====="
+    - cd DatLichPhongKham  # <<< LENH QUAN TRONG NHAT
+    - echo "===== BAT DAU BUILD ====="
     - mvn clean package -DskipTests
   artifacts:
     paths:
-      - "target/*.jar"
+      - "DatLichPhongKham/target/*.jar"
     expire_in: 1 hour
 
-# Job Test
+# ================= TEST =================
 test_job:
   stage: test
   tags:
     - local
-  before_script:
-    - # Tương tự Build: đảm bảo đang ở nơi chứa pom.xml
-      if (-not (Test-Path "pom.xml")) {
-        $found = Get-ChildItem -Recurse -Filter pom.xml -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($found) { Set-Location (Split-Path -Parent $found.FullName) }
-      }
   script:
-    - Write-Output "===== RUN TESTS ====="
+    - cd DatLichPhongKham  # Cung phai vao thu muc nay moi test duoc
+    - echo "===== RUN TESTS ====="
     - mvn test
 
-# Job Deploy
+# ================= DEPLOY =================
 deploy_job:
   stage: deploy
   tags:
     - local
   only:
     - main
-    - master
   script:
-    - Write-Output "===== DEPLOYING CONTAINERS ====="
+    - cd DatLichPhongKham # Vao day de docker-compose thay file docker-compose.yml
+    - echo "===== RESTARTING CONTAINERS ====="
     - docker-compose down
     - docker-compose up -d --build
     - Start-Sleep -Seconds 10
