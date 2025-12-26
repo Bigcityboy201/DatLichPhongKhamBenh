@@ -31,7 +31,7 @@ public class SignUpRequest {
 
 	@NotBlank(message = "Tên đăng nhập không được để trống")
 	@Size(min = 4, max = 20, message = "Tên đăng nhập phải từ 4 đến 20 ký tự")
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false)
 	private String userName;
 
 	@NotBlank(message = "Mật khẩu không được để trống")

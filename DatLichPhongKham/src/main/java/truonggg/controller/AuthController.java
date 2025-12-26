@@ -40,6 +40,7 @@ public class AuthController {
 	private final JwtUtils jwtUtils;
 	private final UserRepository userRepository;
 
+	// 123
 	@PostMapping(path = "/signUp")
 	public SuccessReponse<UserResponseDTO> signUp(@RequestBody @Valid SignUpRequest request) {
 		User user = this.userMapper.toModel(request);
