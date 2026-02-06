@@ -17,44 +17,22 @@ import truonggg.reponse.ErrorReponse;
 @Component
 @RequiredArgsConstructor
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
 	private final ObjectMapper objectMapper;
 
 	@Override
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException {
-		if (response.isCommitted()) {
+
+		if (response.isCommitted())
 			return;
-		}
 
-		try {
-			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.setContentType("application/json");
-			response.setCharacterEncoding("UTF-8");
+		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		response.setContentType("application/json");
+		response.setCharacterEncoding("UTF-8");
 
-			ErrorReponse errorResponse = ErrorReponse.of(
-					"Please login to access this resource",
-					ErrorCode.INVALID,
-					"security");
+		ErrorReponse error = ErrorReponse.of("Invalid username or password", ErrorCode.UNAUTHORIZED, "security");
 
-			if (objectMapper != null) {
-				String jsonResponse = objectMapper.writeValueAsString(errorResponse);
-				response.getWriter().write(jsonResponse);
-			} else {
-				// Fallback nếu ObjectMapper null
-				response.getWriter().write(
-						"{\"message\":\"Please login to access this resource\",\"code\":\"INVALID\",\"domain\":\"security\",\"operationType\":\"Failure\"}");
-			}
-			response.getWriter().flush();
-		} catch (Exception e) {
-			// Fallback nếu có lỗi với ObjectMapper
-			if (!response.isCommitted()) {
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				response.setContentType("application/json");
-				response.setCharacterEncoding("UTF-8");
-				response.getWriter().write(
-						"{\"message\":\"Please login to access this resource\",\"code\":\"INVALID\",\"domain\":\"security\",\"operationType\":\"Failure\"}");
-				response.getWriter().flush();
-			}
-		}
+		response.getWriter().write(objectMapper.writeValueAsString(error));
 	}
 }

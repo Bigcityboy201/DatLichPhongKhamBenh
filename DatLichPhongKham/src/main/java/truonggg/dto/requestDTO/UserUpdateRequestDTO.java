@@ -25,7 +25,6 @@ public class UserUpdateRequestDTO {
 	@Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
 	@Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
 	private String userName;
-
 	@Pattern(regexp = "^[0-9]{10,11}$", message = "Phone number must be 10-11 digits")
 	private String phone;
 

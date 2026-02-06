@@ -1,183 +1,160 @@
 package truonggg.handler;
 
+//import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.log;
+
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.security.access.AccessDeniedException;
+import truonggg.Exception.BusinessException;
 import truonggg.Exception.MultiFieldViolationException;
-import truonggg.Exception.NotFoundException;
 import truonggg.reponse.ErrorCode;
 import truonggg.reponse.ErrorReponse;
 
+//@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	@ExceptionHandler(exception = { NotFoundException.class })
-	public ErrorReponse handle(final NotFoundException ex) {
-		return ErrorReponse.of(ex.getMessage(), ex.getErrorCode(), ex.getDomain());
+
+	@ExceptionHandler(BusinessException.class)
+	public ResponseEntity<ErrorReponse> handleBusinessException(BusinessException ex) {
+
+		HttpStatus status = switch (ex.getErrorCode()) {
+		case NOT_FOUND -> HttpStatus.NOT_FOUND;
+		case CONFLICT, ALREADY_EXIST -> HttpStatus.CONFLICT;
+		case FORBIDDEN -> HttpStatus.FORBIDDEN;
+		case BAD_REQUEST, ACCOUNT_INACTIVE, ACCOUNT_LOCKED, ACCOUNT_DISABLED -> HttpStatus.BAD_REQUEST;
+		default -> HttpStatus.INTERNAL_SERVER_ERROR;
+		};
+
+		return ResponseEntity.status(status).body(ErrorReponse.of(ex.getMessage(), ex.getErrorCode(), ex.getDomain()));
 	}
 
-	@ResponseStatus(value = HttpStatus.FORBIDDEN)
-	@ExceptionHandler(exception = { AccessDeniedException.class })
-	public ErrorReponse handle(final AccessDeniedException ex) {
-		return ErrorReponse.of("You do not have permission to access this resource", ErrorCode.INVALID, "security");
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<ErrorReponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+
+		Map<String, Object> details = ex.getBindingResult().getFieldErrors().stream()
+				.collect(Collectors.toMap(field -> field.getField(), field -> field.getDefaultMessage(), (a, b) -> b));
+
+		return ResponseEntity.badRequest()
+				.body(ErrorReponse.of("Validation failed", ErrorCode.BAD_REQUEST, "request", details));
 	}
 
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	@ExceptionHandler(AuthenticationException.class)
-	public ErrorReponse handleAuthenticationException(AuthenticationException ex) {
-		return ErrorReponse.of(ex.getMessage(), ErrorCode.INVALID, "security");
+	@ExceptionHandler(ConstraintViolationException.class)
+	public ResponseEntity<ErrorReponse> handleConstraintViolation(ConstraintViolationException ex) {
+
+		Map<String, Object> details = ex.getConstraintViolations().stream()
+				.collect(Collectors.toMap(v -> v.getPropertyPath().toString(), v -> v.getMessage(), (a, b) -> b));
+
+		return ResponseEntity.badRequest()
+				.body(ErrorReponse.of("Validation failed", ErrorCode.BAD_REQUEST, "request", details));
 	}
 
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { MethodArgumentNotValidException.class })
-	public ErrorReponse handle(final MethodArgumentNotValidException exception) {
-		Map<String, Object> details = exception.getBindingResult().getFieldErrors().stream()
-				.collect(Collectors.toMap(x -> x.getField().toString(), x -> x.getDefaultMessage(), (a, b) -> b));
+	@ExceptionHandler(BindException.class)
+	public ResponseEntity<ErrorReponse> handleBindException(BindException ex) {
 
-		return ErrorReponse.of("Validation failed", ErrorCode.INVALID, "request", details);
+		Map<String, Object> details = ex.getBindingResult().getFieldErrors().stream()
+				.collect(Collectors.toMap(field -> field.getField(), field -> field.getDefaultMessage(), (a, b) -> b));
 
+		return ResponseEntity.badRequest()
+				.body(ErrorReponse.of("Binding validation failed", ErrorCode.BAD_REQUEST, "request", details));
 	}
 
-//	@ResponseStatus(HttpStatus.CONFLICT) // 409 trùng dữ liệu
-//	@ExceptionHandler(UserAlreadyExistException.class)
-//	public ErrorReponse handleUserAlreadyExist(UserAlreadyExistException ex) {
-//		Map<String, Object> details = Map.of("field", ex.getMessage().contains("userName") ? "userName" : "email");
-//
-//		return ErrorReponse.of(ex.getMessage(), ex.getErrorCode(), ex.getDomain(), details);
-//	}
-
-	@ResponseStatus(HttpStatus.CONFLICT) // 409
 	@ExceptionHandler(MultiFieldViolationException.class)
-	public ErrorReponse handleMultiFieldViolation(MultiFieldViolationException ex) {
-		// Convert Map<String, String> -> Map<String, Object> cho ErrorReponse
+	public ResponseEntity<ErrorReponse> handleMultiFieldViolation(MultiFieldViolationException ex) {
+
 		Map<String, Object> details = ex.getFieldErrors().entrySet().stream()
 				.collect(Collectors.toMap(Map.Entry::getKey, e -> (Object) e.getValue()));
 
-		return ErrorReponse.of("Validation failed for fields: " + details.keySet(), ex.getErrorCode(), ex.getDomain(),
-				details);
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorReponse
+				.of("Validation failed for fields: " + details.keySet(), ex.getErrorCode(), ex.getDomain(), details));
 	}
 
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { ConstraintViolationException.class })
-	public ErrorReponse handle(final ConstraintViolationException exception) {
-		Map<String, Object> details = exception.getConstraintViolations().stream()
-				.collect(Collectors.toMap(x -> x.getPropertyPath().toString(), x -> x.getMessage(), (a, b) -> b));
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ErrorReponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
 
-		return ErrorReponse.of("Validation failed", ErrorCode.INVALID, "request", details);
+		return ResponseEntity.badRequest()
+				.body(ErrorReponse.of("Invalid request body format", ErrorCode.BAD_REQUEST, "request"));
 	}
 
-	// Lỗi database constraint (unique, foreign key, etc.)
-	@ResponseStatus(value = HttpStatus.CONFLICT)
-	@ExceptionHandler(exception = { DataIntegrityViolationException.class })
-	public ErrorReponse handle(final DataIntegrityViolationException ex) {
-		String message = ex.getMessage();
-		if (message != null && message.contains("Duplicate entry")) {
-			message = "Data already exists in the system";
-		} else if (message != null && message.contains("foreign key constraint")) {
-			message = "Cannot delete or update due to foreign key constraint";
-		} else {
-			message = "Data integrity violation: " + (message != null ? message : "Unknown error");
+	@ExceptionHandler(MissingServletRequestParameterException.class)
+	public ResponseEntity<ErrorReponse> handleMissingParameter(MissingServletRequestParameterException ex) {
+
+		return ResponseEntity.badRequest().body(ErrorReponse
+				.of("Required parameter '" + ex.getParameterName() + "' is missing", ErrorCode.BAD_REQUEST, "request"));
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ErrorReponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+
+		return ResponseEntity.badRequest().body(
+				ErrorReponse.of("Parameter '" + ex.getName() + "' has invalid type", ErrorCode.BAD_REQUEST, "request"));
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ErrorReponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+
+		return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ErrorReponse
+				.of("HTTP method '" + ex.getMethod() + "' is not supported", ErrorCode.BAD_REQUEST, "request"));
+	}
+
+	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+	public ResponseEntity<ErrorReponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+
+		return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+				.body(ErrorReponse.of("Media type is not supported", ErrorCode.BAD_REQUEST, "request"));
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorReponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+
+		// log.warn("DataIntegrityViolationException", ex);
+
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(ErrorReponse.of("Data integrity violation", ErrorCode.CONFLICT, "database"));
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<ErrorReponse> handleIllegalArgument(IllegalArgumentException ex) {
+		return ResponseEntity.badRequest()
+				.body(ErrorReponse.of(ex.getMessage(), ErrorCode.BAD_REQUEST, "request"));
+	}
+
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<ErrorReponse> handleIllegalState(IllegalStateException ex) {
+		// Thường dùng cho xung đột trạng thái (ví dụ: đã thanh toán rồi)
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(ErrorReponse.of(ex.getMessage(), ErrorCode.CONFLICT, "business"));
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ErrorReponse> handleAccessDenied(AccessDeniedException ex) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(ErrorReponse.of(ex.getMessage(), ErrorCode.FORBIDDEN, "security"));
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ErrorReponse> handleUnhandledException(Exception ex) {
+
+		// log.error("Unhandled exception", ex);
+		if (ex instanceof org.springframework.security.core.AuthenticationException) {
+			throw (org.springframework.security.core.AuthenticationException) ex;
 		}
-		return ErrorReponse.of(message, ErrorCode.INVALID, "database");
-	}
 
-	// Request body không đọc được (JSON malformed, missing body, etc.)
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { HttpMessageNotReadableException.class })
-	public ErrorReponse handle(final HttpMessageNotReadableException ex) {
-		String message = ex.getMessage();
-		if (message != null && message.contains("JSON parse error")) {
-			message = "Invalid JSON format in request body";
-		} else if (message != null && message.contains("Required request body is missing")) {
-			message = "Request body is required but missing";
-		} else {
-			message = "Invalid request body format";
-		}
-		return ErrorReponse.of(message, ErrorCode.INVALID, "request");
-	}
-
-	// Method HTTP không được hỗ trợ
-	@ResponseStatus(value = HttpStatus.METHOD_NOT_ALLOWED)
-	@ExceptionHandler(exception = { HttpRequestMethodNotSupportedException.class })
-	public ErrorReponse handle(final HttpRequestMethodNotSupportedException ex) {
-		return ErrorReponse.of("HTTP method '" + ex.getMethod() + "' is not supported for this endpoint",
-				ErrorCode.INVALID, "request");
-	}
-
-	// Thiếu required parameter
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { MissingServletRequestParameterException.class })
-	public ErrorReponse handle(final MissingServletRequestParameterException ex) {
-		return ErrorReponse.of("Required parameter '" + ex.getParameterName() + "' is missing", ErrorCode.INVALID,
-				"request");
-	}
-
-	// Type mismatch (ví dụ: truyền string vào Integer)
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { MethodArgumentTypeMismatchException.class })
-	public ErrorReponse handle(final MethodArgumentTypeMismatchException ex) {
-		return ErrorReponse.of(
-				"Parameter '" + ex.getName() + "' has invalid type. Expected: " + ex.getRequiredType().getSimpleName(),
-				ErrorCode.INVALID, "request");
-	}
-
-	// Tham số không hợp lệ
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { IllegalArgumentException.class })
-	public ErrorReponse handle(final IllegalArgumentException ex) {
-		return ErrorReponse.of(ex.getMessage() != null ? ex.getMessage() : "Invalid argument provided",
-				ErrorCode.INVALID, "request");
-	}
-
-	// Media type không được hỗ trợ
-	@ResponseStatus(value = HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-	@ExceptionHandler(exception = { HttpMediaTypeNotSupportedException.class })
-	public ErrorReponse handle(final HttpMediaTypeNotSupportedException ex) {
-		return ErrorReponse.of("Media type '" + ex.getContentType() + "' is not supported", ErrorCode.INVALID,
-				"request");
-	}
-
-	// Binding error
-	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(exception = { BindException.class })
-	public ErrorReponse handle(final BindException ex) {
-		Map<String, Object> details = ex.getBindingResult().getFieldErrors().stream()
-				.collect(Collectors.toMap(x -> x.getField().toString(), x -> x.getDefaultMessage(), (a, b) -> b));
-
-		return ErrorReponse.of("Binding validation failed", ErrorCode.INVALID, "request", details);
-	}
-
-	// NullPointerException - Tránh lộ thông tin chi tiết
-	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	@ExceptionHandler(exception = { NullPointerException.class })
-	public ErrorReponse handle(final NullPointerException ex) {
-		return ErrorReponse.of("An internal error occurred. Please contact support if the problem persists",
-				ErrorCode.INTERNAL_SERVER, "system");
-	}
-
-	// Handler cuối cùng - bắt tất cả exception còn lại
-	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	@ExceptionHandler(exception = { Exception.class })
-	public ErrorReponse handle(final Exception ex) {
-		// Log exception để debug (có thể thêm logger sau)
-		ex.printStackTrace();
-		return ErrorReponse.of(ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred",
-				ErrorCode.INTERNAL_SERVER, "system");
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorReponse
+				.of("An internal error occurred. Please contact support.", ErrorCode.INTERNAL_SERVER_ERROR, "system"));
 	}
 }

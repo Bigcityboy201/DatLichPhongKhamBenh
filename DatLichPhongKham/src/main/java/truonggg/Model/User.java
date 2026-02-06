@@ -30,6 +30,8 @@ public class User {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer userId;
 	private String fullName;
+
+	@Column(unique = true)
 	private String email;
 	private String phone;
 	private String userName;

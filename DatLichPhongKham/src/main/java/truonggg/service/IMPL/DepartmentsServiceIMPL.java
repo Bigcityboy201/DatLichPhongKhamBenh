@@ -106,7 +106,7 @@ public class DepartmentsServiceIMPL implements DepartmentsService {
 	@Override
 	public DepartmentsResponseDTO findById(Integer id) {
 		Departments departments = this.departmentsRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("Department not found!"));
+				.orElseThrow(() -> new NotFoundException("Department", "Department not found!"));
 		return this.departmentsMapper.toResponse(departments);
 	}
 

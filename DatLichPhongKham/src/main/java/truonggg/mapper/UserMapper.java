@@ -26,4 +26,5 @@ public interface UserMapper {
 			return List.of();
 		return users.stream().map(this::toDTO).collect(Collectors.toList());
 	}
+
 }

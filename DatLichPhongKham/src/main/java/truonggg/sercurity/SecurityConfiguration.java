@@ -58,6 +58,7 @@ public class SecurityConfiguration {
 		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
 		authProvider.setUserDetailsService(this.userDetailsService);
 		authProvider.setPasswordEncoder(this.passwordEncoder());
+		authProvider.setHideUserNotFoundExceptions(true);
 
 		return authProvider;
 	}
@@ -80,7 +81,7 @@ public class SecurityConfiguration {
 		http.csrf(AbstractHttpConfigurer::disable);
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-			http.authorizeHttpRequests(auths -> auths
+		http.authorizeHttpRequests(auths -> auths
 				// Public endpoints - không cần xác thực
 				.requestMatchers(WHITE_LIST).permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/payments/bank-transfer-callback").permitAll()

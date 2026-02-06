@@ -25,14 +25,14 @@ import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
 import truonggg.service.AppointmentsService;
-import truonggg.service.UserService;
+import truonggg.service.user.UserManagementService;
 
 @RestController
 @RequestMapping(path = "/api/appointments")
 @RequiredArgsConstructor
 public class AppointmentsController {
 	private final AppointmentsService appointmentsService;
-	private final UserService userService;
+	private final UserManagementService userManagementService;
 
 	// GET /api/appointments - Lấy tất cả (phân trang)
 	@GetMapping
@@ -61,7 +61,7 @@ public class AppointmentsController {
 				.anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
 		if (!isAdmin) {
 			String username = authentication.getName();
-			Integer currentUserId = this.userService.findByUserName(username).getUserId();
+			Integer currentUserId = this.userManagementService.findByUserName(username).getUserId();
 			dto.setUserId(currentUserId);
 		}
 		return SuccessReponse.of(this.appointmentsService.createAppointments(dto));

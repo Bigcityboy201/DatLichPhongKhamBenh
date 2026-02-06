@@ -136,7 +136,7 @@ public class PaymentServiceIMPL implements PaymentService {
 		// Chỉ tạo QR code cho BANK_TRANSFER
 		if (paymentMethod == PaymentMethod.BANK_TRANSFER) {
 			var qrCodeResponse = qrCodeService.getQRCode("BANK_TRANSFER", amount, dto.getAppointmentId());
-			payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
+		payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
 		}
 
 		payment = paymentsRepository.save(payment);
@@ -151,7 +151,7 @@ public class PaymentServiceIMPL implements PaymentService {
 
 		PaymentResponseDTO response = paymentMapper.toDTO(payment);
 		if (payment.getPaymentUrl() != null) {
-			response.setPaymentUrl(payment.getPaymentUrl());
+		response.setPaymentUrl(payment.getPaymentUrl());
 		}
 		return response;
 	}

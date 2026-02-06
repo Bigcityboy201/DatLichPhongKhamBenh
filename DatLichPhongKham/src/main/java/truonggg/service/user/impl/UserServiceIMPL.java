@@ -1,4 +1,4 @@
-package truonggg.service.IMPL;
+package truonggg.service.user.impl;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import truonggg.Enum.UpdateContext;
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
 import truonggg.Model.Doctors;
@@ -27,11 +28,12 @@ import truonggg.repo.DoctorsRepository;
 import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.UserService;
+import truonggg.service.user.UserManagementService;
+import truonggg.service.user.UserSelfService;
 
 @Service
 @RequiredArgsConstructor
-public class UserServiceIMPL implements UserService {
+public class UserServiceIMPL implements UserManagementService, UserSelfService {
 	private final UserRepository userRepository;
 	private final UserMapper userMapper;
 	private final PasswordEncoder passwordEncoder;
@@ -78,45 +80,7 @@ public class UserServiceIMPL implements UserService {
 
 	@Override
 	@Transactional
-	public UserResponseDTO signUp(User user) {
-		Map<String, String> errors = new HashMap<>();
-
-		if (userRepository.existsByUserName(user.getUserName())) {
-			errors.put("userName", "UserName already existed!");
-		}
-		if (userRepository.existsByEmail(user.getEmail())) {
-			errors.put("email", "Email already existed!");
-		}
-
-		if (!errors.isEmpty()) {
-			throw new UserAlreadyExistException(errors);
-		}
-
-		user.setActive(false);
-		user.setPassword(this.passwordEncoder.encode(user.getPassword()));
-
-		// lấy role theo tên (USER/ADMIN)
-		Role roleUser = this.roleRepository.findByRoleName(SecurityRole.ROLE_USER);
-		if (roleUser == null) {
-			throw new NotFoundException("role", "Default role USER not found");
-		}
-
-		// Gán role USER trực tiếp cho user
-		user.setRole(roleUser);
-
-		// lưu user
-		user = this.userRepository.save(user);
-
-		System.out
-				.println("Successfully created user: " + user.getUserName() + " with role: " + roleUser.getRoleName());
-
-		return this.userMapper.toDTO(user);
-	}
-
-	@Override
-	@Transactional
 	public UserResponseDTO assignRole(AssignRoleRequestDTO dto) {
-
 		// Lấy user
 		User user = userRepository.findById(dto.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
@@ -149,12 +113,6 @@ public class UserServiceIMPL implements UserService {
 	}
 
 	@Override
-	public List<UserResponseDTO> getAll() {
-		List<User> users = this.userRepository.findAll();
-		return this.userMapper.toDTOList(users);
-	}
-
-	@Override
 	public PagedResult<UserResponseDTO> getAllPaged(Pageable pageable) {
 		Page<User> userPage = this.userRepository.findAll(pageable);
 		List<UserResponseDTO> dtoList = userPage.stream().map(userMapper::toDTO).collect(Collectors.toList());
@@ -172,52 +130,14 @@ public class UserServiceIMPL implements UserService {
 
 	@Override
 	@Transactional
-	public User update(User user) {
-		User foundUser = userRepository.findById(user.getUserId())
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
-
-		// Cập nhật từng field nếu không null
-		if (user.getFullName() != null)
-			foundUser.setFullName(user.getFullName());
-		if (user.getEmail() != null)
-			foundUser.setEmail(user.getEmail());
-		if (user.getPhone() != null)
-			foundUser.setPhone(user.getPhone());
-		if (user.getAddress() != null)
-			foundUser.setAddress(user.getAddress());
-		if (user.getDateOfBirth() != null)
-			foundUser.setDateOfBirth(user.getDateOfBirth());
-		foundUser.setActive(user.getIsActive());
-
-		return userRepository.save(foundUser);
-	}
-
-	@Override
-	@Transactional
 	public UserResponseDTO update(Integer id, UserUpdateRequestDTO dto) {
-		User user = this.userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+		User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		// Update nếu DTO có giá trị (không null)
-		if (dto.getFullName() != null)
-			user.setFullName(dto.getFullName());
+		validateAdminUpdate(user, dto);
 
-		if (dto.getEmail() != null)
-			user.setEmail(dto.getEmail());
+		applyUserUpdate(user, dto, UpdateContext.ADMIN);
 
-		if (dto.getPhone() != null)
-			user.setPhone(dto.getPhone());
-
-		if (dto.getAddress() != null)
-			user.setAddress(dto.getAddress());
-
-		if (dto.getDateOfBirth() != null)
-			user.setDateOfBirth(dto.getDateOfBirth());
-
-		if (dto.getIsActive() != null)
-			user.setActive(dto.getIsActive());
-
-		user = this.userRepository.save(user);
-		return this.userMapper.toDTO(user);
+		return userMapper.toDTO(userRepository.save(user));
 	}
 
 	@Transactional
@@ -251,20 +171,62 @@ public class UserServiceIMPL implements UserService {
 	@Override
 	@Transactional
 	public UserResponseDTO updateProfile(String userName, UserUpdateRequestDTO dto) {
-		User user = this.userRepository.findByUserName(userName)
+
+		User user = userRepository.findByUserName(userName)
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+
+		validateUpdateProfile(user, dto); // dùng Map ở đây
+
+		applyUserUpdate(user, dto, UpdateContext.SELF);
+
+		return userMapper.toDTO(userRepository.save(user));
+	}
+
+	private void validateUpdateProfile(User user, UserUpdateRequestDTO dto) {
+
+		Map<String, String> errors = new HashMap<>();
+
+		if (dto.getEmail() != null && userRepository.existsByEmailAndUserIdNot(dto.getEmail(), user.getUserId())) {
+
+			errors.put("email", "Email already exists");
+		}
+
+		if (!errors.isEmpty()) {
+			throw new UserAlreadyExistException(errors);
+		}
+	}
+
+	private void validateAdminUpdate(User user, UserUpdateRequestDTO dto) {
+
+		if (dto.getEmail() != null && userRepository.existsByEmailAndUserIdNot(dto.getEmail(), user.getUserId())) {
+
+			throw new UserAlreadyExistException(Map.of("email", "Email already exists"));
+		}
+	}
+
+	void applyUserUpdate(User user, UserUpdateRequestDTO dto, UpdateContext context) {
+
 		if (dto.getFullName() != null)
 			user.setFullName(dto.getFullName());
-		if (dto.getEmail() != null)
+
+		if (dto.getEmail() != null) {
+
 			user.setEmail(dto.getEmail());
+		}
+
 		if (dto.getPhone() != null)
 			user.setPhone(dto.getPhone());
+
 		if (dto.getAddress() != null)
 			user.setAddress(dto.getAddress());
+
 		if (dto.getDateOfBirth() != null)
 			user.setDateOfBirth(dto.getDateOfBirth());
 
-		user = this.userRepository.save(user);
-		return this.userMapper.toDTO(user);
+		// chỉ ADMIN mới được sửa isActive
+		if (context == UpdateContext.ADMIN && dto.getIsActive() != null) {
+			user.setActive(dto.getIsActive());
+		}
 	}
+
 }

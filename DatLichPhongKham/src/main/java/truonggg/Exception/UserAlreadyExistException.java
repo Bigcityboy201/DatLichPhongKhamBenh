@@ -14,11 +14,11 @@ public class UserAlreadyExistException extends MultiFieldViolationException {
 
 	// Multi-field
 	public UserAlreadyExistException(Map<String, String> errors) {
-		super("user", errors, ErrorCode.ALREADY_EXIT);
+		super("user", errors, ErrorCode.ALREADY_EXIST);
 	}
 
 	// Single-field
 	public UserAlreadyExistException(String field, String message) {
-		super("user", Map.of(field, message), ErrorCode.ALREADY_EXIT);
+		super("user", Map.of(field, message), ErrorCode.ALREADY_EXIST);
 	}
 }

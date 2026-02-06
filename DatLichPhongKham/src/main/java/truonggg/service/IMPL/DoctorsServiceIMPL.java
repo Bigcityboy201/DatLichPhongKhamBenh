@@ -30,7 +30,6 @@ import truonggg.repo.SchedulesRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.service.DoctorsService;
-import truonggg.service.UserService;
 
 @Transactional
 @Service
@@ -41,7 +40,6 @@ public class DoctorsServiceIMPL implements DoctorsService {
 	private final DoctorsMapper doctorsMapper;
 	private final UserRepository userRepository;
 	private final DepartmentsRepository departmentsRepository;
-	private final UserService userService;
 	private final AppointmentsRepository appointmentsRepository;
 	private final AppointmentsMapper appointmentsMapper;
 	private final SchedulesRepository schedulesRepository;
@@ -78,8 +76,10 @@ public class DoctorsServiceIMPL implements DoctorsService {
 
 	@Override
 	public PagedResult<DoctorsReponseDTO> getDoctorsByDepartmentPaged(Integer departmentsId, Pageable pageable) {
-		Departments departments = this.departmentsRepository.findById(departmentsId)
-				.orElseThrow(() -> new NotFoundException("department", "Department not found!"));
+		// Đảm bảo khoa tồn tại
+		if (!this.departmentsRepository.existsById(departmentsId)) {
+			throw new NotFoundException("department", "Department not found!");
+		}
 		// Lấy page từ repository
 		Page<Doctors> doctorsPage = doctorsRepository.findByDepartmentsId(departmentsId, pageable);
 
@@ -121,10 +121,26 @@ public class DoctorsServiceIMPL implements DoctorsService {
 
 	@Override
 	public DoctorsReponseDTO updateProfile(DoctorUpdateRequestDTO dto, String userName) {
-		// Tìm doctor hiện tại
-		Doctors foundDoctor = this.doctorsRepository.findByUser_UserName(userName)
+
+		Doctors foundDoctor = doctorsRepository.findByUser_UserName(userName)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
-		// Cập nhật thông tin User
+
+		if (dto.getExperienceYears() != null) {
+			foundDoctor.setExperienceYears(dto.getExperienceYears());
+		}
+		if (dto.getDescription() != null) {
+			foundDoctor.setDescription(dto.getDescription());
+		}
+		if (dto.getImageUrl() != null) {
+			foundDoctor.setImageUrl(dto.getImageUrl());
+		}
+		if (dto.getDepartmentId() != null) {
+			Departments departments = departmentsRepository.findById(dto.getDepartmentId())
+					.orElseThrow(() -> new NotFoundException("department", "Department Not Found"));
+			foundDoctor.setDepartments(departments);
+		}
+
+		// Cập nhật thông tin user đi kèm (SELF CONTEXT – KHÔNG ĐƯỢC SỬA isActive)
 		User user = foundDoctor.getUser();
 		if (user != null) {
 			if (dto.getFullName() != null) {
@@ -142,37 +158,19 @@ public class DoctorsServiceIMPL implements DoctorsService {
 			if (dto.getDateOfBirth() != null) {
 				user.setDateOfBirth(dto.getDateOfBirth());
 			}
-			if (dto.getExperienceYears() != null) {
-				foundDoctor.setExperienceYears(dto.getExperienceYears());
-			}
-			if (dto.getDescription() != null) {
-				foundDoctor.setDescription(dto.getDescription());
-			}
-			if (dto.getImageUrl() != null) {
-				foundDoctor.setImageUrl(dto.getImageUrl());
-			}
-
-			// Cập nhật department nếu có
-			if (dto.getDepartmentId() != null) {
-				Departments departments = this.departmentsRepository.findById(dto.getDepartmentId())
-						.orElseThrow(() -> new NotFoundException("department", "Department Not Found"));
-				foundDoctor.setDepartments(departments);
-			}
-			// Lưu user đã cập nhật
-			User updatedUser = this.userService.update(user);
-			foundDoctor.setUser(updatedUser);
+			// Không cho tự sửa isActive ở đây
+			userRepository.save(user);
 		}
 
-		return this.doctorsMapper.toDTO(this.doctorsRepository.save(foundDoctor));
+		return doctorsMapper.toDTO(doctorsRepository.save(foundDoctor));
 	}
 
 	@Override
 	public DoctorsReponseDTO updateWithUser(Integer id, DoctorUpdateRequestDTO dto) {
-		// Tìm doctor hiện tại
+
 		Doctors foundDoctor = this.doctorsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 
-		// Cập nhật thông tin Doctor
 		if (dto.getExperienceYears() != null) {
 			foundDoctor.setExperienceYears(dto.getExperienceYears());
 		}
@@ -185,15 +183,11 @@ public class DoctorsServiceIMPL implements DoctorsService {
 		if (dto.getIsFeatured() != null) {
 			foundDoctor.setIsFeatured(dto.getIsFeatured());
 		}
-
-		// Cập nhật department nếu có
 		if (dto.getDepartmentId() != null) {
 			Departments departments = this.departmentsRepository.findById(dto.getDepartmentId())
 					.orElseThrow(() -> new NotFoundException("department", "Department Not Found"));
 			foundDoctor.setDepartments(departments);
 		}
-
-		// Cập nhật thông tin User
 		User user = foundDoctor.getUser();
 		if (user != null) {
 			if (dto.getFullName() != null) {
@@ -214,9 +208,7 @@ public class DoctorsServiceIMPL implements DoctorsService {
 			if (dto.getIsActive() != null) {
 				user.setActive(dto.getIsActive());
 			}
-			// Lưu user đã cập nhật
-			User updatedUser = this.userService.update(user);
-			foundDoctor.setUser(updatedUser);
+			userRepository.save(user);
 		}
 
 		return this.doctorsMapper.toDTO(this.doctorsRepository.save(foundDoctor));
