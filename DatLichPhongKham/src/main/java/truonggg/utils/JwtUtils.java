@@ -1,6 +1,5 @@
 package truonggg.utils;
 
-import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,16 +10,18 @@ import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import truonggg.Factory.JwtKeyFactory;
 import truonggg.Model.Role;
 import truonggg.sercurity.CustomUserDetails;
 
 @Component
+@RequiredArgsConstructor
 public class JwtUtils {
 
-	@Value("${jwt.secret}")
-	private String jwtSecret;
+	private final JwtKeyFactory jwtKeyFactory;
+//	@Value("${jwt.secret}")
+//	private String jwtSecret;
 
 	@Value("${jwt.duration}") // kĩ thuật đọc dữ liệu từ file propeties or yml.
 	private long jwtDuration;// thời gian tồn tại của token
@@ -39,14 +40,14 @@ public class JwtUtils {
 		var expirationMillis = new Date(System.currentTimeMillis() + 1000 * jwtDuration); // 7 days
 
 		return Jwts.builder().setClaims(claims).setSubject(user.getUsername()).setIssuedAt(new Date())
-				.setExpiration(expirationMillis).signWith(this.getSignKey()).compact();
+				.setExpiration(expirationMillis).signWith(jwtKeyFactory.getStrategy().getSigningKey()).compact();
 	}
 
 	// tạo khóa bí mật
-	private Key getSignKey() {
-		byte[] keyBytes = Decoders.BASE64.decode(this.jwtSecret);
-		return Keys.hmacShaKeyFor(keyBytes);
-	}
+//	private Key getSignKey() {
+//		byte[] keyBytes = Decoders.BASE64.decode(this.jwtSecret);
+//		return Keys.hmacShaKeyFor(keyBytes);
+//	}
 
 	// lấy thông tin từ token
 	public String extractUsername(String token) {
@@ -66,7 +67,8 @@ public class JwtUtils {
 
 	// lấy thông tin từ token
 	private Claims extractAllClaims(String token) {
-		return Jwts.parser().setSigningKey(this.getSignKey()).build().parseClaimsJws(token).getBody();
+		return Jwts.parser().setSigningKey(jwtKeyFactory.getStrategy().getSigningKey()).build().parseClaimsJws(token)
+				.getBody();
 	}
 
 	// kiểm tra thời hạn

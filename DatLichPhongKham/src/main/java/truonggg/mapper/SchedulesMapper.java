@@ -18,7 +18,6 @@ public interface SchedulesMapper {
 	SchedulesReponseDTO toDTO(final Schedules dto);
 
 	@Mapping(source = "doctorId", target = "doctors.id")
-	@Mapping(source = "active", target = "isActive")
 	Schedules toModel(final SchedulesRequestDTO dto);
 
 	default List<SchedulesReponseDTO> toDTOList(List<Schedules> list) {

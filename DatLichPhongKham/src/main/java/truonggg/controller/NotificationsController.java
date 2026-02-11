@@ -21,14 +21,17 @@ import truonggg.dto.requestDTO.NotificationsRequestDTO;
 import truonggg.dto.requestDTO.NotificationsUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.NotificationsService;
+import truonggg.service.NotificationsAdminService;
+import truonggg.service.NotificationsSelfService;
 
 @RestController
 @RequestMapping(path = "/api/notifications")
 @RequiredArgsConstructor
 public class NotificationsController {
 
-	private final NotificationsService notificationsService;
+	private final NotificationsAdminService notificationsAdminService;
+
+	private final NotificationsSelfService notificationsSelfService;
 
 	// GET /api/notifications - Lấy tất cả notification, có phân trang
 	@GetMapping
@@ -36,7 +39,7 @@ public class NotificationsController {
 	public SuccessReponse<?> getAllNotifications(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsService.getAll(pageable);
+		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsAdminService.getAll(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -44,7 +47,7 @@ public class NotificationsController {
 	@GetMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<NotificationsResponseDTO> getNotificationById(@PathVariable Integer id) {
-		return SuccessReponse.of(this.notificationsService.findById(id));
+		return SuccessReponse.of(this.notificationsAdminService.findById(id));
 	}
 
 	// GET /api/notifications/user/{userId} - Lấy theo User ID
@@ -54,7 +57,7 @@ public class NotificationsController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsService.getByUserId(userId, pageable);
+		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsAdminService.getByUserId(userId, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -65,7 +68,7 @@ public class NotificationsController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsService.getUnreadByUserId(userId,
+		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsAdminService.getUnreadByUserId(userId,
 				pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
@@ -75,7 +78,7 @@ public class NotificationsController {
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<NotificationsResponseDTO> createNotification(
 			@RequestBody @Valid final NotificationsRequestDTO dto) {
-		return SuccessReponse.of(this.notificationsService.createNotification(dto));
+		return SuccessReponse.of(this.notificationsAdminService.createNotification(dto));
 	}
 
 	// PUT /api/notifications/{id} - Cập nhật thông tin notification
@@ -83,28 +86,28 @@ public class NotificationsController {
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<NotificationsResponseDTO> updateNotification(@PathVariable Integer id,
 			@RequestBody @Valid NotificationsUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.notificationsService.update(id, dto));
+		return SuccessReponse.of(this.notificationsAdminService.update(id, dto));
 	}
 
 	// PUT /api/notifications/{id}/read - Đánh dấu notification là đã đọc
 	@PutMapping("/{id}/read")
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<NotificationsResponseDTO> markNotificationAsRead(@PathVariable Integer id) {
-		return SuccessReponse.of(this.notificationsService.markAsRead(id));
+		return SuccessReponse.of(this.notificationsAdminService.markAsRead(id));
 	}
 
 	// DELETE /api/notifications/{id} - Delete notification
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<NotificationsResponseDTO> deleteNotification(@PathVariable Integer id) {
-		return SuccessReponse.of(this.notificationsService.delete(id));
+		return SuccessReponse.of(this.notificationsAdminService.delete(id));
 	}
 
 	// DELETE /api/notifications/manually/{id} - Hard delete notification
 	@DeleteMapping("/manually/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
 	public SuccessReponse<Boolean> hardDeleteNotification(@PathVariable Integer id) {
-		return SuccessReponse.of(this.notificationsService.hardDelete(id));
+		return SuccessReponse.of(this.notificationsAdminService.hardDelete(id));
 	}
 
 	@GetMapping("/me")
@@ -113,7 +116,7 @@ public class NotificationsController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsService.getByCurrentUser(username,
+		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsSelfService.getByCurrentUser(username,
 				pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
@@ -125,7 +128,7 @@ public class NotificationsController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsService.getUnreadByCurrentUser(username,
+		PagedResult<NotificationsResponseDTO> pagedResult = this.notificationsSelfService.getUnreadByCurrentUser(username,
 				pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
@@ -136,7 +139,7 @@ public class NotificationsController {
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR')")
 	public SuccessReponse<Boolean> markMyNotificationAsRead(@PathVariable Integer id) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.notificationsService.markAsReadByCurrentUser(id, username));
+		return SuccessReponse.of(this.notificationsSelfService.markAsReadByCurrentUser(id, username));
 	}
 
 	// DELETE /api/notifications/me/{id} - Soft delete notification của chính mình
@@ -144,6 +147,6 @@ public class NotificationsController {
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR')")
 	public SuccessReponse<Boolean> softDeleteMyNotification(@PathVariable Integer id) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.notificationsService.softDeleteByCurrentUser(id, username));
+		return SuccessReponse.of(this.notificationsSelfService.softDeleteByCurrentUser(id, username));
 	}
 }

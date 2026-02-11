@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +27,7 @@ import truonggg.repo.DoctorsRepository;
 import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
+import truonggg.service.user.PasswordService;
 import truonggg.service.user.UserManagementService;
 import truonggg.service.user.UserSelfService;
 
@@ -36,7 +36,7 @@ import truonggg.service.user.UserSelfService;
 public class UserServiceIMPL implements UserManagementService, UserSelfService {
 	private final UserRepository userRepository;
 	private final UserMapper userMapper;
-	private final PasswordEncoder passwordEncoder;
+	private final PasswordService passwordService;
 	private final RoleRepository roleRepository;
 	private final DoctorsRepository doctorsRepository;
 
@@ -60,7 +60,7 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 		User user = userMapper.toEntity(dto);
 
 		// Encode password trước khi lưu
-		user.setPassword(this.passwordEncoder.encode(user.getPassword()));
+		user.setPassword(this.passwordService.encodePassword(user.getPassword()));
 
 		// Set role mặc định là USER nếu chưa có
 		if (user.getRole() == null) {
@@ -117,9 +117,7 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 		Page<User> userPage = this.userRepository.findAll(pageable);
 		List<UserResponseDTO> dtoList = userPage.stream().map(userMapper::toDTO).collect(Collectors.toList());
 
-		return PagedResult.<UserResponseDTO>builder().content(dtoList).totalElements((int) userPage.getTotalElements())
-				.totalPages(userPage.getTotalPages()).currentPage(userPage.getNumber()).pageSize(userPage.getSize())
-				.build();
+		return PagedResult.from(userPage, dtoList);
 	}
 
 	@Override
@@ -140,6 +138,7 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 		return userMapper.toDTO(userRepository.save(user));
 	}
 
+	@Override
 	@Transactional
 	public UserResponseDTO updateStatus(Integer id, Boolean isActive) {
 		User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
@@ -223,10 +222,7 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 		if (dto.getDateOfBirth() != null)
 			user.setDateOfBirth(dto.getDateOfBirth());
 
-		// chỉ ADMIN mới được sửa isActive
-		if (context == UpdateContext.ADMIN && dto.getIsActive() != null) {
-			user.setActive(dto.getIsActive());
-		}
+		// Trạng thái isActive được cập nhật qua API riêng (UserStatusDTO)
 	}
 
 }

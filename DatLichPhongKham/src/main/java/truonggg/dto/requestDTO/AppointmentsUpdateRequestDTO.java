@@ -2,6 +2,7 @@ package truonggg.dto.requestDTO;
 
 import java.time.LocalDateTime;
 
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +18,7 @@ import truonggg.Enum.Appointments_Enum;
 @Builder
 public class AppointmentsUpdateRequestDTO {
 
+	@FutureOrPresent(message = "Thời gian hẹn phải là hiện tại hoặc trong tương lai")
 	private LocalDateTime appointmentDateTime;
 
 	@Size(max = 500, message = "Note cannot exceed 500 characters")

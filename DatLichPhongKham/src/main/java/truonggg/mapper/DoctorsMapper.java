@@ -12,6 +12,7 @@ import truonggg.Model.DoctorSpecializations;
 import truonggg.Model.Doctors;
 import truonggg.Model.Schedules;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.DoctorSummaryResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
 import truonggg.dto.requestDTO.DoctorsRequestDTO;
 
@@ -30,6 +31,16 @@ public interface DoctorsMapper {
 	@Mapping(target = "schedules", expression = "java(mapSchedules(doctors.getList2()))")
 	@Mapping(target = "appointments", expression = "java(mapAppointments(doctors.getList()))")
 	DoctorsReponseDTO toDTO(Doctors doctors);
+
+	@Mapping(source = "user.userId", target = "userId")
+	@Mapping(source = "user.fullName", target = "fullName")
+	@Mapping(source = "user.email", target = "email")
+	@Mapping(source = "user.phone", target = "phone")
+	@Mapping(source = "departments.id", target = "departmentId")
+	@Mapping(source = "departments.name", target = "departmentName")
+	@Mapping(source = "isActive", target = "active")
+	@Mapping(source = "isFeatured", target = "isFeatured")
+	DoctorSummaryResponseDTO toDTOOther(Doctors doctors);
 
 	default List<String> mapSpecializations(List<DoctorSpecializations> specializations) {
 		if (specializations == null || specializations.isEmpty())
@@ -89,6 +100,12 @@ public interface DoctorsMapper {
 		if (doctorsList == null || doctorsList.isEmpty())
 			return List.of();
 		return doctorsList.stream().map(this::toDTO).collect(Collectors.toList());
+	}
+
+	default List<DoctorSummaryResponseDTO> toDTOOtherList(List<Doctors> doctorsList) {
+		if (doctorsList == null || doctorsList.isEmpty())
+			return List.of();
+		return doctorsList.stream().map(this::toDTOOther).collect(Collectors.toList());
 	}
 
 	Doctors toEntity(DoctorsRequestDTO dto);

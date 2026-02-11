@@ -7,7 +7,6 @@ import java.util.Map;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +26,7 @@ import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
 import truonggg.sercurity.CustomUserDetails;
 import truonggg.service.user.AuthService;
+import truonggg.service.user.PasswordService;
 import truonggg.utils.JwtUtils;
 
 @RequiredArgsConstructor
@@ -35,7 +35,7 @@ public class AuthServiceIMPL implements AuthService {
 
 	private final UserRepository userRepository;
 	private final RoleRepository roleRepository;
-	private final PasswordEncoder passwordEncoder;
+	private final PasswordService passwordService;
 	private final UserMapper userMapper;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
@@ -43,6 +43,9 @@ public class AuthServiceIMPL implements AuthService {
 	@Override
 	@Transactional
 	public UserResponseDTO signUp(SignUpRequest dto) {
+
+		// nên thay gọi lỗi->tương ứng rằng mỗi feature sẽ là một lỗi nếu như này vi
+		// phạm srp
 		Map<String, String> errors = new HashMap<>();
 
 		if (userRepository.existsByUserName(dto.getUserName())) {
@@ -58,7 +61,7 @@ public class AuthServiceIMPL implements AuthService {
 
 		User user = userMapper.toModel(dto);
 		user.setActive(false);
-		user.setPassword(this.passwordEncoder.encode(user.getPassword()));
+		user.setPassword(this.passwordService.encodePassword(user.getPassword()));
 
 		// lấy role theo tên (USER/ADMIN)
 		Role roleUser = this.roleRepository.findByRoleName(SecurityRole.ROLE_USER);
@@ -86,7 +89,7 @@ public class AuthServiceIMPL implements AuthService {
 		User user = userRepository.findByUserName(userDetails.getUsername())
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
 
-		// isActive = true nghĩa là tài khoản đang hoạt động; false là chưa kích hoạt /
+		// isActive = false nghĩa là tài khoản đang hoạt động; true là chưa kích hoạt /
 		// inactive
 		if (Boolean.TRUE.equals(user.getIsActive())) {
 			throw new AccountInactiveException();

@@ -21,14 +21,17 @@ import truonggg.dto.requestDTO.RoleRequestDTO;
 import truonggg.dto.requestDTO.RoleUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.RoleService;
+import truonggg.service.RoleCommandService;
+import truonggg.service.RoleQueryService;
 
 @RestController
 @RequestMapping(path = "/api/roles")
 @RequiredArgsConstructor
 public class RoleController {
 
-	private final RoleService roleService;
+	private final RoleQueryService roleQueryService;
+
+	private final RoleCommandService roleCommandService;
 
 	// GET /api/roles - Lấy tất cả
 	@GetMapping
@@ -36,7 +39,7 @@ public class RoleController {
 	public SuccessReponse<?> getAllRoles(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<RoleResponseDTO> pagedResult = this.roleService.getAll(pageable);
+		PagedResult<RoleResponseDTO> pagedResult = this.roleQueryService.getAll(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -44,34 +47,34 @@ public class RoleController {
 	@GetMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<RoleResponseDTO> getRoleById(@PathVariable Integer id) {
-		return SuccessReponse.of(this.roleService.findById(id));
+		return SuccessReponse.of(this.roleQueryService.findById(id));
 	}
 
 	// POST /api/roles - Tạo mới
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<RoleResponseDTO> createRole(@RequestBody @Valid final RoleRequestDTO dto) {
-		return SuccessReponse.of(this.roleService.createRole(dto));
+		return SuccessReponse.of(this.roleCommandService.createRole(dto));
 	}
 
 	// PUT /api/roles - Cập nhật
 	@PutMapping
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<RoleResponseDTO> updateRole(@RequestBody @Valid RoleUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.roleService.update(dto));
+		return SuccessReponse.of(this.roleCommandService.update(dto));
 	}
 
 	// DELETE /api/roles - Soft delete
 	@DeleteMapping
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<Boolean> deleteRole(@RequestBody @Valid RoleDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.roleService.delete(dto));
+		return SuccessReponse.of(this.roleCommandService.delete(dto));
 	}
 
 	// DELETE /api/roles/{id} - Hard delete
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<Boolean> hardDeleteRole(@PathVariable Integer id) {
-		return SuccessReponse.of(this.roleService.delete(id));
+		return SuccessReponse.of(this.roleCommandService.delete(id));
 	}
 }

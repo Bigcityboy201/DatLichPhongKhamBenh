@@ -20,25 +20,25 @@ import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.DepartmentsResponseDTO;
 import truonggg.dto.requestDTO.DepartmentsRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
-import truonggg.mapper.DepartmentsMapper;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.DepartmentsService;
+import truonggg.service.department.DepartmentsCommandService;
+import truonggg.service.department.DepartmentsQueryService;
 
 @RestController
 @RequestMapping(path = "/api/departments")
 @RequiredArgsConstructor
 public class DepartmentsController {
 
-	private final DepartmentsService departmentsService;
-	private final DepartmentsMapper departmentsMapper;
+	private final DepartmentsQueryService departmentsQueryService;
+	private final DepartmentsCommandService departmentsCommandService;
 
 	// GET /api/departments - Lấy tất cả (phân trang)
 	@GetMapping
 	public SuccessReponse<?> getAllDepartments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<DepartmentsResponseDTO> pagedResult = departmentsService.getAllPaged(pageable);
+		PagedResult<DepartmentsResponseDTO> pagedResult = departmentsQueryService.getAllPaged(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -47,12 +47,12 @@ public class DepartmentsController {
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<DepartmentsResponseDTO> createDepartment(
 			@RequestBody @Valid final DepartmentsRequestDTO dto) {
-		return SuccessReponse.of(this.departmentsService.createDepartment(dto));
+		return SuccessReponse.of(this.departmentsCommandService.createDepartment(dto));
 	}
 
 	@GetMapping("/{id}")
 	public SuccessReponse<DepartmentsResponseDTO> findById(@PathVariable Integer id) {
-		return SuccessReponse.of(this.departmentsService.findById(id));
+		return SuccessReponse.of(this.departmentsQueryService.findById(id));
 	}
 
 	// PUT /api/departments - Cập nhật
@@ -60,7 +60,7 @@ public class DepartmentsController {
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<DepartmentsResponseDTO> updateDepartment(@RequestBody @Valid DepartmentsUpdateRequestDTO dto,
 			@PathVariable Integer id) {
-		return SuccessReponse.of(this.departmentsService.update(id, dto));
+		return SuccessReponse.of(this.departmentsCommandService.update(id, dto));
 	}
 
 	// DELETE /api/departments - Soft delete
@@ -68,14 +68,14 @@ public class DepartmentsController {
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<DepartmentsResponseDTO> deleteDepartment(@RequestBody @Valid DepartmentsUpdateRequestDTO dto,
 			@PathVariable Integer id) {
-		return SuccessReponse.of(this.departmentsService.delete(id, dto));
+		return SuccessReponse.of(this.departmentsCommandService.delete(id, dto));
 	}
 
 	// DELETE /api/departments/{id} - Hard delete
 	@DeleteMapping("/manually/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<String> hardDeleteDepartment(@PathVariable Integer id) {
-		this.departmentsService.delete(id);
+		this.departmentsCommandService.delete(id);
 		return SuccessReponse.of("Xóa thành công khoa");
 	}
 
@@ -85,7 +85,7 @@ public class DepartmentsController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<DepartmentsResponseDTO> pagedResult = departmentsService.searchDepartments(keyword, pageable);
+		PagedResult<DepartmentsResponseDTO> pagedResult = departmentsQueryService.searchDepartments(keyword, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 }

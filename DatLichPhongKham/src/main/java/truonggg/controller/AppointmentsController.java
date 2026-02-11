@@ -24,14 +24,16 @@ import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.AppointmentsService;
+import truonggg.service.appointment.AppointmentsCommandService;
+import truonggg.service.appointment.AppointmentsQueryService;
 import truonggg.service.user.UserManagementService;
 
 @RestController
 @RequestMapping(path = "/api/appointments")
 @RequiredArgsConstructor
 public class AppointmentsController {
-	private final AppointmentsService appointmentsService;
+	private final AppointmentsQueryService appointmentsQueryService;
+	private final AppointmentsCommandService appointmentsCommandService;
 	private final UserManagementService userManagementService;
 
 	// GET /api/appointments - Lấy tất cả (phân trang)
@@ -40,15 +42,15 @@ public class AppointmentsController {
 	public SuccessReponse<?> getAllAppointments(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsService.getAllPaged(pageable);
+		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsQueryService.getAllPaged(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
 	// GET /api/appointments/{id} - Lấy theo ID
 	@GetMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> getAppointmentById(@PathVariable Integer id) {
-		return SuccessReponse.of(this.appointmentsService.findById(id));
+		return SuccessReponse.of(this.appointmentsQueryService.findById(id));
 	}
 
 	// POST /api/appointments - Tạo mới
@@ -64,7 +66,7 @@ public class AppointmentsController {
 			Integer currentUserId = this.userManagementService.findByUserName(username).getUserId();
 			dto.setUserId(currentUserId);
 		}
-		return SuccessReponse.of(this.appointmentsService.createAppointments(dto));
+		return SuccessReponse.of(this.appointmentsCommandService.createAppointments(dto));
 	}
 
 	// PUT /api/appointments - Cập nhật
@@ -72,21 +74,21 @@ public class AppointmentsController {
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> updateAppointment(@PathVariable Integer id,
 			@RequestBody @Valid AppointmentsUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.appointmentsService.update(id, dto));
+		return SuccessReponse.of(this.appointmentsCommandService.update(id, dto));
 	}
 
 	// DELETE /api/appointments - Soft delete
 	@PutMapping("/{id}/status")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> deleteAppointment(@PathVariable Integer id) {
-		return SuccessReponse.of(this.appointmentsService.delete(id));
+		return SuccessReponse.of(this.appointmentsCommandService.delete(id));
 	}
 
 	// DELETE /api/appointments/{id} - Hard delete
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<String> hardDeleteAppointment(@PathVariable Integer id) {
-		this.appointmentsService.deleteManually(id);
+		this.appointmentsCommandService.deleteManually(id);
 		return SuccessReponse.of("Xóa thành công!");
 	}
 
@@ -97,8 +99,8 @@ public class AppointmentsController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsService.getAppointmentByCurrentUser(username,
-				pageable);
+		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsQueryService
+				.getAppointmentByCurrentUser(username, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -108,13 +110,13 @@ public class AppointmentsController {
 
 		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-		return SuccessReponse.of(appointmentsService.cancelByUser(id, currentUsername));
+		return SuccessReponse.of(appointmentsCommandService.cancelByUser(id, currentUsername));
 	}
 
 	@PutMapping("/{id}/assign-doctor")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> assignDoctor(@PathVariable Integer id,
 			@RequestBody @Valid AppointmentAssignDoctorRequestDTO dto) {
-		return SuccessReponse.of(this.appointmentsService.assignDoctor(id, dto.getDoctorId()));
+		return SuccessReponse.of(this.appointmentsCommandService.assignDoctor(id, dto.getDoctorId()));
 	}
 }

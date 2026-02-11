@@ -22,14 +22,17 @@ import truonggg.dto.requestDTO.ReviewUpdateRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO_USER;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.ReviewService;
+import truonggg.service.ReviewAdminService;
+import truonggg.service.ReviewSelfService;
 
 @RestController
 @RequestMapping(path = "/api/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
 
-	private final ReviewService reviewService;
+	private final ReviewAdminService reviewAdminService;
+
+	private final ReviewSelfService reviewSelfService;
 
 	// GET /api/reviews - Lấy tất cả
 	@GetMapping
@@ -37,14 +40,14 @@ public class ReviewController {
 	public SuccessReponse<?> getAllReviews(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<ReviewResponseDTO> pagedResult = this.reviewService.getAll(pageable);
+		PagedResult<ReviewResponseDTO> pagedResult = this.reviewAdminService.getAll(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
 	// GET /api/reviews/{id} - Lấy theo ID
 	@GetMapping("/{id}")
 	public SuccessReponse<ReviewResponseDTO> getReviewById(@PathVariable Integer id) {
-		return SuccessReponse.of(this.reviewService.findById(id));
+		return SuccessReponse.of(this.reviewAdminService.findById(id));
 	}
 
 	// GET /api/reviews/doctor/{doctorId} - Lấy theo Doctor ID
@@ -53,7 +56,7 @@ public class ReviewController {
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<ReviewResponseDTO> pagedResult = this.reviewService.getByDoctorId(doctorId, pageable);
+		PagedResult<ReviewResponseDTO> pagedResult = this.reviewAdminService.getByDoctorId(doctorId, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -70,7 +73,7 @@ public class ReviewController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		PagedResult<ReviewResponseDTO> pagedResult = this.reviewService.getByCurrentUser(username, pageable);
+		PagedResult<ReviewResponseDTO> pagedResult = this.reviewSelfService.getByCurrentUser(username, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -80,7 +83,7 @@ public class ReviewController {
 	public SuccessReponse<ReviewResponseDTO> createReviewForCurrentUser(
 			@RequestBody @Valid final ReviewSelfRequestDTO dto) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.reviewService.createReviewForCurrentUser(dto, username));
+		return SuccessReponse.of(this.reviewSelfService.createReviewForCurrentUser(dto, username));
 	}
 
 	// PUT /api/reviews/me/{id} - User cập nhật review của chính mình
@@ -89,7 +92,7 @@ public class ReviewController {
 	public SuccessReponse<ReviewResponseDTO> updateReviewByCurrentUser(@PathVariable Integer id,
 			@RequestBody @Valid ReviewUpdateRequestDTO_USER dto) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.reviewService.updateByCurrentUser(id, dto, username));
+		return SuccessReponse.of(this.reviewSelfService.updateByCurrentUser(id, dto, username));
 	}
 
 	// PUT /api/reviews - Cập nhật
@@ -97,7 +100,7 @@ public class ReviewController {
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<ReviewResponseDTO> updateReview(@RequestBody @Valid ReviewUpdateRequestDTO dto,
 			@PathVariable Integer id) {
-		return SuccessReponse.of(this.reviewService.update(id, dto));
+		return SuccessReponse.of(this.reviewAdminService.update(id, dto));
 	}
 
 	// DELETE /api/reviews - Soft delete
@@ -105,21 +108,21 @@ public class ReviewController {
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<ReviewResponseDTO> deleteReview(@RequestBody @Valid ReviewUpdateRequestDTO dto,
 			@PathVariable Integer id) {
-		return SuccessReponse.of(this.reviewService.delete(id, dto));
+		return SuccessReponse.of(this.reviewAdminService.delete(id, dto));
 	}
 
 	@DeleteMapping("/me/{id}")
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<ReviewResponseDTO> deleteReviewByCurrentUserUsingDelete(@PathVariable Integer id) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.reviewService.softDeleteByCurrentUser(id, username));
+		return SuccessReponse.of(this.reviewSelfService.softDeleteByCurrentUser(id, username));
 	}
 
 	// DELETE /api/reviews/{id} - Hard delete
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	@DeleteMapping("/{id}")
 	public SuccessReponse<String> hardDeleteReview(@PathVariable Integer id) {
-		this.reviewService.delete(id);
+		this.reviewAdminService.delete(id);
 		return SuccessReponse.of("Xóa thành công review!");
 	}
 }

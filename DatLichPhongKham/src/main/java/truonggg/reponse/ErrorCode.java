@@ -25,9 +25,9 @@ public enum ErrorCode {
 	INTERNAL_SERVER_ERROR,
 
 	// ===== DEPRECATED (KHÔNG DÙNG MỚI) =====
-	@Deprecated
-	ALREADY_EXIT,
-
-	@Deprecated
-	INTERNAL_SERVER
+//	@Deprecated
+//	ALREADY_EXIT,
+//
+//	@Deprecated
+//	INTERNAL_SERVER
 }

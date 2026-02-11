@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.DoctorSummaryResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.DoctorUpdateRequestDTO;
@@ -27,13 +28,17 @@ import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DoctorsRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.DoctorsService;
+import truonggg.service.doctor.DoctorAdminService;
+import truonggg.service.doctor.DoctorQueryService;
+import truonggg.service.doctor.DoctorSelfService;
 
 @RestController
 @RequestMapping(path = "/api/doctors")
 @RequiredArgsConstructor
 public class DoctorsController {
-	private final DoctorsService doctorsService;
+	private final DoctorQueryService doctorQueryService;
+	private final DoctorAdminService doctorAdminService;
+	private final DoctorSelfService doctorSelfService;
 
 	// GET /api/doctors - Lấy tất cả (có thể phân trang)
 	@GetMapping
@@ -43,78 +48,80 @@ public class DoctorsController {
 
 		// Nếu có featured parameter, trả về danh sách không phân trang
 		if (featured != null) {
-			return SuccessReponse.of(this.doctorsService.getAll(featured));
+			return SuccessReponse.of(this.doctorQueryService.getAll(featured));
 		}
 
 		// Nếu không có featured parameter, trả về danh sách có phân trang
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<DoctorsReponseDTO> pagedResult = doctorsService.getAllPaged(pageable);
+		PagedResult<DoctorSummaryResponseDTO> pagedResult = doctorQueryService.getAllPaged(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
 	// GET /api/doctors/{id} - Lấy theo ID
 	@GetMapping("/{id}")
 	public SuccessReponse<DoctorsReponseDTO> getDoctorById(@PathVariable Integer id) {
-		return SuccessReponse.of(this.doctorsService.findById(id));
+		return SuccessReponse.of(this.doctorQueryService.findById(id));
 	}
 
 	// GET /api/doctors/department - Lấy theo Department
 	@GetMapping("/department")
-	public SuccessReponse<List<DoctorsReponseDTO>> getDoctorsByDepartment(@RequestParam(required = false) Integer id,
-			@RequestParam(value = "page", defaultValue = "0") int page,
+	public SuccessReponse<List<DoctorSummaryResponseDTO>> getDoctorsByDepartment(
+			@RequestParam(required = false) Integer id, @RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<DoctorsReponseDTO> pagedResult = doctorsService.getDoctorsByDepartmentPaged(id, pageable);
+		PagedResult<DoctorSummaryResponseDTO> pagedResult = doctorQueryService.getDoctorsByDepartmentPaged(id,
+				pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
 	// POST /api/doctors - Tạo mới
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<DoctorsReponseDTO> createDoctor(@RequestBody @Valid final DoctorsRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.createDoctor(dto));
+	public SuccessReponse<DoctorSummaryResponseDTO> createDoctor(@RequestBody @Valid final DoctorsRequestDTO dto) {
+		return SuccessReponse.of(this.doctorAdminService.createDoctor(dto));
 	}
 
 	// PUT /api/doctors/profile - Cập nhật profile (cho DOCTOR)
 	@PutMapping("/profile")
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")
-	public SuccessReponse<DoctorsReponseDTO> updateDoctorProfile(@RequestBody @Valid DoctorUpdateRequestDTO dto) {
+	public SuccessReponse<DoctorSummaryResponseDTO> updateDoctorProfile(
+			@RequestBody @Valid DoctorUpdateRequestDTO dto) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.doctorsService.updateProfile(dto, username));
+		return SuccessReponse.of(this.doctorSelfService.updateProfile(dto, username));
 	}
 
 	// PUT /api/doctors - Cập nhật (cho ADMIN/EMPLOYEE)
 	@PutMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<DoctorsReponseDTO> updateDoctor(@PathVariable Integer id,
+	public SuccessReponse<DoctorSummaryResponseDTO> updateDoctor(@PathVariable Integer id,
 			@RequestBody @Valid DoctorUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.updateWithUser(id, dto));
+		return SuccessReponse.of(this.doctorAdminService.updateWithUser(id, dto));
 	}
 
 	// DELETE /api/doctors - Soft delete
 	@PatchMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<DoctorsReponseDTO> deleteDoctor(@PathVariable Integer id,
+	public SuccessReponse<DoctorSummaryResponseDTO> deleteDoctor(@PathVariable Integer id,
 			@RequestBody @Valid DoctorsDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.doctorsService.delete(id, dto));
+		return SuccessReponse.of(this.doctorAdminService.delete(id, dto));
 	}
 
 	// DELETE /api/doctors/{id} - Hard delete
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<String> hardDeleteDoctor(@PathVariable Integer id) {
-		this.doctorsService.deleteManually(id);
+		this.doctorAdminService.deleteManually(id);
 		return SuccessReponse.of("Xóa thành công doctor với id:" + id);
 	}
 
 	@GetMapping("/search")
-	public SuccessReponse<List<DoctorsReponseDTO>> searchDoctors(@RequestParam String keyword,
+	public SuccessReponse<List<DoctorSummaryResponseDTO>> searchDoctors(@RequestParam String keyword,
 			@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<DoctorsReponseDTO> pagedResult = doctorsService.searchDoctors(keyword, pageable);
+		PagedResult<DoctorSummaryResponseDTO> pagedResult = doctorQueryService.searchDoctors(keyword, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -123,7 +130,7 @@ public class DoctorsController {
 	@PreAuthorize("hasAnyAuthority('DOCTOR')")
 	public SuccessReponse<DoctorsReponseDTO> getMyProfile() {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return SuccessReponse.of(this.doctorsService.findByUserName(username));
+		return SuccessReponse.of(this.doctorSelfService.findByUserName(username));
 	}
 
 	// GET /api/doctors/me/appointments - Xem cuộc hẹn của bác sĩ đang đăng nhập
@@ -133,7 +140,7 @@ public class DoctorsController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<AppointmentsResponseDTO> pagedResult = doctorsService.getMyAppointments(username, pageable);
+		PagedResult<AppointmentsResponseDTO> pagedResult = doctorSelfService.getMyAppointments(username, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -144,7 +151,7 @@ public class DoctorsController {
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<SchedulesReponseDTO> pagedResult = this.doctorsService.getMySchedules(username, pageable);
+		PagedResult<SchedulesReponseDTO> pagedResult = this.doctorSelfService.getMySchedules(username, pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 }

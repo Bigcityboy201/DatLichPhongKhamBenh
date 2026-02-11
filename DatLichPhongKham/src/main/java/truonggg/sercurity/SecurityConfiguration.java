@@ -43,6 +43,12 @@ public class SecurityConfiguration {
 		this.authenticationEntryPoint = authenticationEntryPoint;
 	}
 
+	/*
+	 * authenticationManager không trực tiếp xác thực mà giao cho
+	 * AuthenticationProvider AuthenticationConfiguration tìm tất cả
+	 * AuthenticationProvider mà đã đăng kí trong context Để lựa chọn 1
+	 * AuthenticationProvider phù hợp dùng trong việc xác thực
+	 */
 	@Bean
 	AuthenticationManager authenticationManager(AuthenticationConfiguration authConfiguration) throws Exception {
 		return authConfiguration.getAuthenticationManager();
@@ -141,8 +147,9 @@ public class SecurityConfiguration {
 
 				// Appointments
 				.requestMatchers(HttpMethod.GET, "/api/appointments").hasAnyAuthority("EMPLOYEE", "ADMIN")
-				.requestMatchers(HttpMethod.GET, "/api/appointments/*")
+				.requestMatchers(HttpMethod.GET, "/api/appointments/me")
 				.hasAnyAuthority("USER", "DOCTOR", "EMPLOYEE", "ADMIN")
+				.requestMatchers(HttpMethod.GET, "/api/appointments/*").hasAnyAuthority("DOCTOR", "EMPLOYEE", "ADMIN")
 				.requestMatchers(HttpMethod.POST, "/api/appointments").hasAnyAuthority("USER", "ADMIN")
 				.requestMatchers(HttpMethod.PUT, "/api/appointments/*/assign-doctor")
 				.hasAnyAuthority("EMPLOYEE", "ADMIN").requestMatchers(HttpMethod.PUT, "/api/appointments/*/cancel-user")

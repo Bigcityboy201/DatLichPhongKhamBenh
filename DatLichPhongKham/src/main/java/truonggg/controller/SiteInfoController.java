@@ -21,20 +21,22 @@ import truonggg.dto.requestDTO.SiteInfoRequestDTO;
 import truonggg.dto.requestDTO.SiteInfoUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
-import truonggg.service.SiteInfoService;
+import truonggg.service.SiteInfoCommandService;
+import truonggg.service.SiteInfoQueryService;
 
 @RestController
 @RequestMapping(path = "/api/siteinfos")
 @RequiredArgsConstructor
 public class SiteInfoController {
-	private final SiteInfoService siteInfoService;
+	private final SiteInfoQueryService siteInfoQueryService;
+	private final SiteInfoCommandService siteInfoCommandService;
 
 	// GET /api/siteinfos - Lấy tất cả
 	@GetMapping
 	public SuccessReponse<?> getAllSiteInfos(@RequestParam(value = "page", defaultValue = "0") int page,
 			@RequestParam(value = "size", defaultValue = "10") int size) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<SiteInfoResponseDTO> pagedResult = this.siteInfoService.getAll(pageable);
+		PagedResult<SiteInfoResponseDTO> pagedResult = this.siteInfoQueryService.getAll(pageable);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
@@ -42,27 +44,27 @@ public class SiteInfoController {
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<SiteInfoResponseDTO> createSiteInfo(@RequestBody @Valid final SiteInfoRequestDTO dto) {
-		return SuccessReponse.of(this.siteInfoService.save(dto));
+		return SuccessReponse.of(this.siteInfoCommandService.save(dto));
 	}
 
 	// PUT /api/siteinfos - Cập nhật
 	@PutMapping
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<SiteInfoResponseDTO> updateSiteInfo(@RequestBody @Valid SiteInfoUpdateRequestDTO dto) {
-		return SuccessReponse.of(this.siteInfoService.update(dto));
+		return SuccessReponse.of(this.siteInfoCommandService.update(dto));
 	}
 
 	// DELETE /api/siteinfos - Soft delete
 	@DeleteMapping
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<Boolean> deleteSiteInfo(@RequestBody @Valid SiteInfoDeleteRequestDTO dto) {
-		return SuccessReponse.of(this.siteInfoService.delete(dto));
+		return SuccessReponse.of(this.siteInfoCommandService.delete(dto));
 	}
 
 	// DELETE /api/siteinfos/{id} - Hard delete
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<Boolean> hardDeleteSiteInfo(@PathVariable Integer id) {
-		return SuccessReponse.of(this.siteInfoService.delete(id));
+		return SuccessReponse.of(this.siteInfoCommandService.delete(id));
 	}
 }
