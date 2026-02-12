@@ -22,5 +22,5 @@ public class PaymentRequestDTO {
 //	private Double amount;
 
 	@NotNull(message = "Phương thức thanh toán không được bỏ trống")
-	private String paymentMethod; // CASH, BANK_TRANSFER
+	private String paymentMethod;
 }

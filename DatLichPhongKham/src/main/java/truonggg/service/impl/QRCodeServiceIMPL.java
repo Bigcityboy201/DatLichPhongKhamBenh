@@ -8,18 +8,14 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.QRCodeResponseDTO;
-import truonggg.repo.AppointmentsRepository;
 import truonggg.service.QRCodeService;
 
 @Service
 @RequiredArgsConstructor
 public class QRCodeServiceIMPL implements QRCodeService {
 
-	private final AppointmentsRepository appointmentsRepository;
-
-	// Bank Configuration (MB Bank)
 	@Value("${qrcode.bank.bank-id:970422}")
-	private String bankId; // MB Bank: 970422
+	private String bankId;
 
 	@Value("${qrcode.bank.account:}")
 	private String bankAccount;
@@ -30,53 +26,30 @@ public class QRCodeServiceIMPL implements QRCodeService {
 	@Value("${qrcode.bank.name:MB Bank}")
 	private String bankName;
 
-	// Default deposit amount
-	private static final Double DEFAULT_DEPOSIT_AMOUNT = 2000.0;
-
 	@Override
-	public QRCodeResponseDTO getDepositQRCode(String paymentMethod, Integer appointmentId) {
-		return getQRCode(paymentMethod, DEFAULT_DEPOSIT_AMOUNT, appointmentId);
-	}
+	public QRCodeResponseDTO generateQRCode(Double amount, Integer appointmentId) {
 
-	@Override
-	public QRCodeResponseDTO getQRCode(String paymentMethod, Double amount, Integer appointmentId) {
-		String method = paymentMethod.toUpperCase();
-
-		if ("BANK_TRANSFER".equals(method) || "MB".equals(method)) {
-			return generateBankQRCode(amount, appointmentId);
-		} else {
-			throw new IllegalArgumentException(
-					"Phương thức thanh toán không hợp lệ. Chỉ chấp nhận: BANK_TRANSFER, MB");
-		}
-	}
-
-	private QRCodeResponseDTO generateBankQRCode(Double amount, Integer appointmentId) {
-
+		// 1)Kiểm tra cấu hình ngân hàng
 		if (bankAccount == null || bankAccount.isEmpty()) {
 			throw new IllegalStateException("Chưa cấu hình tài khoản ngân hàng");
 		}
 
-		// ✅ Nội dung chuyển khoản chuẩn Casso
+		// 2️)Tạo nội dung chuyển khoản
 		String content = generatePaymentContent(appointmentId);
 
-		// ✅ BẮT BUỘC encode addInfo
+		// 3️) Encode nội dung
 		String encodedContent = URLEncoder.encode(content, StandardCharsets.UTF_8);
 
-		// VietQR URL
+		// 4️) Tạo URL VietQR
 		String qrCodeUrl = String.format("https://img.vietqr.io/image/%s-%s-%s.png?amount=%.0f&addInfo=%s", bankId,
 				bankAccount, bankTemplate, amount, encodedContent);
 
+		// 5️) Trả DTO
 		return QRCodeResponseDTO.builder().qrCodeUrl(qrCodeUrl).amount(amount).paymentMethod("BANK_TRANSFER")
 				.accountNumber(bankAccount).bankName(bankName).content(content).template(bankTemplate).build();
 	}
 
-	/**
-	 * Nội dung chuyển khoản: VD: COCLK21
-	 */
 	private String generatePaymentContent(Integer appointmentId) {
-		if (appointmentId != null) {
-			return "COCLK" + appointmentId;
-		}
-		return "COCPHONGKHAM";
+		return "COCLK" + appointmentId;
 	}
 }

@@ -23,9 +23,6 @@ import truonggg.Enum.PaymentStatus;
 
 @Entity
 @Check(constraints = "payment_method BETWEEN 0 AND 1 AND status BETWEEN 0 AND 2")
-// Check constraint: payment_method (0-1), status (0-2)
-// PaymentMethod: CASH(0), BANK_TRANSFER(1)
-// PaymentStatus: PENDING(0), CONFIRMED(1), CANCELLED(2)
 @Getter
 @Setter
 @NoArgsConstructor
