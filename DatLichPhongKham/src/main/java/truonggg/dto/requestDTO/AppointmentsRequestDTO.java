@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,8 +25,8 @@ public class AppointmentsRequestDTO {
 	@Size(max = 500, message = "Ghi chú tối đa 500 ký tự")
 	private String note;
 
-	@NotNull(message = "UserId không được bỏ trống")
-	private Integer userId;
+//	@NotNull(message = "UserId không được bỏ trống")
+//	private Integer userId;
 
 	// Có thể null nếu để EMPLOYEE gán bác sĩ sau
 	private Integer doctorId;

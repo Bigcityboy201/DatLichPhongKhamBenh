@@ -55,18 +55,15 @@ public class AppointmentsController {
 
 	// POST /api/appointments - Tạo mới
 	@PostMapping
-	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
+	@PreAuthorize("hasAnyAuthority('USER','ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> createAppointment(
 			@RequestBody @Valid final AppointmentsRequestDTO dto) {
-		var authentication = SecurityContextHolder.getContext().getAuthentication();
-		boolean isAdmin = authentication.getAuthorities().stream()
-				.anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
-		if (!isAdmin) {
-			String username = authentication.getName();
-			Integer currentUserId = this.userManagementService.findByUserName(username).getUserId();
-			dto.setUserId(currentUserId);
-		}
-		return SuccessReponse.of(this.appointmentsCommandService.createAppointments(dto));
+
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+		Integer currentUserId = userManagementService.findByUserName(username).getUserId();
+
+		return SuccessReponse.of(appointmentsCommandService.createAppointments(dto, currentUserId));
 	}
 
 	// PUT /api/appointments - Cập nhật

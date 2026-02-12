@@ -37,6 +37,8 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 	private final AppointmentsMapper appointmentsMapper;
 	private final SchedulesRepository schedulesRepository;
 
+	private static final int APPOINTMENT_DURATION_MINUTES = 30;
+
 	// ================= QUERY =================
 
 	@Override
@@ -67,15 +69,21 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 	// ================= COMMAND =================
 
 	@Override
-	public AppointmentsResponseDTO createAppointments(AppointmentsRequestDTO dto) {
+	public AppointmentsResponseDTO createAppointments(AppointmentsRequestDTO dto, Integer currentUserId) {
 		// Chặn đặt lịch ở quá khứ (phòng khi validation @Future bị bỏ qua)
 		LocalDateTime appointmentTime = dto.getAppointmentDateTime();
-		if (appointmentTime != null && appointmentTime.isBefore(LocalDateTime.now())) {
+		if (appointmentTime == null) {
+			throw new IllegalArgumentException("Thời gian không được để trống");
+		}
+
+		if (appointmentTime.isBefore(LocalDateTime.now())) {
 			throw new IllegalArgumentException("Thời gian đặt lịch phải ở hiện tại hoặc tương lai");
 		}
 
+		validateSlotFormat(appointmentTime);
+
 		// Lấy user
-		User user = this.userRepository.findById(dto.getUserId())
+		User user = this.userRepository.findById(currentUserId)
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
 		Doctors doctors = null;
@@ -83,7 +91,8 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 			doctors = this.doctorsRepository.findById(dto.getDoctorId())
 					.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
 
-			validateDoctorAvailability(doctors.getId(), appointmentTime, null);
+			validateAppointmentTime(doctors.getId(), appointmentTime, null);
+
 		}
 
 		// Tạo lịch hẹn
@@ -109,9 +118,15 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 		Integer newDoctorId = dto.getDoctorId() != null ? dto.getDoctorId()
 				: (foundAppointment.getDoctors() != null ? foundAppointment.getDoctors().getId() : null);
 
+		if (newTime != null && newTime.isBefore(LocalDateTime.now())) {
+			throw new IllegalArgumentException("Không thể cập nhật lịch về quá khứ");
+		}
+
 		// Nếu có thay đổi thời gian hoặc bác sĩ, validate lại
-		if (newDoctorId != null && newTime != null && (dto.getAppointmentDateTime() != null || dto.getDoctorId() != null)) {
-			validateDoctorAvailability(newDoctorId, newTime, foundAppointment.getId());
+		if (newDoctorId != null && newTime != null
+				&& (dto.getAppointmentDateTime() != null || dto.getDoctorId() != null)) {
+
+			validateAppointmentTime(newDoctorId, newTime, id);
 		}
 
 		// Cập nhật thông tin nếu có
@@ -195,7 +210,8 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
 
 		// Không cho gán bác sĩ cho lịch đã hoàn thành / đã hủy
-		if (appointment.getStatus() == Appointments_Enum.COMPLETED || appointment.getStatus() == Appointments_Enum.CANCELLED
+		if (appointment.getStatus() == Appointments_Enum.COMPLETED
+				|| appointment.getStatus() == Appointments_Enum.CANCELLED
 				|| appointment.getStatus() == Appointments_Enum.CANCELLED_NO_REFUND
 				|| appointment.getStatus() == Appointments_Enum.CANCELLED_REFUND) {
 			throw new IllegalArgumentException("Không thể gán bác sĩ cho lịch hẹn ở trạng thái hiện tại");
@@ -208,7 +224,7 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 			return this.appointmentsMapper.toDTO(appointment);
 		}
 
-		validateDoctorAvailability(doctorId, appointment.getAppointmentDateTime(), appointment.getId());
+		validateAppointmentTime(doctorId, appointment.getAppointmentDateTime(), appointment.getId());
 
 		appointment.setDoctors(doctor);
 		if (appointment.getStatus() == null || appointment.getStatus() == Appointments_Enum.PENDING) {
@@ -220,30 +236,56 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 
 	// ================= VALIDATION HELPERS =================
 
-	private void validateDoctorAvailability(Integer doctorId, LocalDateTime appointmentTime, Integer excludeAppointmentId) {
-		// Kiểm tra bác sĩ có lịch làm vào thời gian đó không
-		boolean hasSchedule = this.schedulesRepository
-				.existsByDoctors_IdAndStartAtLessThanEqualAndEndAtGreaterThanEqual(doctorId, appointmentTime,
-						appointmentTime);
+	private void validateAppointmentTime(Integer doctorId, LocalDateTime startTime, Integer excludeAppointmentId) {
 
-		if (!hasSchedule) {
-			throw new IllegalArgumentException("Bác sĩ không có ca làm vào thời gian này");
+		if (startTime == null) {
+			throw new IllegalArgumentException("Thời gian không hợp lệ");
 		}
 
-		// Kiểm tra bác sĩ có bận không
+// 0️ Check slot 30 phút
+		validateSlotFormat(startTime);
+
+// 1️ Check thuộc ca làm việc
+		boolean hasSchedule = schedulesRepository
+				.existsByDoctors_IdAndStartAtLessThanEqualAndEndAtGreaterThanEqual(doctorId, startTime, startTime);
+
+		if (!hasSchedule) {
+			throw new IllegalArgumentException("Thời gian này không nằm trong ca làm việc của bác sĩ");
+		}
+
+// 2️ Check nghỉ trưa (12:00 - 13:00)
+		LocalDateTime lunchStart = startTime.toLocalDate().atTime(12, 0);
+		LocalDateTime lunchEnd = startTime.toLocalDate().atTime(13, 0);
+
+		if (!startTime.isBefore(lunchStart) && startTime.isBefore(lunchEnd)) {
+			throw new IllegalArgumentException("Không thể đặt lịch trong giờ nghỉ trưa (12:00 - 13:00)");
+		}
+
+// 3️ Check trùng slot (ĐÚNG với entity hiện tại)
 		boolean doctorBusy;
+
 		if (excludeAppointmentId == null) {
-			doctorBusy = this.appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(doctorId,
-					appointmentTime, Appointments_Enum.CANCELLED);
+			doctorBusy = appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(doctorId,
+					startTime, Appointments_Enum.CANCELLED);
 		} else {
-			doctorBusy = this.appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNotAndIdNot(
-					doctorId, appointmentTime, Appointments_Enum.CANCELLED, excludeAppointmentId);
+			doctorBusy = appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNotAndIdNot(doctorId,
+					startTime, Appointments_Enum.CANCELLED, excludeAppointmentId);
 		}
 
 		if (doctorBusy) {
-			throw new IllegalArgumentException("Bác sĩ đã có lịch hẹn tại khung giờ này");
+			throw new IllegalArgumentException("Slot này đã có người đặt");
 		}
 	}
+
+	private void validateSlotFormat(LocalDateTime time) {
+
+		if (time.getMinute() != 0 && time.getMinute() != 30) {
+			throw new IllegalArgumentException("Chỉ được đặt lịch theo khung 30 phút (vd: 08:00, 08:30)");
+		}
+
+		if (time.getSecond() != 0 || time.getNano() != 0) {
+			throw new IllegalArgumentException("Thời gian không hợp lệ");
+		}
+	}
+
 }
-
-

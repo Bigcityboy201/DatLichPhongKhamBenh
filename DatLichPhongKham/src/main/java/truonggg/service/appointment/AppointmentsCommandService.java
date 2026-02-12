@@ -6,7 +6,7 @@ import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 
 public interface AppointmentsCommandService {
 
-	AppointmentsResponseDTO createAppointments(AppointmentsRequestDTO dto);
+	public AppointmentsResponseDTO createAppointments(AppointmentsRequestDTO dto, Integer currentUserId);
 
 	AppointmentsResponseDTO update(Integer id, AppointmentsUpdateRequestDTO dto);
 
@@ -18,5 +18,3 @@ public interface AppointmentsCommandService {
 
 	AppointmentsResponseDTO assignDoctor(Integer appointmentId, Integer doctorId);
 }
-
-

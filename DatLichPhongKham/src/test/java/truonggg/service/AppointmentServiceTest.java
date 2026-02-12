@@ -88,10 +88,14 @@ public class AppointmentServiceTest {
 	@Test
 	void createAppointments_ShouldCreate_WhenFutureTimeAndValid() {
 		AppointmentsRequestDTO dto = new AppointmentsRequestDTO();
-		dto.setUserId(1);
+		// dto.setUserId(1);
 		dto.setDoctorId(2);
-		dto.setAppointmentDateTime(LocalDateTime.now().plusHours(1));
+		LocalDateTime appointmentTime = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0)
+				.withNano(0);
 
+		dto.setAppointmentDateTime(appointmentTime);
+
+		Integer currentUserId = 1;
 		User user = new User();
 		user.setUserId(1);
 		Doctors doctor = new Doctors();
@@ -111,7 +115,7 @@ public class AppointmentServiceTest {
 		when(appointmentsRepository.save(any(Appointments.class))).thenReturn(saved);
 		when(appointmentsMapper.toDTO(saved)).thenReturn(responseDTO);
 
-		AppointmentsResponseDTO result = appointmentService.createAppointments(dto);
+		AppointmentsResponseDTO result = appointmentService.createAppointments(dto, currentUserId);
 
 		assertNotNull(result);
 		verify(userRepository).findById(1);
@@ -123,11 +127,12 @@ public class AppointmentServiceTest {
 	@Test
 	void createAppointments_ShouldThrow_WhenTimeInPast() {
 		AppointmentsRequestDTO dto = new AppointmentsRequestDTO();
-		dto.setUserId(1);
+		// dto.setUserId(1);
 		dto.setAppointmentDateTime(LocalDateTime.now().minusHours(1));
 
+		Integer currentUserId = 1;
 		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-				() -> appointmentService.createAppointments(dto));
+				() -> appointmentService.createAppointments(dto, currentUserId));
 		assertEquals("Thời gian đặt lịch phải ở hiện tại hoặc tương lai", ex.getMessage());
 
 		verify(userRepository, never()).findById(any());
@@ -137,12 +142,14 @@ public class AppointmentServiceTest {
 	@Test
 	void createAppointments_ShouldThrow_WhenUserNotFound() {
 		AppointmentsRequestDTO dto = new AppointmentsRequestDTO();
-		dto.setUserId(1);
-		dto.setAppointmentDateTime(LocalDateTime.now().plusHours(1));
+		// dto.setUserId(1);
+		Integer currentUserId = 1;
+		dto.setAppointmentDateTime(LocalDateTime.of(2026, 3, 10, 10, 0));
 
 		when(userRepository.findById(1)).thenReturn(Optional.empty());
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> appointmentService.createAppointments(dto));
+		NotFoundException ex = assertThrows(NotFoundException.class,
+				() -> appointmentService.createAppointments(dto, currentUserId));
 		assertEquals("user: User Not Found", ex.getMessage());
 	}
 
@@ -268,5 +275,3 @@ public class AppointmentServiceTest {
 		verify(appointmentsRepository, never()).delete(any());
 	}
 }
-
-

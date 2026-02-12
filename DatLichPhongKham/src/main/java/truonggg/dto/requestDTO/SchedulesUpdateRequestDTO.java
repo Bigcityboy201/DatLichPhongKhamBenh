@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Future;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,4 +33,12 @@ public class SchedulesUpdateRequestDTO {
 	private Integer doctorId;
 
 	private Boolean active;
+
+	@AssertTrue(message = "Thời gian kết thúc phải sau thời gian bắt đầu")
+	public boolean isEndTimeAfterStartTime() {
+		if (startAt == null || endAt == null) {
+			return true; // bỏ qua nếu null, đã validate @NotNull
+		}
+		return endAt.isAfter(startAt);
+	}
 }

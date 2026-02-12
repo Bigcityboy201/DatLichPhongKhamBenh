@@ -46,52 +46,52 @@ public class PaymentServiceIMPL implements PaymentService {
 	@Transactional
 	public PaymentResponseDTO createPayment(PaymentRequestDTO dto, String username) {
 
-		// Lấy user đang thao tác
+		// B1:Kiểm tra user tồn tại
 		User user = userRepository.findByUserName(username)
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
 
-		// Lấy appointment
+		// B2:Kiểm tra appointment tồn tại
 		Appointments appointment = appointmentsRepository.findById(dto.getAppointmentId())
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment not found"));
 
-		// ==================== 🔥 [THÊM] KIỂM TRA PAYMENT SUCCESS ====================
+		// B3:Kiểm tra appointment đã thanh toán thành công hay chưa
 		boolean hasSuccessPayment = paymentsRepository.existsByAppointmentsAndStatus(appointment,
 				PaymentStatus.CONFIRMED);
 
 		if (hasSuccessPayment) {
 			throw new IllegalStateException("Appointment này đã được thanh toán");
 		}
-		// ==================== 🔥 KẾT THÚC PHẦN THÊM ====================
 
-		// ==================== 🔥 [THÊM] KIỂM TRA PAYMENT PENDING ====================
+		// B4:KIỂM TRA PAYMENT PENDING
 		Optional<Payments> pendingPaymentOpt = paymentsRepository.findByAppointmentsAndStatus(appointment,
 				PaymentStatus.PENDING);
 
+		// B4.1:Kiểm tra trạng thái pending chưa,nếu pending thì lấy ra
 		if (pendingPaymentOpt.isPresent()) {
 			Payments pendingPayment = pendingPaymentOpt.get();
 
-			// 👉 TRẢ LẠI QR CŨ – KHÔNG TẠO PAYMENT MỚI
+			// B4.2:Chuyển sang dto và set lại qr cũ
 			PaymentResponseDTO response = paymentMapper.toDTO(pendingPayment);
 			response.setPaymentUrl(pendingPayment.getPaymentUrl());
 
 			return response;
 		}
-		// ==================== 🔥 KẾT THÚC PHẦN THÊM ====================
 
-		// Kiểm tra quyền
+		// B5:Kiểm tra quyền admin hay employee
 		boolean isAdminOrEmployee = user.getRole() != null && !user.getRole().getIsActive()
 				&& (user.getRole().getRoleName().equals("ADMIN") || user.getRole().getRoleName().equals("EMPLOYEE"));
 
+		// B5.1:Kiểm tra nếu không thuộc quyền admin or employee or user thì thông báo
 		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {
 			throw new AccessDeniedException("Bạn không có quyền thanh toán cho appointment này");
 		}
 
-		// Kiểm tra trạng thái appointment
+		// B6:Kiểm tra trạng thái appointment
 		if (appointment.getStatus() == Appointments_Enum.CANCELLED) {
 			throw new IllegalArgumentException("Không thể thanh toán cho appointment đã bị hủy");
 		}
 
-		// Xác định phương thức thanh toán: CASH hoặc BANK_TRANSFER
+		// B7: Nếu chưa hủy-> xác định phương thức thanh toán: CASH hoặc BANK_TRANSFER
 		PaymentMethod paymentMethod;
 		if (dto.getPaymentMethod() != null && !dto.getPaymentMethod().isBlank()) {
 			try {
@@ -101,8 +101,10 @@ public class PaymentServiceIMPL implements PaymentService {
 							"Phương thức thanh toán không hợp lệ. Chỉ hỗ trợ: CASH, BANK_TRANSFER");
 				}
 			} catch (IllegalArgumentException e) {
-				throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ. Chỉ hỗ trợ: CASH, BANK_TRANSFER");
+				throw new IllegalArgumentException(
+						"Phương thức thanh toán không hợp lệ. Chỉ hỗ trợ: CASH, BANK_TRANSFER");
 			}
+			// B7.1:Nếu không gửi pttt->BANK_TRANSFER
 		} else {
 			// Mặc định là BANK_TRANSFER
 			paymentMethod = PaymentMethod.BANK_TRANSFER;
@@ -111,47 +113,45 @@ public class PaymentServiceIMPL implements PaymentService {
 		// Sử dụng số tiền cọc mặc định
 		double amount = DEFAULT_DEPOSIT_AMOUNT;
 
-		// Tạo payment
-		PaymentStatus initialStatus = paymentMethod == PaymentMethod.CASH 
-				? PaymentStatus.CONFIRMED  // CASH được xác nhận ngay
-				: PaymentStatus.PENDING;   // BANK_TRANSFER cần chờ xác nhận
+		// B8:Nếu Cash->Confirmed(Còn lại pending)
+		PaymentStatus initialStatus = paymentMethod == PaymentMethod.CASH ? PaymentStatus.CONFIRMED // CASH được xác
+																									// nhận ngay
+				: PaymentStatus.PENDING; // BANK_TRANSFER cần chờ xác nhận
 
-		Payments payment = Payments.builder()
-				.amount(amount)
-				.paymentDate(new Date())
-				.paymentMethod(paymentMethod)
-				.isDeposit(true)
-				.status(initialStatus)
-				.appointments(appointment)
-				.build();
+		// B9:Tạo đối tượng payment nhưng chưa saveDB
+		Payments payment = Payments.builder().amount(amount).paymentDate(new Date()).paymentMethod(paymentMethod)
+				.isDeposit(true).status(initialStatus).appointments(appointment).build();
 
+		// B10:Tạo mã giao dịch(mỗi cuộc hẹn chỉ có 1 transaction)
 		String transactionId = paymentMethod == PaymentMethod.CASH
 				? "CASH_" + dto.getAppointmentId() + "_" + System.currentTimeMillis()
 				: "BANK_MB_" + dto.getAppointmentId() + "_" + System.currentTimeMillis();
+		// B10.1:setTransaction vào
 		payment.setTransactionId(transactionId);
 
+		// B11:Tạo nội dung chuyển khoản
 		String paymentCode = "COCLK" + dto.getAppointmentId();
+		// B11.1:
 		payment.setPaymentCode(paymentCode);
 
 		// Chỉ tạo QR code cho BANK_TRANSFER
 		if (paymentMethod == PaymentMethod.BANK_TRANSFER) {
 			var qrCodeResponse = qrCodeService.getQRCode("BANK_TRANSFER", amount, dto.getAppointmentId());
-		payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
+			payment.setPaymentUrl(qrCodeResponse.getQrCodeUrl());
 		}
 
 		payment = paymentsRepository.save(payment);
 
 		// Cập nhật appointment status nếu là CASH
-		if (paymentMethod == PaymentMethod.CASH && 
-				(appointment.getStatus() == Appointments_Enum.PENDING
-						|| appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT)) {
+		if (paymentMethod == PaymentMethod.CASH && (appointment.getStatus() == Appointments_Enum.PENDING
+				|| appointment.getStatus() == Appointments_Enum.AWAITING_DEPOSIT)) {
 			appointment.setStatus(Appointments_Enum.CONFIRMED);
 			appointmentsRepository.saveAndFlush(appointment);
 		}
 
 		PaymentResponseDTO response = paymentMapper.toDTO(payment);
 		if (payment.getPaymentUrl() != null) {
-		response.setPaymentUrl(payment.getPaymentUrl());
+			response.setPaymentUrl(payment.getPaymentUrl());
 		}
 		return response;
 	}

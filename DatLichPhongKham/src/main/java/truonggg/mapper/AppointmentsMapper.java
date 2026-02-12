@@ -25,7 +25,7 @@ public interface AppointmentsMapper {
 	@Mapping(source = "status", target = "status")
 	AppointmentsResponseDTO toDTO(final Appointments appointments);
 
-	@Mapping(source = "userId", target = "user.userId")
+	// @Mapping(source = "userId", target = "user.userId")
 	@Mapping(source = "doctorId", target = "doctors.id")
 	@Mapping(target = "status", expression = "java(truonggg.Enum.Appointments_Enum.PENDING)")
 	Appointments toEntity(AppointmentsRequestDTO dto);
