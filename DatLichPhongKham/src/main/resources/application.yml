@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: DatLichPhongKham
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+jwt:
+  algorithm: HS256
+
+payment:
+  deposit:
+    default-amount: ${DEPOSIT_AMOUNT:2000}
+
+server:
+  port: ${SERVER_PORT:8080}

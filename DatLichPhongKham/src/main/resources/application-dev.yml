@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/phongkhambenh?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: quangtruong1
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  secret: dev-secret-key-very-simple
+  duration: 604800
+
+admin:
+  default:
+    username: quangtruongngo2012004
+    password: quangtruong1
+    email: quangtruong2012004@gmail.com
+
+qrcode:
+  bank:
+    bank-id: 970422
+    account: 0363159912
+    template: compact2
+    name: MB Bank
+
+casso:
+  webhook:
+    secret-key: phongkham2024_secret_key_abc123xyz789
