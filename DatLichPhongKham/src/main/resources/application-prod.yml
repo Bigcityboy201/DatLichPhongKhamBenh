@@ -1,0 +1,34 @@
+
+#môi trường prod chạy thật,lấy những biến set đó trong env bắt buộc
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  duration: ${JWT_DURATION}
+
+admin:
+  default:
+    username: ${ADMIN_USERNAME}
+    password: ${ADMIN_PASSWORD}
+    email: ${ADMIN_EMAIL}
+
+qrcode:
+  bank:
+    bank-id: ${QRCODE_BANK_ID}
+    account: ${QRCODE_BANK_ACCOUNT}
+    template: ${QRCODE_BANK_TEMPLATE}
+    name: ${QRCODE_BANK_NAME}
+
+casso:
+  webhook:
+    secret-key: ${CASSO_WEBHOOK_SECRET_KEY}
