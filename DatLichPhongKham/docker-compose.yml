@@ -47,6 +47,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-phongkhambenh}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-quangtruong1}
+      SPRING_PROFILES_ACTIVE: prod
 
       # JWT Configuration
       JWT_SECRET: ${JWT_SECRET:-YnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8xYnRfYXBpX29ubF8x}

@@ -1,6 +1,7 @@
 package truonggg.Configuration;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import truonggg.repo.RoleRepository;
 import truonggg.repo.UserRepository;
 
 @Component
+@Profile("dev") // chạy môi trường dev,prod không tự động tạo
 @RequiredArgsConstructor
 public class AdminUserInitializer implements CommandLineRunner {
 
@@ -58,7 +60,7 @@ public class AdminUserInitializer implements CommandLineRunner {
 		if (admin == null) {
 			// Lấy role ADMIN trước khi tạo user
 			Role adminRole = roleRepository.findByRoleName(SecurityRole.ROLE_ADMIN);
-			
+
 			if (adminRole == null) {
 				System.out.println("ERROR: ADMIN role not found! Please create roles first.");
 				return;
@@ -70,7 +72,8 @@ public class AdminUserInitializer implements CommandLineRunner {
 					.role(adminRole) // Gán đối tượng Role trực tiếp
 					.build();
 			admin = userRepository.save(admin);
-			System.out.println("Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
+			System.out.println(
+					"Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
 		} else {
 			// Kiểm tra và cập nhật role nếu chưa có
 			if (admin.getRole() == null) {
