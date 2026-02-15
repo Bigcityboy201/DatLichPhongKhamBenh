@@ -1,0 +1,11 @@
+1. Xác định số lượng service cần chạy
+2. Với mỗi service:
+   - Bắt buộc có image hoặc build
+   - Cấu hình container_name (nếu cần)
+   - Cấu hình restart (nếu cần)
+   - Mở port (nếu cần truy cập từ bên ngoài)
+   - Thêm environment (nếu phần mềm yêu cầu)
+   - Thêm volume (nếu cần lưu dữ liệu)
+   - Thêm healthcheck (nếu cần kiểm tra sẵn sàng)
+3. Khai báo volumes dùng chung ở cuối file
+4. Cấu hình depends_on nếu có service phụ thuộc

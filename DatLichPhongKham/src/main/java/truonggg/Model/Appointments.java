@@ -4,8 +4,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.Check;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,6 +24,7 @@ import lombok.Setter;
 import truonggg.Enum.Appointments_Enum;
 
 @Entity
+@Check(constraints = "status BETWEEN 0 AND 7")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,6 +35,7 @@ public class Appointments {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 	private LocalDateTime appointmentDateTime;
+	@Enumerated(EnumType.ORDINAL)
 	private Appointments_Enum status;
 	private String note;
 	@ManyToOne

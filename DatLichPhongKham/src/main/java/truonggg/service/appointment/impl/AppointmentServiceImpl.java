@@ -1,7 +1,10 @@
 package truonggg.service.appointment.impl;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,16 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import truonggg.Enum.Appointments_Enum;
+import truonggg.Enum.PaymentStatus;
 import truonggg.Exception.NotFoundException;
 import truonggg.Model.Appointments;
 import truonggg.Model.Doctors;
+import truonggg.Model.Payments;
 import truonggg.Model.User;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.CancelAppointmentResponse;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.mapper.AppointmentsMapper;
 import truonggg.repo.AppointmentsRepository;
 import truonggg.repo.DoctorsRepository;
+import truonggg.repo.PaymentsRepository;
 import truonggg.repo.SchedulesRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
@@ -36,8 +43,10 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 	private final DoctorsRepository doctorsRepository;
 	private final AppointmentsMapper appointmentsMapper;
 	private final SchedulesRepository schedulesRepository;
+	private final PaymentsRepository paymentsRepository;
 
 	private static final int APPOINTMENT_DURATION_MINUTES = 30;
+	private static final int REFUND_WINDOW_MINUTES = 10; // Thời gian cho phép hoàn tiền: 10 phút
 
 	// ================= QUERY =================
 
@@ -185,23 +194,98 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 	}
 
 	@Override
-	public AppointmentsResponseDTO cancelByUser(Integer id, String userName) {
-		Appointments found = appointmentsRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("appointment", "Appointment Not Found"));
+	@Transactional
+	public CancelAppointmentResponse cancelByUser(Integer appointmentId, String username) {
 
-		if (!found.getUser().getUserName().equals(userName)) {
+		// 1️Tìm appointment
+		Appointments found = appointmentsRepository.findById(appointmentId)
+				.orElseThrow(() -> new NotFoundException("appointment", "Không tìm thấy lịch hẹn"));
+
+		// 2️Kiểm tra quyền sở hữu
+		if (!found.getUser().getUserName().equals(username)) {
 			throw new AccessDeniedException("You cannot cancel this appointment");
 		}
 
-		// Không cho hủy nếu đã COMPLETED hoặc đã bị hủy trước đó
+		// 3️Không cho hủy nếu đã hoàn tất hoặc đã hủy trước đó
 		if (found.getStatus() == Appointments_Enum.COMPLETED || found.getStatus() == Appointments_Enum.CANCELLED
 				|| found.getStatus() == Appointments_Enum.CANCELLED_NO_REFUND
 				|| found.getStatus() == Appointments_Enum.CANCELLED_REFUND) {
+
 			throw new IllegalArgumentException("Không thể hủy lịch hẹn ở trạng thái hiện tại");
 		}
 
-		found.setStatus(Appointments_Enum.CANCELLED);
-		return appointmentsMapper.toDTO(appointmentsRepository.save(found));
+		String message;
+
+		// Tìm payment deposit đã thanh toán
+		Optional<Payments> depositPaymentOpt = paymentsRepository.findByAppointmentsAndStatus(found,
+				PaymentStatus.CONFIRMED);
+
+		if (depositPaymentOpt.isPresent()) {
+
+			Payments depositPayment = depositPaymentOpt.get();
+
+			if (depositPayment.isDeposit()) {
+
+				LocalDateTime paymentTime = convertToLocalDateTime(depositPayment.getPaymentDate());
+
+				// Kiểm tra paymentDate có null không
+				if (paymentTime == null) {
+					// Không có paymentDate, không hoàn tiền
+					found.setStatus(Appointments_Enum.CANCELLED_NO_REFUND);
+					message = "Hủy lịch thành công. Không thể xác định thời gian thanh toán, tiền cọc sẽ không được hoàn lại.";
+				} else {
+					LocalDateTime now = LocalDateTime.now();
+
+					long minutesSincePayment = Duration.between(paymentTime, now).toMinutes();
+
+					// 5️Trong 10 phút → hoàn tiền
+					if (minutesSincePayment <= REFUND_WINDOW_MINUTES) {
+
+						depositPayment.setStatus(PaymentStatus.REFUNDED);
+						paymentsRepository.save(depositPayment);
+
+						found.setStatus(Appointments_Enum.CANCELLED_REFUND);
+
+						message = "Hủy lịch thành công. Tiền cọc đã được hoàn lại.";
+
+					} else {
+
+						// 6️Quá 10 phút → không hoàn tiền
+						found.setStatus(Appointments_Enum.CANCELLED_NO_REFUND);
+
+						message = "Hủy lịch thành công. Do đã quá " + REFUND_WINDOW_MINUTES
+								+ " phút kể từ khi thanh toán, tiền cọc sẽ không được hoàn lại.";
+					}
+				}
+
+			} else {
+				// Không phải deposit
+				found.setStatus(Appointments_Enum.CANCELLED);
+				message = "Hủy lịch thành công.";
+			}
+
+		} else {
+			// Chưa thanh toán
+			found.setStatus(Appointments_Enum.CANCELLED);
+			message = "Hủy lịch thành công.";
+		}
+
+		// 7️Lưu lại appointment
+		appointmentsRepository.save(found);
+
+		return new CancelAppointmentResponse(appointmentsMapper.toDTO(found), message);
+	}
+
+	private LocalDateTime convertToLocalDateTime(Date date) {
+		if (date == null) {
+			return null;
+		}
+		// Nếu date là java.sql.Date, convert trực tiếp
+		if (date instanceof java.sql.Date) {
+			return ((java.sql.Date) date).toLocalDate().atStartOfDay();
+		}
+		// Nếu date là java.util.Date, convert qua Instant
+		return date.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
 	}
 
 	@Override

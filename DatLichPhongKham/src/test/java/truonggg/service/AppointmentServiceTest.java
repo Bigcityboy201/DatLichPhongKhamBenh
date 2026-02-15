@@ -27,15 +27,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import truonggg.Enum.Appointments_Enum;
+import truonggg.Enum.PaymentStatus;
 import truonggg.Exception.NotFoundException;
 import truonggg.Model.Appointments;
 import truonggg.Model.Doctors;
 import truonggg.Model.User;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.CancelAppointmentResponse;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.mapper.AppointmentsMapper;
 import truonggg.repo.AppointmentsRepository;
 import truonggg.repo.DoctorsRepository;
+import truonggg.repo.PaymentsRepository;
 import truonggg.repo.SchedulesRepository;
 import truonggg.repo.UserRepository;
 import truonggg.reponse.PagedResult;
@@ -61,6 +64,9 @@ public class AppointmentServiceTest {
 
 	@InjectMocks
 	private AppointmentServiceImpl appointmentService;
+
+	@Mock
+	private PaymentsRepository paymentsRepository;
 
 	// ============= getAllPaged ============
 	@DisplayName("getAllPaged: success")
@@ -154,9 +160,10 @@ public class AppointmentServiceTest {
 	}
 
 	// ============= cancelByUser ============
-	@DisplayName("cancelByUser: success when owner and status allow cancel")
 	@Test
-	void cancelByUser_ShouldCancel_WhenOwnerAndStatusValid() {
+	@DisplayName("cancelByUser: success when owner and no payment")
+	void cancelByUser_ShouldCancel_WhenOwnerAndNoPayment() {
+
 		Integer id = 1;
 		String username = "user1";
 
@@ -168,22 +175,27 @@ public class AppointmentServiceTest {
 		appointment.setUser(user);
 		appointment.setStatus(Appointments_Enum.PENDING);
 
-		Appointments saved = new Appointments();
-		saved.setStatus(Appointments_Enum.CANCELLED);
-
 		when(appointmentsRepository.findById(id)).thenReturn(Optional.of(appointment));
-		when(appointmentsRepository.save(appointment)).thenReturn(saved);
-		when(appointmentsMapper.toDTO(saved)).thenReturn(new AppointmentsResponseDTO());
 
-		AppointmentsResponseDTO result = appointmentService.cancelByUser(id, username);
+		when(paymentsRepository.findByAppointmentsAndStatus(any(Appointments.class), eq(PaymentStatus.CONFIRMED)))
+				.thenReturn(Optional.empty());
+
+		when(appointmentsRepository.save(any(Appointments.class))).thenReturn(appointment);
+
+		when(appointmentsMapper.toDTO(any(Appointments.class))).thenReturn(new AppointmentsResponseDTO());
+
+		CancelAppointmentResponse result = appointmentService.cancelByUser(id, username);
 
 		assertNotNull(result);
-		verify(appointmentsRepository).save(appointment);
+		assertEquals("Hủy lịch thành công.", result.getMessage());
+
+		verify(appointmentsRepository).save(any(Appointments.class));
 	}
 
-	@DisplayName("cancelByUser: throw AccessDeniedException when not owner")
 	@Test
+	@DisplayName("cancelByUser: throw AccessDeniedException when not owner")
 	void cancelByUser_ShouldThrow_WhenNotOwner() {
+
 		Integer id = 1;
 
 		User user = new User();
@@ -198,12 +210,14 @@ public class AppointmentServiceTest {
 
 		AccessDeniedException ex = assertThrows(AccessDeniedException.class,
 				() -> appointmentService.cancelByUser(id, "user1"));
+
 		assertEquals("You cannot cancel this appointment", ex.getMessage());
 	}
 
-	@DisplayName("cancelByUser: throw IllegalArgumentException when status not cancellable")
 	@Test
+	@DisplayName("cancelByUser: throw IllegalArgumentException when status invalid")
 	void cancelByUser_ShouldThrow_WhenStatusInvalid() {
+
 		Integer id = 1;
 		String username = "user1";
 
@@ -219,7 +233,19 @@ public class AppointmentServiceTest {
 
 		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
 				() -> appointmentService.cancelByUser(id, username));
+
 		assertEquals("Không thể hủy lịch hẹn ở trạng thái hiện tại", ex.getMessage());
+	}
+
+	@Test
+	@DisplayName("cancelByUser: throw NotFoundException when appointment not found")
+	void cancelByUser_ShouldThrow_WhenNotFound() {
+
+		Integer id = 1;
+
+		when(appointmentsRepository.findById(id)).thenReturn(Optional.empty());
+
+		assertThrows(NotFoundException.class, () -> appointmentService.cancelByUser(id, "user1"));
 	}
 
 	// ============= delete soft ============

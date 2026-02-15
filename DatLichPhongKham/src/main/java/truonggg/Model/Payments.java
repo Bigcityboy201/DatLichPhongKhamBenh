@@ -22,7 +22,7 @@ import truonggg.Enum.PaymentMethod;
 import truonggg.Enum.PaymentStatus;
 
 @Entity
-@Check(constraints = "payment_method BETWEEN 0 AND 1 AND status BETWEEN 0 AND 2")
+@Check(constraints = "payment_method BETWEEN 0 AND 1 AND status BETWEEN 0 AND 3")
 @Getter
 @Setter
 @NoArgsConstructor

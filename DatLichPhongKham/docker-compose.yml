@@ -1,23 +1,29 @@
 version: "3.9"
 #bỏ env vào
 services:
+#cung cấp image mysql
   mysql:
     image: mysql:8.0
+#container mysql
     container_name: datlichphongkham-mysql
     restart: unless-stopped
+#cấu hình cho container mysql
     environment:
       MYSQL_ROOT_PASSWORD: quangtruong1
       MYSQL_DATABASE: phongkhambenh
+#may that 3307,3306
     ports:
       - "3307:3306"
+#giúp lưu dữ liệu bên trong container
     volumes:
       - mysql_data:/var/lib/mysql
+#kiểm tra mysql đã sẵn sàng chưa
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pquangtruong1"]
       interval: 10s
       timeout: 5s
       retries: 5
-
+#container cho app(app string boot)
   app:
     build: .
     container_name: datlichphongkham-app

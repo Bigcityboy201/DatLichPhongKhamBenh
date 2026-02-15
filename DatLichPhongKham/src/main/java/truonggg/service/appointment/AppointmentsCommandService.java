@@ -1,6 +1,7 @@
 package truonggg.service.appointment;
 
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.CancelAppointmentResponse;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 
@@ -14,7 +15,7 @@ public interface AppointmentsCommandService {
 
 	boolean deleteManually(Integer id);
 
-	AppointmentsResponseDTO cancelByUser(Integer id, String userName);
+	CancelAppointmentResponse cancelByUser(Integer id, String userName);
 
 	AppointmentsResponseDTO assignDoctor(Integer appointmentId, Integer doctorId);
 }

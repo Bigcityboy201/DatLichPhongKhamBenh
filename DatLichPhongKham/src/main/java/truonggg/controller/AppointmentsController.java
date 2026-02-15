@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.CancelAppointmentResponse;
 import truonggg.dto.requestDTO.AppointmentAssignDoctorRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
 import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
@@ -103,7 +104,7 @@ public class AppointmentsController {
 
 	@PutMapping("/{id}/cancel-user")
 	@PreAuthorize("hasAuthority('USER')")
-	public SuccessReponse<AppointmentsResponseDTO> cancelAppointmentByUser(@PathVariable Integer id) {
+	public SuccessReponse<CancelAppointmentResponse> cancelAppointmentByUser(@PathVariable Integer id) {
 
 		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
