@@ -25,15 +25,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Notifications;
-import truonggg.Model.User;
+import truonggg.notifications.domain.model.Notifications;
+import truonggg.user.domain.model.User;
 import truonggg.dto.reponseDTO.NotificationsResponseDTO;
 import truonggg.dto.requestDTO.NotificationsRequestDTO;
-import truonggg.mapper.NotificationsMapper;
-import truonggg.repo.NotificationsRepository;
-import truonggg.repo.UserRepository;
+import truonggg.notifications.mapper.NotificationsMapper;
+import truonggg.user.infrastructure.UserRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.impl.NotificationsServiceIMPL;
+import truonggg.notifications.application.impl.NotificationsServiceIMPL;
+import truonggg.notifications.infrastructure.NotificationsRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class NotificationsServiceTest {

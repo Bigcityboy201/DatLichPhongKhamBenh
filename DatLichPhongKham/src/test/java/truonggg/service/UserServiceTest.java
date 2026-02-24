@@ -21,26 +21,25 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
-import truonggg.Model.Doctors;
-import truonggg.Model.Role;
-import truonggg.Model.User;
+import truonggg.doctor.domain.Doctors;
+import truonggg.role.domain.model.Role;
+import truonggg.user.domain.model.User;
 import truonggg.constant.SecurityRole;
 import truonggg.dto.reponseDTO.UserResponseDTO;
 import truonggg.dto.requestDTO.AssignRoleRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
-import truonggg.mapper.UserMapper;
-import truonggg.repo.DoctorsRepository;
-import truonggg.repo.RoleRepository;
-import truonggg.repo.UserRepository;
+import truonggg.user.mapper.UserMapper;
+import truonggg.doctor.infrastructure.DoctorsRepository;
+import truonggg.role.infrastructure.RoleRepository;
+import truonggg.user.infrastructure.UserRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.user.PasswordService;
-import truonggg.service.user.impl.UserServiceIMPL;
+import truonggg.user.application.PasswordService;
+import truonggg.user.application.impl.UserServiceIMPL;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {

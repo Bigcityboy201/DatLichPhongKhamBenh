@@ -23,27 +23,30 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Appointments;
-import truonggg.Model.Departments;
-import truonggg.Model.Doctors;
-import truonggg.Model.Schedules;
-import truonggg.Model.User;
+
+import truonggg.appointment.domain.model.Appointments;
+import truonggg.appointment.infrastructure.AppointmentsRepository;
+import truonggg.appointment.mapper.AppointmentsMapper;
+import truonggg.department.domain.model.Departments;
+import truonggg.doctor.application.impl.DoctorsServiceIMPL;
+import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.infrastructure.DoctorsRepository;
+import truonggg.doctor.mapper.DoctorsMapper;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.DoctorSummaryResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
 import truonggg.dto.requestDTO.DoctorsRequestDTO;
-import truonggg.mapper.AppointmentsMapper;
-import truonggg.mapper.DoctorsMapper;
-import truonggg.mapper.SchedulesMapper;
-import truonggg.repo.AppointmentsRepository;
-import truonggg.repo.DepartmentsRepository;
-import truonggg.repo.DoctorsRepository;
-import truonggg.repo.SchedulesRepository;
-import truonggg.repo.UserRepository;
+
+import truonggg.department.infrastructure.DepartmentsRepository;
+
 import truonggg.reponse.PagedResult;
-import truonggg.service.doctor.impl.DoctorsServiceIMPL;
+import truonggg.schedules.domain.model.Schedules;
+import truonggg.schedules.infrastructure.SchedulesRepository;
+import truonggg.schedules.mapper.SchedulesMapper;
+import truonggg.user.domain.model.User;
+import truonggg.user.infrastructure.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class DoctorServiceTest {

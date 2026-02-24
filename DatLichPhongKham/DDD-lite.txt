@@ -1,0 +1,28 @@
+truonggg
+ ├── user
+ │     ├── controller
+ │     ├── application
+ │     │     └── UserService.java
+ │     ├── domain
+ │     │     ├── model
+ │     │     ├── event
+ │     │     └── repository
+ │     ├── infrastructure
+ │     │     └── UserRepositoryImpl
+ │     └── mapper
+ │
+ ├── doctor
+ │     ├── controller
+ │     ├── application
+ │     │     └── listener
+ │     ├── domain
+ │     ├── infrastructure
+ │     └── mapper
+ │
+ ├── appointment
+ │     ├── ...
+ │
+ └── shared
+       ├── exception
+       ├── config
+       └── security

@@ -29,7 +29,7 @@ services:
     container_name: datlichphongkham-app
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8080:8081"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/phongkhambenh?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root

@@ -24,16 +24,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Doctors;
-import truonggg.Model.Schedules;
+import truonggg.schedules.domain.model.Schedules;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.SchedulesRequestDTO;
 import truonggg.dto.requestDTO.SchedulesUpdateRequestDTO;
-import truonggg.mapper.SchedulesMapper;
-import truonggg.repo.DoctorsRepository;
-import truonggg.repo.SchedulesRepository;
+import truonggg.schedules.mapper.SchedulesMapper;
+import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.schedules.impl.SchedulesServiceImpl;
+import truonggg.schedules.application.impl.SchedulesServiceImpl;
+import truonggg.schedules.infrastructure.SchedulesRepository;
+import truonggg.doctor.domain.Doctors;
 
 @ExtendWith(MockitoExtension.class)
 public class SchedulesServiceTest {

@@ -24,15 +24,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.SiteInfo;
+import truonggg.siteInfo.domain.model.SiteInfo;
 import truonggg.dto.reponseDTO.SiteInfoResponseDTO;
 import truonggg.dto.requestDTO.SiteInfoDeleteRequestDTO;
 import truonggg.dto.requestDTO.SiteInfoRequestDTO;
 import truonggg.dto.requestDTO.SiteInfoUpdateRequestDTO;
-import truonggg.mapper.SiteInfoMapper;
-import truonggg.repo.SiteInfoRepository;
+import truonggg.siteInfo.mapper.SiteInfoMapper;
+import truonggg.siteInfo.infrastructure.SiteInfoRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.impl.SiteInfoServiceIMPL;
+import truonggg.siteInfo.application.impl.SiteInfoServiceIMPL;
 
 @ExtendWith(MockitoExtension.class)
 public class SiteInfoServiceTest {

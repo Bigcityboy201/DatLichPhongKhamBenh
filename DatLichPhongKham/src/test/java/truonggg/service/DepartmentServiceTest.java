@@ -24,14 +24,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Departments;
+import truonggg.department.domain.model.Departments;
+import truonggg.department.mapper.DepartmentsMapper;
 import truonggg.dto.reponseDTO.DepartmentsResponseDTO;
 import truonggg.dto.requestDTO.DepartmentsRequestDTO;
 import truonggg.dto.requestDTO.DepartmentsUpdateRequestDTO;
-import truonggg.mapper.DepartmentsMapper;
-import truonggg.repo.DepartmentsRepository;
+import truonggg.department.infrastructure.DepartmentsRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.department.impl.DepartmentServiceImpl;
+import truonggg.department.application.impl.DepartmentServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
 public class DepartmentServiceTest {

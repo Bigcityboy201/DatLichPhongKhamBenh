@@ -8,9 +8,9 @@ import lombok.RequiredArgsConstructor;
 import truonggg.Enum.Appointments_Enum;
 import truonggg.Enum.PaymentMethod;
 import truonggg.Enum.PaymentStatus;
-import truonggg.Model.Appointments;
-import truonggg.Model.Payments;
-import truonggg.Model.User;
+import truonggg.appointment.domain.model.Appointments;
+import truonggg.payment.domain.model.Payments;
+import truonggg.user.domain.model.User;
 import truonggg.dto.requestDTO.PaymentRequestDTO;
 import truonggg.strategy.PaymentStrategy;
 

@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import truonggg.Model.User;
-import truonggg.repo.UserRepository;
+import truonggg.user.domain.model.User;
+import truonggg.user.infrastructure.UserRepository;
 
 @Service
 @RequiredArgsConstructor

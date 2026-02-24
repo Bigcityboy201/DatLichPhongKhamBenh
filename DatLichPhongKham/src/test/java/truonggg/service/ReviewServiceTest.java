@@ -24,19 +24,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Doctors;
-import truonggg.Model.User;
-import truonggg.Model.review;
+import truonggg.user.domain.model.User;
+import truonggg.review.domain.model.review;
 import truonggg.dto.reponseDTO.ReviewResponseDTO;
 import truonggg.dto.requestDTO.ReviewRequestDTO;
 import truonggg.dto.requestDTO.ReviewSelfRequestDTO;
 import truonggg.dto.requestDTO.ReviewUpdateRequestDTO_USER;
-import truonggg.mapper.ReviewMapper;
-import truonggg.repo.DoctorsRepository;
-import truonggg.repo.ReviewRepository;
-import truonggg.repo.UserRepository;
+import truonggg.review.mapper.ReviewMapper;
+import truonggg.doctor.infrastructure.DoctorsRepository;
+import truonggg.review.infrastructure.ReviewRepository;
+import truonggg.user.infrastructure.UserRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.impl.ReviewServiceIMPL;
+import truonggg.review.application.impl.ReviewServiceIMPL;
+import truonggg.doctor.domain.Doctors;
 
 @ExtendWith(MockitoExtension.class)
 public class ReviewServiceTest {

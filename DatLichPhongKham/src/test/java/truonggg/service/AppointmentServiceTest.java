@@ -29,20 +29,21 @@ import org.springframework.security.access.AccessDeniedException;
 import truonggg.Enum.Appointments_Enum;
 import truonggg.Enum.PaymentStatus;
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Appointments;
-import truonggg.Model.Doctors;
-import truonggg.Model.User;
+
+import truonggg.appointment.application.impl.AppointmentServiceImpl;
+import truonggg.appointment.domain.model.Appointments;
+import truonggg.appointment.infrastructure.AppointmentsRepository;
+import truonggg.appointment.mapper.AppointmentsMapper;
+import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.CancelAppointmentResponse;
 import truonggg.dto.requestDTO.AppointmentsRequestDTO;
-import truonggg.mapper.AppointmentsMapper;
-import truonggg.repo.AppointmentsRepository;
-import truonggg.repo.DoctorsRepository;
-import truonggg.repo.PaymentsRepository;
-import truonggg.repo.SchedulesRepository;
-import truonggg.repo.UserRepository;
+import truonggg.payment.infrastructure.PaymentsRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.appointment.impl.AppointmentServiceImpl;
+import truonggg.schedules.infrastructure.SchedulesRepository;
+import truonggg.user.domain.model.User;
+import truonggg.user.infrastructure.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class AppointmentServiceTest {
@@ -104,7 +105,8 @@ public class AppointmentServiceTest {
 		Integer currentUserId = 1;
 		User user = new User();
 		user.setUserId(1);
-		Doctors doctor = new Doctors();
+		Doctors
+                doctor = new Doctors();
 		doctor.setId(2);
 
 		Appointments saved = new Appointments();

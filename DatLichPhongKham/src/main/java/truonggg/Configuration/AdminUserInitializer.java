@@ -6,11 +6,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
-import truonggg.Model.Role;
-import truonggg.Model.User;
+import truonggg.role.domain.model.Role;
+import truonggg.role.infrastructure.RoleRepository;
+import truonggg.user.domain.model.User;
 import truonggg.constant.SecurityRole;
-import truonggg.repo.RoleRepository;
-import truonggg.repo.UserRepository;
+import truonggg.user.infrastructure.UserRepository;
 
 @Component
 @Profile("dev") // chạy môi trường dev,prod không tự động tạo

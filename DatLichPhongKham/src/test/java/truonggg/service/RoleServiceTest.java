@@ -24,15 +24,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.Model.Role;
+import truonggg.role.domain.model.Role;
 import truonggg.dto.reponseDTO.RoleResponseDTO;
 import truonggg.dto.requestDTO.RoleDeleteRequestDTO;
 import truonggg.dto.requestDTO.RoleRequestDTO;
 import truonggg.dto.requestDTO.RoleUpdateRequestDTO;
-import truonggg.mapper.RoleMapper;
-import truonggg.repo.RoleRepository;
+import truonggg.role.mapper.RoleMapper;
+import truonggg.role.infrastructure.RoleRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.service.impl.RoleServiceIMPL;
+import truonggg.role.application.impl.RoleServiceIMPL;
 
 @ExtendWith(MockitoExtension.class)
 public class RoleServiceTest {

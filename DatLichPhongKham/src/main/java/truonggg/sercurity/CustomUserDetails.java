@@ -11,8 +11,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import truonggg.Model.Role;
-import truonggg.Model.User;
+import truonggg.role.domain.model.Role;
+import truonggg.user.domain.model.User;
 
 @AllArgsConstructor
 @Getter

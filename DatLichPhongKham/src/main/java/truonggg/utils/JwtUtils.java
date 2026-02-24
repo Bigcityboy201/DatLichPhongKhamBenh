@@ -12,7 +12,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import truonggg.Factory.JwtKeyFactory;
-import truonggg.Model.Role;
+import truonggg.role.domain.model.Role;
 import truonggg.sercurity.CustomUserDetails;
 
 @Component

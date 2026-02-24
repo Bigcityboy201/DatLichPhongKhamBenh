@@ -1,0 +1,122 @@
+package truonggg.appointment.controller;
+
+import java.util.List;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import truonggg.appointment.application.AppointmentsCommandService;
+import truonggg.appointment.application.AppointmentsQueryService;
+import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
+import truonggg.dto.reponseDTO.CancelAppointmentResponse;
+import truonggg.dto.requestDTO.AppointmentAssignDoctorRequestDTO;
+import truonggg.dto.requestDTO.AppointmentsRequestDTO;
+import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
+import truonggg.reponse.PagedResult;
+import truonggg.reponse.SuccessReponse;
+import truonggg.user.application.UserManagementService;
+
+@RestController
+@RequestMapping(path = "/api/appointments")
+@RequiredArgsConstructor
+public class AppointmentsController {
+	private final AppointmentsQueryService appointmentsQueryService;
+	private final AppointmentsCommandService appointmentsCommandService;
+	private final UserManagementService userManagementService;
+
+	// GET /api/appointments - Lấy tất cả (phân trang)
+	@GetMapping
+	@PreAuthorize("hasAnyAuthority('ADMIN','EMPLOYEE')")
+	public SuccessReponse<?> getAllAppointments(@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+		Pageable pageable = PageRequest.of(page, size);
+		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsQueryService.getAllPaged(pageable);
+		return SuccessReponse.ofPaged(pagedResult);
+	}
+
+	// GET /api/appointments/{id} - Lấy theo ID
+	@GetMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> getAppointmentById(@PathVariable Integer id) {
+		return SuccessReponse.of(this.appointmentsQueryService.findById(id));
+	}
+
+	// POST /api/appointments - Tạo mới
+	@PostMapping
+	@PreAuthorize("hasAnyAuthority('USER','ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> createAppointment(
+			@RequestBody @Valid final AppointmentsRequestDTO dto) {
+
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+		Integer currentUserId = userManagementService.findByUserName(username).getUserId();
+
+		return SuccessReponse.of(appointmentsCommandService.createAppointments(dto, currentUserId));
+	}
+
+	// PUT /api/appointments - Cập nhật
+	@PutMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> updateAppointment(@PathVariable Integer id,
+			@RequestBody @Valid AppointmentsUpdateRequestDTO dto) {
+		return SuccessReponse.of(this.appointmentsCommandService.update(id, dto));
+	}
+
+	// DELETE /api/appointments - Soft delete
+	@PutMapping("/{id}/status")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> deleteAppointment(@PathVariable Integer id) {
+		return SuccessReponse.of(this.appointmentsCommandService.delete(id));
+	}
+
+	// DELETE /api/appointments/{id} - Hard delete
+	@DeleteMapping("/{id}")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<String> hardDeleteAppointment(@PathVariable Integer id) {
+		this.appointmentsCommandService.deleteManually(id);
+		return SuccessReponse.of("Xóa thành công!");
+	}
+
+	@GetMapping("/me")
+	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<List<AppointmentsResponseDTO>> getMyAppointments(
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size) {
+		Pageable pageable = PageRequest.of(page, size);
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		PagedResult<AppointmentsResponseDTO> pagedResult = appointmentsQueryService
+				.getAppointmentByCurrentUser(username, pageable);
+		return SuccessReponse.ofPaged(pagedResult);
+	}
+
+	@PutMapping("/{id}/cancel-user")
+	@PreAuthorize("hasAuthority('USER')")
+	public SuccessReponse<CancelAppointmentResponse> cancelAppointmentByUser(@PathVariable Integer id) {
+
+		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+		return SuccessReponse.of(appointmentsCommandService.cancelByUser(id, currentUsername));
+	}
+
+	@PutMapping("/{id}/assign-doctor")
+	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
+	public SuccessReponse<AppointmentsResponseDTO> assignDoctor(@PathVariable Integer id,
+			@RequestBody @Valid AppointmentAssignDoctorRequestDTO dto) {
+		return SuccessReponse.of(this.appointmentsCommandService.assignDoctor(id, dto.getDoctorId()));
+	}
+}
+
+
