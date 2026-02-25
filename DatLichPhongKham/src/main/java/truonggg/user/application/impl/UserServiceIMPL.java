@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import truonggg.Enum.UpdateContext;
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
 import truonggg.role.domain.model.Role;
+import truonggg.user.domain.event.UserRoleAssignedEvent;
 import truonggg.user.domain.model.User;
 import truonggg.constant.SecurityRole;
 import truonggg.dto.reponseDTO.UserResponseDTO;
@@ -39,6 +41,7 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 	private final PasswordService passwordService;
 	private final RoleRepository roleRepository;
 	private final DoctorsRepository doctorsRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
 	// create-user(srp)
 	@Override
@@ -89,39 +92,27 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 	// kết thúc create
 
 	// assignRole
-	@Override
-	@Transactional
-	public UserResponseDTO assignRole(AssignRoleRequestDTO dto) {
-		// Lấy user
-		User user = userRepository.findById(dto.getUserId())
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+    //coupling:gọi repo,mapper,entity doctor
+    @Override
+    @Transactional
+    public UserResponseDTO assignRole(AssignRoleRequestDTO dto) {
 
-		// Lấy role
-		Role role = roleRepository.findById(dto.getRoleId())
-				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		// Gán role mới
-		user.setRole(role);
-		user = userRepository.save(user);
+        Role role = roleRepository.findById(dto.getRoleId())
+                .orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
-		final User finalUser = user;
+        user.setRole(role);
+        userRepository.save(user);
 
-		if (role.getRoleName().equalsIgnoreCase("DOCTOR")) {
-			doctorsRepository.findByUser(finalUser).orElseGet(() -> {
-				Doctors doctor = new Doctors();
-				doctor.setUser(finalUser); // dùng finalUser
-				doctor.setDescription(null);
-				doctor.setExperienceYears(0);
-				doctor.setIsActive(false);
-				doctor.setDepartments(null);
-				doctor.setIsFeatured(false);
-				doctor.setImageUrl(null);
-				return doctorsRepository.save(doctor);
-			});
-		}
+        // Publish domain event (SYNC)
+        applicationEventPublisher.publishEvent(
+                new UserRoleAssignedEvent(user.getUserId(), role.getRoleName())
+        );
 
-		return userMapper.toDTO(user);
-	}
+        return userMapper.toDTO(user);
+    }
 
 	@Override
 	public PagedResult<UserResponseDTO> getAllPaged(Pageable pageable) {

@@ -1,0 +1,129 @@
+1)side effect:là hành động phát sinh bên ngoài làm thay đổi trạng thái hệ thống
+ví dụ:
+Gửi email
+
+Ghi log
+
+Publish event
+
+Gọi API bên ngoài
+
+Cập nhật bảng khác
+-cụ thể:
+@Transactional
+public void createOrder(OrderRequest dto) {
+
+    Order order = orderRepository.save(new Order(dto));
+
+    paymentService.process(order);   // side effect->nếu payment sai có thể rollback toàn cả order
+    emailService.sendEmail(order);   // side effect->tương tự
+    notificationService.push(order); // side effect->tương tự
+}
+2)coupling:độ phụ thuộc giữa các class,kiểu như giống dip(dependency injection princle)
+ví dụ:
+public class OrderService {
+
+    private PaymentService paymentService = new PaymentService();
+}
+3)decoupling=low coupling
+ví dụ:
+@RequiredArgsConstructor
+@Service
+public class OrderService {
+
+    private final PaymentService paymentService;
+}
+4)domain model:trường hợp khi xử lí logic ở entity vâng vâng
+ví dụ:
+public class Order {
+
+    private BigDecimal amount;
+    private OrderStatus status;
+
+    public void markAsPaid() {
+
+        if (status != OrderStatus.CREATED) {
+            throw new BusinessException("Invalid state");
+        }
+
+        this.status = OrderStatus.PAID;
+    }
+}
+5)Domain Service dùng khi:
+
+Logic nghiệp vụ
+
+Không thuộc riêng 1 entity
+
+Liên quan nhiều entity
+ví dụ:
+@Component
+public class CommissionDomainService {
+
+    public BigDecimal calculate(Order order, Provider provider) {
+
+        BigDecimal rate = provider.isVip()
+                ? BigDecimal.valueOf(0.05)
+                : BigDecimal.valueOf(0.1);
+
+        return order.getAmount().multiply(rate);
+    }
+}
+6)domain event:Sự kiện xảy ra trong domain (nghiệp vụ), có thể được nhiều thành phần quan tâm.
+Ví dụ:
+
+OrderCreated
+
+PaymentCompleted
+
+DisputeOpened
+
+Nó không chỉ để xử lý side effect.
+
+Nó còn để:
+
+Decouple modules
+
+Trigger workflow
+
+Hỗ trợ microservice
+
+Xử lý async
+7)transaction script:tất cả code logic,business đều nằm trong service,nếu service phình to
+khó mở rộng
+8)Xử lý Đồng bộ (Synchronous - Sync):Hệ thống phải chờ tác vụ hoàn thành rồi mới trả kết quả.
+ví dụ:
+A → B → B xong → A tiếp tục
+Đặc điểm
+
+Trả kết quả ngay lập tức
+
+Nếu B fail → A fail
+
+Phù hợp khi hành động đó bắt buộc phải thành công
+ví dụ:
+@Transactional
+public void createOrder(OrderRequest dto) {
+
+    Order order = orderRepository.save(new Order(dto));
+
+    paymentService.process(order); // BẮT BUỘC thành công
+
+}
+9)Xử lý Bất đồng bộ (Asynchronous - Async):Không chờ tác vụ hoàn thành.Gửi đi rồi tiếp tục xử lý.
+A → gửi sự kiện → A xong
+        ↓
+        B xử lý sau
+ví dụ:
+orderRepository.save(order);
+
+applicationEventPublisher.publishEvent(
+    new OrderCreatedEvent(order)
+);
+@Async
+@EventListener
+public void handle(OrderCreatedEvent event) {
+    emailService.sendEmail(event.getOrder());
+}
+Order tạo xong → trả response ngay
+Email gửi sau
