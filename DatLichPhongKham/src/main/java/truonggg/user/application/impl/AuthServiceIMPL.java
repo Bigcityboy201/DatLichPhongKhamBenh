@@ -59,9 +59,19 @@ public class AuthServiceIMPL implements AuthService {
 			throw new UserAlreadyExistException(errors);
 		}
 
-		User user = userMapper.toModel(dto);
-		user.setActive(false);
-		user.setPassword(this.passwordService.encodePassword(user.getPassword()));
+        Role userRole = roleRepository.findByRoleName("USER");
+        if(userRole==null){
+            throw new NotFoundException("Role","Role not found!");
+        }
+		// Tạo user domain với trạng thái active mặc định
+		String encodedPassword = this.passwordService.encodePassword(dto.getPassword());
+		User user = User.create(
+				dto.getUserName(),
+				encodedPassword,
+				dto.getFullName(),
+				dto.getEmail(),
+                userRole
+		);
 
 		// lấy role theo tên (USER/ADMIN)
 		Role roleUser = this.roleRepository.findByRoleName(SecurityRole.ROLE_USER);
@@ -69,8 +79,8 @@ public class AuthServiceIMPL implements AuthService {
 			throw new NotFoundException("role", "Default role USER not found");
 		}
 
-		// Gán role USER trực tiếp cho user
-		user.setRole(roleUser);
+		// Gán role USER trực tiếp cho user (domain sẽ validate)
+		user.assignRole(roleUser);
 
 		// lưu user
 		user = userRepository.save(user);
@@ -89,9 +99,8 @@ public class AuthServiceIMPL implements AuthService {
 		User user = userRepository.findByUserName(userDetails.getUsername())
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
 
-		// isActive = false nghĩa là tài khoản đang hoạt động; true là chưa kích hoạt /
-		// inactive
-		if (Boolean.TRUE.equals(user.getIsActive())) {
+		// Logic mới: isActive = true nghĩa là tài khoản đang hoạt động
+		if (!user.getIsActive()) {
 			throw new AccountInactiveException();
 		}
 

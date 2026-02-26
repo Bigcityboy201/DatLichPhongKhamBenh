@@ -29,10 +29,9 @@ public class CustomUserDetails implements UserDetails {
 		this.userName = user.getUserName();
 		this.password = user.getPassword();
 		
-		// Lấy role từ User.role thay vì User.list
-		// Logic: isActive = 0 (false) = đang hoạt động, isActive = 1 (true) = ngưng
-		// Chỉ tạo authorities nếu role tồn tại và role đang active (isActive = false)
-		if (user.getRole() != null && !user.getRole().getIsActive()) {
+		// Lấy role từ User.role
+		// Logic mới: isActive = true nghĩa là role đang hoạt động
+		if (user.getRole() != null && user.getRole().getIsActive()) {
 			this.authorities = Set.of(new SimpleGrantedAuthority(user.getRole().getRoleName()));
 			this.roles = Set.of(user.getRole());
 		} else {
@@ -40,7 +39,7 @@ public class CustomUserDetails implements UserDetails {
 			this.roles = Set.of();
 			if (user.getRole() == null) {
 				System.out.println("WARNING: User " + this.userName + " has no role assigned!");
-			} else if (user.getRole().getIsActive()) {
+			} else if (!user.getRole().getIsActive()) {
 				System.out.println("WARNING: User " + this.userName + " has inactive role (ngưng): " + user.getRole().getRoleName());
 			}
 		}

@@ -7,7 +7,7 @@ import truonggg.dto.requestDTO.DoctorsRequestDTO;
 
 public interface DoctorAdminService {
 
-	DoctorSummaryResponseDTO createDoctor(DoctorsRequestDTO dto);
+	//DoctorSummaryResponseDTO createDoctor(DoctorsRequestDTO dto);
 
 	DoctorSummaryResponseDTO updateWithUser(Integer id, DoctorUpdateRequestDTO dto);
 

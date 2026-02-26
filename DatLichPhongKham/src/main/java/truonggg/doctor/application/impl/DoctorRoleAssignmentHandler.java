@@ -7,7 +7,6 @@ import truonggg.doctor.domain.model.Doctors;
 import truonggg.role.application.RoleAssignmentHandler;
 import truonggg.user.domain.model.User;
 @Component
-@RequiredArgsConstructor
 public class DoctorRoleAssignmentHandler implements RoleAssignmentHandler {
 
     @Override
@@ -19,22 +18,15 @@ public class DoctorRoleAssignmentHandler implements RoleAssignmentHandler {
     public void onAssigned(User user) {
 
         if (user.getDoctors() != null) {
-            return; // đã có rồi thì thôi
+            return;
         }
 
-        Doctors doctor = Doctors.builder()
-                .user(user)
-                .experienceYears(0)
-                .isActive(false)
-                .isFeatured(false)
-                .build();
-
-        user.setDoctors(doctor);
+        Doctors doctor = Doctors.createDefault();
+        user.assignDoctorProfile(doctor);
     }
 
     @Override
     public void onRemoved(User user) {
-
-        user.setDoctors(null); // Hibernate tự xóa
+        user.removeDoctorProfile();
     }
 }

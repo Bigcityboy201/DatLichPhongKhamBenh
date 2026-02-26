@@ -108,8 +108,8 @@ public class ReviewServiceIMPL implements ReviewAdminService, ReviewSelfService 
 			// Admin thấy tất cả review, kể cả bị khóa
 			reviewsPage = reviewRepository.findByUser_UserId(user.getUserId(), pageable);
 		} else {
-			// User bình thường chỉ thấy review chưa bị khóa (isActive = false)
-			reviewsPage = reviewRepository.findByUser_UserIdAndIsActiveFalse(user.getUserId(), pageable);
+			// User bình thường chỉ thấy review đang hoạt động (isActive = true)
+			reviewsPage = reviewRepository.findByUser_UserIdAndIsActiveTrue(user.getUserId(), pageable);
 		}
 
 		return toPagedResult(reviewsPage);

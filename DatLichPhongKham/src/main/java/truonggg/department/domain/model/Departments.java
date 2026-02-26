@@ -20,7 +20,7 @@ public class Departments {
     private Integer id;
     private String name;
     private String description;
-    @Column(columnDefinition = "BIT DEFAULT 0")
+    @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -75,13 +75,6 @@ public class DoctorsController {
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
-	// POST /api/doctors - Tạo mới
-	@PostMapping
-	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<DoctorSummaryResponseDTO> createDoctor(@RequestBody @Valid final DoctorsRequestDTO dto) {
-		return SuccessReponse.of(this.doctorAdminService.createDoctor(dto));
-	}
-
 	// PUT /api/doctors/profile - Cập nhật profile (cho DOCTOR)
 	@PutMapping("/profile")
 	@PreAuthorize("hasAnyAuthority('DOCTOR', 'ADMIN')")

@@ -17,7 +17,7 @@ public class SiteInfo {
     private Integer id;
     private String infoKey;
     private String value;
-    @Column(columnDefinition = "BIT DEFAULT 0")
+    @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

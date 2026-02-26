@@ -366,7 +366,7 @@ public class PaymentServiceIMPL implements PaymentService {
 	}
 
 	private boolean isAdminOrEmployee(User user) {
-		return user.getRole() != null && Boolean.FALSE.equals(user.getRole().getIsActive()) // role đang hoạt động
+		return user.getRole() != null && Boolean.TRUE.equals(user.getRole().getIsActive()) // role đang hoạt động
 				&& ("ADMIN".equals(user.getRole().getRoleName()) || "EMPLOYEE".equals(user.getRole().getRoleName()));
 	}
 
@@ -397,7 +397,7 @@ public class PaymentServiceIMPL implements PaymentService {
 
 	private void validatePermission(User user, Appointments appointment) {
 
-		boolean isAdminOrEmployee = user.getRole() != null && Boolean.FALSE.equals(user.getRole().getIsActive())
+		boolean isAdminOrEmployee = user.getRole() != null && Boolean.TRUE.equals(user.getRole().getIsActive())
 				&& ("ADMIN".equals(user.getRole().getRoleName()) || "EMPLOYEE".equals(user.getRole().getRoleName()));
 
 		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {

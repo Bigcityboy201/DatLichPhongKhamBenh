@@ -127,3 +127,27 @@ public void handle(OrderCreatedEvent event) {
 }
 Order tạo xong → trả response ngay
 Email gửi sau
+10)
+Khi viết code, tự hỏi:
+
+-Đây có phải business rule không?
+
+→ Entity
+
+-Đây có phải kiểm tra DB không?
+
+→ Service
+
+-Đây có phải encode, gửi mail, gọi API không?
+
+→ Infrastructure
+
+-Đây có phải hành vi phát sinh thêm hành động khác?
+
+→ Domain Event
+11)dùng domain service và domain model khi nào?
+-nếu chỉ phụ thuộc vào chính nó không liên quan gì->domain model
+-nếu phụ thuộc vào nhiều thứ khác->domain service
+ví dụ:
+-quy định user inActive không thể đổi role thành bác sĩ,tối đa 100 bác sĩ
+->nó liên quan đến user,doctor,role->domain service

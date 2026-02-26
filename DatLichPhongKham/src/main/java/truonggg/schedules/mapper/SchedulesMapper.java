@@ -16,7 +16,8 @@ public interface SchedulesMapper {
     @Mapping(source = "isActive", target = "active")
     SchedulesReponseDTO toDTO(final Schedules dto);
 
-    @Mapping(source = "doctorId", target = "doctors.id")
+    // Không map ngược doctorId -> doctors.id trực tiếp, sẽ gán Doctors trong service
+    @Mapping(target = "doctors", ignore = true)
     Schedules toModel(final SchedulesRequestDTO dto);
 
     default List<SchedulesReponseDTO> toDTOList(List<Schedules> list) {

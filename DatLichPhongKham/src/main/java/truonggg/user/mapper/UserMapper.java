@@ -13,13 +13,14 @@ import truonggg.dto.requestDTO.UserRequestDTO;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
-	User toEntity(UserRequestDTO dto);
+	// Không dùng mapper để tạo User entity (sử dụng User.create trong service)
+	//User toEntity(UserRequestDTO dto);
 
 	@Mapping(source = "role.roleName", target = "role")
-
 	UserResponseDTO toDTO(User user);
 
-	User toModel(final SignUpRequest dto);
+	// Không map ngược từ SignUpRequest sang User qua mapper
+	//User toModel(final SignUpRequest dto);
 
 	default List<UserResponseDTO> toDTOList(List<User> users) {
 		if (users == null || users.isEmpty())

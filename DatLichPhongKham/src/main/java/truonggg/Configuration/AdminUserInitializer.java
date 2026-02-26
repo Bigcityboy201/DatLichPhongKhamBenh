@@ -40,15 +40,15 @@ public class AdminUserInitializer implements CommandLineRunner {
 	private void createRoleIfNotExists(String roleName, String description) {
 		Role role = roleRepository.findByRoleName(roleName);
 		if (role == null) {
-			role = Role.builder().roleName(roleName).Description(description).isActive(false) // tất cả role inactive
+			role = Role.builder().roleName(roleName).Description(description).isActive(true) // role active mặc định
 					.build();
 			roleRepository.save(role);
-			System.out.println("Created role: " + roleName + " with isActive=false");
-		} else if (role.getIsActive()) {
-			// Nếu role đã tồn tại nhưng active=true, set lại false
-			role.setIsActive(false);
+			System.out.println("Created role: " + roleName + " with isActive=true");
+		} else if (!role.getIsActive()) {
+			// Nếu role đã tồn tại nhưng inactive, set lại active
+			role.setIsActive(true);
 			roleRepository.save(role);
-			System.out.println("Updated role: " + roleName + " to isActive=false");
+			System.out.println("Updated role: " + roleName + " to isActive=true");
 		}
 	}
 
@@ -66,20 +66,24 @@ public class AdminUserInitializer implements CommandLineRunner {
 				return;
 			}
 
-			// Tạo user admin inactive và gán role trực tiếp
-			admin = User.builder().userName(adminUsername).password(passwordEncoder.encode("quangtruong1"))
-					.fullName("Quang Truong").email("quangtruong2012004@gmail.com").phone("0123456789").isActive(false)
-					.role(adminRole) // Gán đối tượng Role trực tiếp
-					.build();
+			// Tạo user admin active và gán role trực tiếp
+			admin = User.create(
+					adminUsername,
+					passwordEncoder.encode("quangtruong1"),
+					"Quang Truong",
+					"quangtruong2012004@gmail.com",
+                    adminRole
+			);
+			admin.assignRole(adminRole);
 			admin = userRepository.save(admin);
 			System.out.println(
-					"Created admin user: " + adminUsername + " isActive=false with role_id=" + adminRole.getRoleId());
+					"Created admin user: " + adminUsername + " isActive=true with role_id=" + adminRole.getRoleId());
 		} else {
 			// Kiểm tra và cập nhật role nếu chưa có
 			if (admin.getRole() == null) {
 				Role adminRole = roleRepository.findByRoleName(SecurityRole.ROLE_ADMIN);
 				if (adminRole != null) {
-					admin.setRole(adminRole);
+					admin.assignRole(adminRole);
 					userRepository.save(admin);
 					System.out.println("Updated admin user: set role_id=" + adminRole.getRoleId());
 				}

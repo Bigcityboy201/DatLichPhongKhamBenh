@@ -20,7 +20,7 @@ public class Schedules {
     private DayOfWeek dayOfWeek;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
-    @Column(columnDefinition = "BIT DEFAULT 0")
+    @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
     @ManyToOne
     @JoinColumn(name = "doctor_id", referencedColumnName = "id")

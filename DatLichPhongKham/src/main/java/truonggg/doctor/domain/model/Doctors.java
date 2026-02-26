@@ -13,10 +13,10 @@ import java.util.List;
 
 @Entity
 @Getter
-@Setter
+//@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
+//@AllArgsConstructor
+//@Builder
 public class Doctors {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,7 +24,7 @@ public class Doctors {
     private int experienceYears;
     private String description;
     private String imageUrl;
-    @Column(columnDefinition = "BIT DEFAULT 0")
+    @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
     @Column(columnDefinition = "BIT DEFAULT 0")
     private Boolean isFeatured;
@@ -57,29 +57,79 @@ public class Doctors {
         this.isFeatured = isFeatured;
     }
 
-    public void activate() {
-        if (this.user == null) {
-            throw new IllegalStateException("Doctor must be linked to a user");
+    public static Doctors createDefault() {
+        Doctors doctor = new Doctors();
+        doctor.experienceYears = 0;
+        doctor.isActive = true;
+        doctor.isFeatured = false;
+        return doctor;
+    }
+
+    public void attachToUser(User user) {
+        this.user = user;
+    }
+
+    public void detachUser() {
+        this.user = null;
+    }
+
+    public void updateProfile(
+            Integer experienceYears,
+            String description,
+            String imageUrl,
+            Departments departments
+    ) {
+
+        if (experienceYears != null) {
+            this.experienceYears = experienceYears;
         }
 
-        if (!this.user.getIsActive()) {
-            throw new IllegalStateException("Cannot activate doctor if user is inactive");
+        if (description != null) {
+            this.description = description;
         }
 
-        this.isActive = true;
+        if (imageUrl != null) {
+            this.imageUrl = imageUrl;
+        }
+
+        if (departments != null) {
+            this.departments = departments;
+        }
+    }
+
+    public void updateByAdmin(
+            Integer experienceYears,
+            String description,
+            String imageUrl,
+            Boolean isFeatured,
+            Departments departments
+    ) {
+
+        if (experienceYears != null) {
+            this.experienceYears = experienceYears;
+        }
+
+        if (description != null) {
+            this.description = description;
+        }
+
+        if (imageUrl != null) {
+            this.imageUrl = imageUrl;
+        }
+
+        if (isFeatured != null) {
+            this.isFeatured = isFeatured;
+        }
+
+        if (departments != null) {
+            this.departments = departments;
+        }
     }
 
     public void deactivate() {
-        this.isActive = false;
-    }
-
-    public void ensureValidState() {
-        if (this.user == null) {
-            throw new IllegalStateException("Doctor must belong to a user");
+        if (!this.isActive) {
+            throw new IllegalStateException("Doctor already inactive");
         }
-
-        if (this.experienceYears < 0) {
-            throw new IllegalStateException("Experience years cannot be negative");
-        }
+        this.isActive = true;
     }
 }

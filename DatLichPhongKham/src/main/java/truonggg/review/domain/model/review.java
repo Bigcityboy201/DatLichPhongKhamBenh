@@ -20,7 +20,7 @@ public class review {
     private int rating;
     private String comment;
     private Date createAt;
-    @Column(columnDefinition = "BIT DEFAULT 0")
+    @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "userId")

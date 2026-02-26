@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
-import truonggg.Enum.UpdateContext;
+
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
 import truonggg.role.application.RoleAssignmentHandler;
@@ -64,24 +64,27 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 
         validateUser(dto);
 
-        User user = userMapper.toEntity(dto);
+        Role roleUser = roleRepository
+                .findByRoleName(SecurityRole.ROLE_USER);
 
-        // encode password vẫn ở service (vì là infrastructure concern)
-        user.setPassword(passwordService.encodePassword(user.getPassword()));
-
-        // lấy default role
-        Role roleUser = roleRepository.findByRoleName(SecurityRole.ROLE_USER);
         if (roleUser == null) {
             throw new NotFoundException("role", "Default role USER not found");
         }
 
-        // gọi behavior domain
-        user.changeRole(roleUser);
-        user.markCreated();
-        user.deactivate();        // mặc định active
-        user.ensureValidState();  // check invariant
+        String encodedPassword =
+                passwordService.encodePassword(dto.getPassword());
 
-        return userMapper.toDTO(userRepository.save(user));
+        User user = User.create(
+                dto.getUserName(),
+                encodedPassword,
+                dto.getFullName(),
+                dto.getEmail(),
+                roleUser
+        );
+
+        userRepository.save(user);
+
+        return userMapper.toDTO(user);
     }
 
 	private void validateUser(UserRequestDTO dto) {
@@ -166,7 +169,13 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 
         validateEmailUniqueness(user, dto);
 
-        user.updateByAdmin(dto);
+        user.updateProfile(
+                dto.getFullName(),
+                dto.getEmail(),
+                dto.getPhone(),
+                dto.getAddress(),
+                dto.getDateOfBirth()
+        );
 
         return userMapper.toDTO(user);
     }
@@ -214,7 +223,13 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 
         validateEmailUniqueness(user, dto);
 
-        user.updateBySelf(dto);
+        user.updateProfile(
+                dto.getFullName(),
+                dto.getEmail(),
+                dto.getPhone(),
+                dto.getAddress(),
+                dto.getDateOfBirth()
+        );
 
         return userMapper.toDTO(user);
     }

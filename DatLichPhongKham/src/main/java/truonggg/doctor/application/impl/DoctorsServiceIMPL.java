@@ -22,7 +22,6 @@ import truonggg.dto.reponseDTO.DoctorsReponseDTO;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.DoctorUpdateRequestDTO;
 import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
-import truonggg.dto.requestDTO.DoctorsRequestDTO;
 import truonggg.appointment.mapper.AppointmentsMapper;
 import truonggg.doctor.mapper.DoctorsMapper;
 import truonggg.schedules.mapper.SchedulesMapper;
@@ -62,24 +61,6 @@ public class DoctorsServiceIMPL implements DoctorQueryService, DoctorAdminServic
 	}
 
 	@Override
-	public DoctorSummaryResponseDTO createDoctor(DoctorsRequestDTO dto) {
-		User user = this.userRepository.findById(dto.getUserId())
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found!"));
-		Departments departments = this.departmentsRepository.findById(dto.getDepartmentId())
-				.orElseThrow(() -> new NotFoundException("department", "Department Not Found!"));
-		Doctors doctors = this.doctorsMapper.toEntity(dto);
-		if (dto.getIsFeatured() == null) {
-			doctors.setIsFeatured(false);
-		} else {
-			doctors.setIsFeatured(dto.getIsFeatured());
-		}
-		doctors.setUser(user);
-		doctors.setDepartments(departments);
-		doctors = this.doctorsRepository.save(doctors);
-		return this.doctorsMapper.toDTOOther(doctors);
-	}
-
-	@Override
 	public PagedResult<DoctorSummaryResponseDTO> getDoctorsByDepartmentPaged(Integer departmentsId, Pageable pageable) {
 		// Đảm bảo khoa tồn tại
 		if (!this.departmentsRepository.existsById(departmentsId)) {
@@ -114,130 +95,121 @@ public class DoctorsServiceIMPL implements DoctorQueryService, DoctorAdminServic
 		return this.doctorsMapper.toDTO(doctors);
 	}
 
-	@Override
-	public DoctorSummaryResponseDTO updateProfile(DoctorUpdateRequestDTO dto, String userName) {
+    @Override
+    @Transactional
+    public DoctorSummaryResponseDTO updateProfile(
+            DoctorUpdateRequestDTO dto,
+            String userName
+    ) {
 
-		Doctors foundDoctor = doctorsRepository.findByUser_UserName(userName)
-				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+        Doctors foundDoctor = doctorsRepository
+                .findByUser_UserName(userName)
+                .orElseThrow(() ->
+                        new NotFoundException("doctor", "Doctor Not Found"));
 
-		if (dto.getExperienceYears() != null) {
-			foundDoctor.setExperienceYears(dto.getExperienceYears());
-		}
-		if (dto.getDescription() != null) {
-			foundDoctor.setDescription(dto.getDescription());
-		}
-		if (dto.getImageUrl() != null) {
-			foundDoctor.setImageUrl(dto.getImageUrl());
-		}
-		if (dto.getDepartmentId() != null) {
-			Departments departments = departmentsRepository.findById(dto.getDepartmentId())
-					.orElseThrow(() -> new NotFoundException("department", "Department Not Found"));
-			foundDoctor.setDepartments(departments);
-		}
+        Departments departments = null;
 
-		// Cập nhật thông tin user đi kèm (SELF CONTEXT – KHÔNG ĐƯỢC SỬA isActive)
-		User user = foundDoctor.getUser();
-		if (user != null) {
-			if (dto.getFullName() != null) {
-				user.setFullName(dto.getFullName());
-			}
-			if (dto.getEmail() != null) {
-				user.setEmail(dto.getEmail());
-			}
-			if (dto.getPhone() != null) {
-				user.setPhone(dto.getPhone());
-			}
-			if (dto.getAddress() != null) {
-				user.setAddress(dto.getAddress());
-			}
-			if (dto.getDateOfBirth() != null) {
-				user.setDateOfBirth(dto.getDateOfBirth());
-			}
-			// Không cho tự sửa isActive ở đây
-			userRepository.save(user);
-		}
+        if (dto.getDepartmentId() != null) {
+            departments = departmentsRepository
+                    .findById(dto.getDepartmentId())
+                    .orElseThrow(() ->
+                            new NotFoundException("department", "Department Not Found"));
+        }
 
-		return doctorsMapper.toDTOOther(doctorsRepository.save(foundDoctor));
-	}
+        //update doctor domain
+        foundDoctor.updateProfile(
+                dto.getExperienceYears(),
+                dto.getDescription(),
+                dto.getImageUrl(),
+                departments
+        );
 
-	@Override
-	public DoctorSummaryResponseDTO updateWithUser(Integer id, DoctorUpdateRequestDTO dto) {
+        //update user domain (không cho sửa isActive)
+        User user = foundDoctor.getUser();
 
-		Doctors foundDoctor = this.doctorsRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+        if (user != null) {
+            user.updateProfile(
+                    dto.getFullName(),
+                    dto.getEmail(),
+                    dto.getPhone(),
+                    dto.getAddress(),
+                    dto.getDateOfBirth()
+            );
+        }
 
-		if (dto.getExperienceYears() != null) {
-			foundDoctor.setExperienceYears(dto.getExperienceYears());
-		}
-		if (dto.getDescription() != null) {
-			foundDoctor.setDescription(dto.getDescription());
-		}
-		if (dto.getImageUrl() != null) {
-			foundDoctor.setImageUrl(dto.getImageUrl());
-		}
-		if (dto.getIsFeatured() != null) {
-			foundDoctor.setIsFeatured(dto.getIsFeatured());
-		}
-		if (dto.getDepartmentId() != null) {
-			Departments departments = this.departmentsRepository.findById(dto.getDepartmentId())
-					.orElseThrow(() -> new NotFoundException("department", "Department Not Found"));
-			foundDoctor.setDepartments(departments);
-		}
-		User user = foundDoctor.getUser();
-		if (user != null) {
-			if (dto.getFullName() != null) {
-				user.setFullName(dto.getFullName());
-			}
-			if (dto.getEmail() != null) {
-				user.setEmail(dto.getEmail());
-			}
-			if (dto.getPhone() != null) {
-				user.setPhone(dto.getPhone());
-			}
-			if (dto.getAddress() != null) {
-				user.setAddress(dto.getAddress());
-			}
-			if (dto.getDateOfBirth() != null) {
-				user.setDateOfBirth(dto.getDateOfBirth());
-			}
-			//			if (dto.getIsActive() != null) {
-			//				user.setActive(dto.getIsActive());
-			//			}
-			userRepository.save(user);
-		}
+        return doctorsMapper.toDTOOther(foundDoctor);
+    }
 
-		return this.doctorsMapper.toDTOOther(this.doctorsRepository.save(foundDoctor));
-	}
+    @Override
+    @Transactional
+    public DoctorSummaryResponseDTO updateWithUser(Integer id,
+                                                   DoctorUpdateRequestDTO dto) {
+
+        Doctors foundDoctor = doctorsRepository.findById(id)
+                .orElseThrow(() ->
+                        new NotFoundException("doctor", "Doctor Not Found"));
+
+        Departments departments = null;
+
+        if (dto.getDepartmentId() != null) {
+            departments = departmentsRepository.findById(dto.getDepartmentId())
+                    .orElseThrow(() ->
+                            new NotFoundException("department", "Department Not Found"));
+        }
+
+        //Update Doctor domain
+        foundDoctor.updateByAdmin(
+                dto.getExperienceYears(),
+                dto.getDescription(),
+                dto.getImageUrl(),
+                dto.getIsFeatured(),
+                departments
+        );
+
+        //Update User domain
+        User user = foundDoctor.getUser();
+
+        if (user != null) {
+            user.updateProfile(
+                    dto.getFullName(),
+                    dto.getEmail(),
+                    dto.getPhone(),
+                    dto.getAddress(),
+                    dto.getDateOfBirth()
+            );
+        }
+
+        return doctorsMapper.toDTOOther(foundDoctor);
+    }
 
 	@Override
 	public DoctorSummaryResponseDTO delete(Integer id, DoctorsDeleteRequestDTO dto) {
 		// Tìm xem có bác sĩ không
 		Doctors foundDoctor = this.doctorsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
-
-		// Soft delete - set isActive
-		if (dto.getIsActive() != null) {
-			foundDoctor.setIsActive(dto.getIsActive());
-			this.doctorsRepository.save(foundDoctor);
-		}
+        foundDoctor.deactivate();
 		return this.doctorsMapper.toDTOOther(foundDoctor);
 	}
 
-	@Override
-	public boolean deleteManually(Integer id) {
-		// Tìm xem có bác sĩ không
-		Doctors foundDoctor = this.doctorsRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+    @Override
+    @Transactional
+    public boolean deleteManually(Integer id) {
 
-		User user = foundDoctor.getUser();
-		if (user != null) {
-			user.setDoctors(null);
-			userRepository.delete(user);
-		}
-		// Hard delete - xóa hoàn toàn khỏi DB
-		this.doctorsRepository.delete(foundDoctor);
-		return true;
-	}
+        Doctors foundDoctor = doctorsRepository.findById(id)
+                .orElseThrow(() ->
+                        new NotFoundException("doctor", "Doctor Not Found"));
+
+        User user = foundDoctor.getUser();
+
+        if (user != null) {
+            user.removeDoctorProfile();   //đúng chuẩn aggregate
+            userRepository.delete(user);
+        }
+
+        doctorsRepository.delete(foundDoctor);
+
+        return true;
+    }
 
 	@Override
 	public PagedResult<DoctorSummaryResponseDTO> searchDoctors(String keyword, Pageable pageable) {

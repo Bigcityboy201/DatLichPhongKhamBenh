@@ -8,11 +8,17 @@ I)Lý thuyết
 3)tại sao lại bảo vệ domain trong khi application(client thao tác)đã đủ.Bởi vì application
 chỉ thao tác bên ngoài check các values object các validation trong dto vâng vâng xem thỏa mãn chưa
 Mà quên mất rằng domain chịu trách nhiệm phải lưu đúng 
+4)trong entity thì tôi sử dụng business rule như check rỗng,set các field entity.Mục đích
+để cho nó không phụ thuộc vào dto
 II)Những gì đã thực hiện
 1.Create User
 -ban đầu dùng private method trong serviceImpl mục đích để tránh ví phạm srp
 -sau đó cải tiến hơn là bảo vệ domain không cho set role bừa bãi
--dùng invariant để bảo vệ domain bằng việc check các business rule 
+-dùng invariant để bảo vệ domain bằng việc check các business rule(check ko được rỗng...)
 -không đưa xử lí encodePassword vào entity vì nó là thư viện,jpa.Invariant chỉ chịu trách nghiệm
 duy nhất là xử lí business rule bảo vệ domain
 -domain phải độc lập với framework
+lưu í:còn phần chưa xử lí là service biết quá nhiều lifecyle nên di chuyển vào entity
+2.assignRole ...triển khai ra
+3.update(Admin)...tương tự
+4.Update(User)...tương tự

@@ -21,7 +21,7 @@ public class Role {
     @Column(name = "RoleName")
     private String roleName;
     private String Description;
-    @Column(columnDefinition = "BIT DEFAULT 0")
+    @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
     // Mỗi user có 1 role, nên không cần list UserRoles nữa
     @OneToMany(mappedBy = "role")

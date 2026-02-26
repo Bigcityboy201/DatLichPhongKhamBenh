@@ -82,7 +82,8 @@ public interface DoctorsMapper {
 
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-		return schedules.stream().filter(s -> !s.getIsActive()) // active = false theo quy ước của bạn
+		// Logic mới: chỉ lấy các lịch đang hoạt động (isActive = true)
+		return schedules.stream().filter(Schedules::getIsActive)
 				.filter(s -> s.getStartAt() != null && s.getEndAt() != null)
 				.map(s -> s.getStartAt().format(formatter) + " - " + s.getEndAt().format(formatter))
 				.collect(Collectors.toList());

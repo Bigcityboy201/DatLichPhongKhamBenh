@@ -25,8 +25,8 @@ public interface AppointmentsMapper {
 	@Mapping(source = "status", target = "status")
 	AppointmentsResponseDTO toDTO(final Appointments appointments);
 
-	// @Mapping(source = "userId", target = "user.userId")
-	@Mapping(source = "doctorId", target = "doctors.id")
+	// Không set trực tiếp doctors.id, sẽ gán Doctors trong service
+	@Mapping(target = "doctors", ignore = true)
 	@Mapping(target = "status", expression = "java(truonggg.Enum.Appointments_Enum.PENDING)")
 	Appointments toEntity(AppointmentsRequestDTO dto);
 
