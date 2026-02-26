@@ -2,7 +2,7 @@ package truonggg.schedules.domain.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;

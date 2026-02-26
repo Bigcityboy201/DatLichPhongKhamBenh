@@ -22,7 +22,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import truonggg.Enum.Appointments_Enum;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.payment.domain.model.Payments;
 import truonggg.user.domain.model.User;
 

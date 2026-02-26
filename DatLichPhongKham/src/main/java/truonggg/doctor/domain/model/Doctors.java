@@ -1,4 +1,4 @@
-package truonggg.doctor.domain;
+package truonggg.doctor.domain.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,7 +29,7 @@ public class Doctors {
     @Column(columnDefinition = "BIT DEFAULT 0")
     private Boolean isFeatured;
     @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "userId")
+    @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false, unique = true)
     private User user;
     @OneToMany(mappedBy = "doctors", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointments> list = new ArrayList();
@@ -55,5 +55,31 @@ public class Doctors {
 
     public void setIsFeatured(Boolean isFeatured) {
         this.isFeatured = isFeatured;
+    }
+
+    public void activate() {
+        if (this.user == null) {
+            throw new IllegalStateException("Doctor must be linked to a user");
+        }
+
+        if (!this.user.getIsActive()) {
+            throw new IllegalStateException("Cannot activate doctor if user is inactive");
+        }
+
+        this.isActive = true;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    public void ensureValidState() {
+        if (this.user == null) {
+            throw new IllegalStateException("Doctor must belong to a user");
+        }
+
+        if (this.experienceYears < 0) {
+            throw new IllegalStateException("Experience years cannot be negative");
+        }
     }
 }

@@ -21,7 +21,7 @@ import truonggg.appointment.application.AppointmentsQueryService;
 import truonggg.appointment.domain.model.Appointments;
 import truonggg.appointment.infrastructure.AppointmentsRepository;
 import truonggg.appointment.mapper.AppointmentsMapper;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.CancelAppointmentResponse;

@@ -2,7 +2,7 @@ package truonggg.review.domain.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.user.domain.model.User;
 
 import java.util.Date;

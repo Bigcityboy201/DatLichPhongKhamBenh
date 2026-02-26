@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import truonggg.Exception.NotFoundException;
 import truonggg.appointment.domain.model.Appointments;
 import truonggg.department.domain.model.Departments;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.schedules.domain.model.Schedules;
 import truonggg.user.domain.model.User;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;

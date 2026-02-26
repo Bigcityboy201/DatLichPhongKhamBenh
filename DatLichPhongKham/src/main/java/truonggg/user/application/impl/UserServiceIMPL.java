@@ -3,9 +3,10 @@ package truonggg.user.application.impl;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.context.ApplicationEventPublisher;
+import jakarta.annotation.PostConstruct;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,8 +16,8 @@ import lombok.RequiredArgsConstructor;
 import truonggg.Enum.UpdateContext;
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
+import truonggg.role.application.RoleAssignmentHandler;
 import truonggg.role.domain.model.Role;
-import truonggg.user.domain.event.UserRoleAssignedEvent;
 import truonggg.user.domain.model.User;
 import truonggg.constant.SecurityRole;
 import truonggg.dto.reponseDTO.UserResponseDTO;
@@ -24,14 +25,12 @@ import truonggg.dto.requestDTO.AssignRoleRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
 import truonggg.user.mapper.UserMapper;
-import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.role.infrastructure.RoleRepository;
 import truonggg.user.infrastructure.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.user.application.PasswordService;
 import truonggg.user.application.UserManagementService;
 import truonggg.user.application.UserSelfService;
-import truonggg.doctor.domain.Doctors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,21 +39,50 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 	private final UserMapper userMapper;
 	private final PasswordService passwordService;
 	private final RoleRepository roleRepository;
-	private final DoctorsRepository doctorsRepository;
-    private final ApplicationEventPublisher applicationEventPublisher;
+    // Spring inject tất cả handler vào đây
+    private final List<RoleAssignmentHandler> handlers;
+
+    // Map build sau khi inject xong
+    private Map<String, RoleAssignmentHandler> handlerMap;
+
+
+    @PostConstruct
+    public void init() {
+        this.handlerMap = handlers == null
+                ? Map.of()
+                : handlers.stream()
+                .collect(Collectors.toMap(
+                        RoleAssignmentHandler::supportedRole,
+                        Function.identity()
+                ));
+    }
 
 	// create-user(srp)
-	@Override
-	@Transactional
-	public UserResponseDTO createUser(UserRequestDTO dto) {
-		validateUser(dto);
+    @Override
+    @Transactional
+    public UserResponseDTO createUser(UserRequestDTO dto) {
 
-		User user = userMapper.toEntity(dto);
+        validateUser(dto);
 
-		prepareUser(user);
+        User user = userMapper.toEntity(dto);
 
-		return userMapper.toDTO(userRepository.save(user));
-	}
+        // encode password vẫn ở service (vì là infrastructure concern)
+        user.setPassword(passwordService.encodePassword(user.getPassword()));
+
+        // lấy default role
+        Role roleUser = roleRepository.findByRoleName(SecurityRole.ROLE_USER);
+        if (roleUser == null) {
+            throw new NotFoundException("role", "Default role USER not found");
+        }
+
+        // gọi behavior domain
+        user.changeRole(roleUser);
+        user.markCreated();
+        user.deactivate();        // mặc định active
+        user.ensureValidState();  // check invariant
+
+        return userMapper.toDTO(userRepository.save(user));
+    }
 
 	private void validateUser(UserRequestDTO dto) {
 		Map<String, String> errors = new HashMap<>();
@@ -71,45 +99,46 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 			throw new UserAlreadyExistException(errors);
 		}
 	}
-
-	private void prepareUser(User user) {
-		// Encode password trước khi lưu
-		user.setPassword(this.passwordService.encodePassword(user.getPassword()));
-
-		// Set role mặc định là USER nếu chưa có
-		if (user.getRole() == null) {
-			Role roleUser = this.roleRepository.findByRoleName(SecurityRole.ROLE_USER);
-			if (roleUser == null) {
-				throw new NotFoundException("role", "Default role USER not found");
-			}
-			user.setRole(roleUser);
-		}
-
-		// Set isActive mặc định là false (cần admin kích hoạt)
-		user.setActive(false);
-	}
-
 	// kết thúc create
 
 	// assignRole
     //coupling:gọi repo,mapper,entity doctor
-    @Override
     @Transactional
+    @Override
     public UserResponseDTO assignRole(AssignRoleRequestDTO dto) {
 
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-        Role role = roleRepository.findById(dto.getRoleId())
+        Role newRole = roleRepository.findById(dto.getRoleId())
                 .orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
-        user.setRole(role);
-        userRepository.save(user);
+        String oldRoleName = user.getRole() != null
+                ? user.getRole().getRoleName()
+                : null;
 
-        // Publish domain event (SYNC)
-        applicationEventPublisher.publishEvent(
-                new UserRoleAssignedEvent(user.getUserId(), role.getRoleName())
-        );
+        String newRoleName = newRole.getRoleName();
+
+        if (oldRoleName != null && oldRoleName.equals(newRoleName)) {
+            return userMapper.toDTO(user); // không đổi gì
+        }
+
+        // remove role cũ
+        if (oldRoleName != null) {
+            RoleAssignmentHandler oldHandler = handlerMap.get(oldRoleName);
+            if (oldHandler != null) {
+                oldHandler.onRemoved(user);
+            }
+        }
+
+        // đổi role
+        user.assignRole(newRole);
+
+        // add role mới
+        RoleAssignmentHandler newHandler = handlerMap.get(newRoleName);
+        if (newHandler != null) {
+            newHandler.onAssigned(user);
+        }
 
         return userMapper.toDTO(user);
     }
@@ -128,32 +157,38 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 		return this.userMapper.toDTO(user);
 	}
 
+    @Override
+    @Transactional
+    public UserResponseDTO update(Integer id, UserUpdateRequestDTO dto) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+
+        validateEmailUniqueness(user, dto);
+
+        user.updateByAdmin(dto);
+
+        return userMapper.toDTO(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO updateStatus(Integer id, Boolean isActive) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+
+        if (Boolean.TRUE.equals(isActive)) {
+            user.activate();
+        } else if (Boolean.FALSE.equals(isActive)) {
+            user.deactivate();
+        }
+
+        return userMapper.toDTO(user);
+    }
+
+    @Transactional
 	@Override
-	@Transactional
-	public UserResponseDTO update(Integer id, UserUpdateRequestDTO dto) {
-		User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
-
-		validateAdminUpdate(user, dto);
-
-		applyUserUpdate(user, dto, UpdateContext.ADMIN);
-
-		return userMapper.toDTO(userRepository.save(user));
-	}
-
-	@Override
-	@Transactional
-	public UserResponseDTO updateStatus(Integer id, Boolean isActive) {
-		User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
-
-		if (isActive != null) {
-			user.setActive(isActive);
-			userRepository.save(user);
-		}
-		return this.userMapper.toDTO(user);
-	}
-
-	@Override
-	@Transactional
 	public boolean deleteManually(Integer id) {
 		User user = this.userRepository.findById(id).orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
@@ -169,64 +204,36 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 		return this.userMapper.toDTO(user);
 	}
 
-	@Override
-	@Transactional
-	public UserResponseDTO updateProfile(String userName, UserUpdateRequestDTO dto) {
+    @Override
+    @Transactional
+    public UserResponseDTO updateProfile(String userName,
+                                         UserUpdateRequestDTO dto) {
 
-		User user = userRepository.findByUserName(userName)
-				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+        User user = userRepository.findByUserName(userName)
+                .orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		validateUpdateProfile(user, dto); // dùng Map ở đây
+        validateEmailUniqueness(user, dto);
 
-		applyUserUpdate(user, dto, UpdateContext.SELF);
+        user.updateBySelf(dto);
 
-		return userMapper.toDTO(userRepository.save(user));
-	}
+        return userMapper.toDTO(user);
+    }
 
-	private void validateUpdateProfile(User user, UserUpdateRequestDTO dto) {
+    private void validateEmailUniqueness(User user,
+                                         UserUpdateRequestDTO dto) {
 
-		Map<String, String> errors = new HashMap<>();
+        if (dto.getEmail() == null)
+            return;
 
-		if (dto.getEmail() != null && userRepository.existsByEmailAndUserIdNot(dto.getEmail(), user.getUserId())) {
+        boolean exists = userRepository
+                .existsByEmailAndUserIdNot(dto.getEmail(),
+                        user.getUserId());
 
-			errors.put("email", "Email already exists");
-		}
-
-		if (!errors.isEmpty()) {
-			throw new UserAlreadyExistException(errors);
-		}
-	}
-
-	private void validateAdminUpdate(User user, UserUpdateRequestDTO dto) {
-
-		if (dto.getEmail() != null && userRepository.existsByEmailAndUserIdNot(dto.getEmail(), user.getUserId())) {
-
-			throw new UserAlreadyExistException(Map.of("email", "Email already exists"));
-		}
-	}
-
-	void applyUserUpdate(User user, UserUpdateRequestDTO dto, UpdateContext context) {
-
-		if (dto.getFullName() != null)
-			user.setFullName(dto.getFullName());
-
-		if (dto.getEmail() != null) {
-
-			user.setEmail(dto.getEmail());
-		}
-
-		if (dto.getPhone() != null)
-			user.setPhone(dto.getPhone());
-
-		if (dto.getAddress() != null)
-			user.setAddress(dto.getAddress());
-
-		if (dto.getDateOfBirth() != null)
-			user.setDateOfBirth(dto.getDateOfBirth());
-
-		// Trạng thái isActive được cập nhật qua API riêng (UserStatusDTO)
-	}
-
+        if (exists) {
+            throw new UserAlreadyExistException(
+                    Map.of("email", "Email already exists"));
+        }
+    }
 }
 
 

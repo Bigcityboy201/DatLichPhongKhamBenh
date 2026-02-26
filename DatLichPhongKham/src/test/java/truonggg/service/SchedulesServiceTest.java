@@ -33,7 +33,7 @@ import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.schedules.application.impl.SchedulesServiceImpl;
 import truonggg.schedules.infrastructure.SchedulesRepository;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 
 @ExtendWith(MockitoExtension.class)
 public class SchedulesServiceTest {

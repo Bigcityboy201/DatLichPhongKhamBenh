@@ -29,7 +29,7 @@ import truonggg.appointment.infrastructure.AppointmentsRepository;
 import truonggg.appointment.mapper.AppointmentsMapper;
 import truonggg.department.domain.model.Departments;
 import truonggg.doctor.application.impl.DoctorsServiceIMPL;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.doctor.mapper.DoctorsMapper;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;

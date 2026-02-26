@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import truonggg.user.domain.model.User;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 
 @Repository
 public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
@@ -34,6 +34,7 @@ public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
 
 	Optional<Doctors> findByUser_UserName(String userName);
 
+    boolean existsByUser(User user);
 }
 
 

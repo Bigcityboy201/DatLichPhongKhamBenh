@@ -36,7 +36,7 @@ import truonggg.review.infrastructure.ReviewRepository;
 import truonggg.user.infrastructure.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.review.application.impl.ReviewServiceIMPL;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 
 @ExtendWith(MockitoExtension.class)
 public class ReviewServiceTest {

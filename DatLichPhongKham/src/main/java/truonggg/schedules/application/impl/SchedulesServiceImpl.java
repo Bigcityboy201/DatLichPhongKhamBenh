@@ -7,7 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import truonggg.Exception.NotFoundException;
 import truonggg.schedules.domain.model.Schedules;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.schedules.infrastructure.SchedulesRepository;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;

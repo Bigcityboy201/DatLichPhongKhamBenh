@@ -9,7 +9,7 @@ import org.mapstruct.Mapping;
 
 import truonggg.appointment.domain.model.Appointments;
 import truonggg.schedules.domain.model.Schedules;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.DoctorSummaryResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;

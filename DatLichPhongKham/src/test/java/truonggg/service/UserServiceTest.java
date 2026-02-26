@@ -25,7 +25,7 @@ import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.role.domain.model.Role;
 import truonggg.user.domain.model.User;
 import truonggg.constant.SecurityRole;

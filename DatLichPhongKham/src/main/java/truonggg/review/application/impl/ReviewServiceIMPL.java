@@ -25,7 +25,7 @@ import truonggg.user.infrastructure.UserRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.review.application.ReviewAdminService;
 import truonggg.review.application.ReviewSelfService;
-import truonggg.doctor.domain.Doctors;
+import truonggg.doctor.domain.model.Doctors;
 
 @Service
 @RequiredArgsConstructor
