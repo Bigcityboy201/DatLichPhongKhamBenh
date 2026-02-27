@@ -63,11 +63,8 @@ public class ReviewServiceTest {
 		dto.setUserId(1);
 		dto.setDoctorId(2);
 
-		User user = new User();
-		user.setUserId(1);
-
-		Doctors doctor = new Doctors();
-		doctor.setId(2);
+		User user = org.mockito.Mockito.mock(User.class);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
 
 		review entity = new review();
 		review saved = new review();
@@ -104,11 +101,8 @@ public class ReviewServiceTest {
 		dto.setDoctorId(2);
 		String username = "user1";
 
-		User user = new User();
-		user.setUserName(username);
-
-		Doctors doctor = new Doctors();
-		doctor.setId(2);
+		User user = org.mockito.Mockito.mock(User.class);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
 
 		review entity = new review();
 
@@ -149,8 +143,8 @@ public class ReviewServiceTest {
 		Integer id = 1;
 		String username = "user1";
 
-		User otherUser = new User();
-		otherUser.setUserName("other");
+		User otherUser = org.mockito.Mockito.mock(User.class);
+		when(otherUser.getUserName()).thenReturn("other");
 
 		review found = new review();
 		found.setUser(otherUser);
@@ -168,8 +162,8 @@ public class ReviewServiceTest {
 		Integer id = 1;
 		String username = "user1";
 
-		User user = new User();
-		user.setUserName(username);
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getUserName()).thenReturn(username);
 
 		review found = new review();
 		found.setUser(user);

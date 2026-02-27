@@ -103,11 +103,9 @@ public class AppointmentServiceTest {
 		dto.setAppointmentDateTime(appointmentTime);
 
 		Integer currentUserId = 1;
-		User user = new User();
-		user.setUserId(1);
-		Doctors
-                doctor = new Doctors();
-		doctor.setId(2);
+		User user = org.mockito.Mockito.mock(User.class);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
+		when(doctor.getId()).thenReturn(2);
 
 		Appointments saved = new Appointments();
 		AppointmentsResponseDTO responseDTO = new AppointmentsResponseDTO();
@@ -169,8 +167,8 @@ public class AppointmentServiceTest {
 		Integer id = 1;
 		String username = "user1";
 
-		User user = new User();
-		user.setUserName(username);
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getUserName()).thenReturn(username);
 
 		Appointments appointment = new Appointments();
 		appointment.setId(id);
@@ -200,8 +198,8 @@ public class AppointmentServiceTest {
 
 		Integer id = 1;
 
-		User user = new User();
-		user.setUserName("other");
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getUserName()).thenReturn("other");
 
 		Appointments appointment = new Appointments();
 		appointment.setId(id);
@@ -223,8 +221,8 @@ public class AppointmentServiceTest {
 		Integer id = 1;
 		String username = "user1";
 
-		User user = new User();
-		user.setUserName(username);
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getUserName()).thenReturn(username);
 
 		Appointments appointment = new Appointments();
 		appointment.setId(id);

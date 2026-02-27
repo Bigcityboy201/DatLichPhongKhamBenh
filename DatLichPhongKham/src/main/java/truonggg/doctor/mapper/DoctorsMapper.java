@@ -13,7 +13,6 @@ import truonggg.doctor.domain.model.Doctors;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.DoctorSummaryResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
-import truonggg.dto.requestDTO.DoctorsRequestDTO;
 
 @Mapper(componentModel = "spring")
 public interface DoctorsMapper {
@@ -26,7 +25,7 @@ public interface DoctorsMapper {
 	@Mapping(source = "departments.name", target = "departmentName")
 	@Mapping(source = "isActive", target = "active")
 	@Mapping(source = "isFeatured", target = "isFeatured")
-	@Mapping(target = "schedules", expression = "java(mapSchedules(doctors.getList2()))")
+	@Mapping(target = "schedules", expression = "java(mapSchedules(doctors.getSchedules()))")
 	@Mapping(target = "appointments", expression = "java(mapAppointments(doctors.getList()))")
 	DoctorsReponseDTO toDTO(Doctors doctors);
 
@@ -100,8 +99,6 @@ public interface DoctorsMapper {
 			return List.of();
 		return doctorsList.stream().map(this::toDTOOther).collect(Collectors.toList());
 	}
-
-	Doctors toEntity(DoctorsRequestDTO dto);
 }
 
 

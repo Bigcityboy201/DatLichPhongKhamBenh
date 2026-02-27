@@ -53,7 +53,8 @@ public class DepartmentServiceImpl implements DepartmentsCommandService, Departm
 	@Override
 	@Transactional
 	public DepartmentsResponseDTO createDepartment(DepartmentsRequestDTO dto) {
-		Departments departments = this.departmentsMapper.toEntity(dto);
+		//Departments departments = this.departmentsMapper.toEntity(dto);
+        Departments departments=Departments.create(dto.getName(), dto.getDescription());
 		return this.departmentsMapper.toResponse(this.departmentsRepository.save(departments));
 	}
 
@@ -61,7 +62,7 @@ public class DepartmentServiceImpl implements DepartmentsCommandService, Departm
 	@Transactional
 	public DepartmentsResponseDTO update(Integer id, DepartmentsUpdateRequestDTO dto) {
 		Departments found = getDepartmentOrThrow(id);
-		applyUpdate(found, dto);
+		found.changeInfo(dto.getName(), dto.getDescription());
 		return this.departmentsMapper.toResponse(this.departmentsRepository.save(found));
 	}
 
@@ -69,7 +70,17 @@ public class DepartmentServiceImpl implements DepartmentsCommandService, Departm
 	@Transactional
 	public DepartmentsResponseDTO delete(Integer id, DepartmentsUpdateRequestDTO dto) {
 		Departments found = getDepartmentOrThrow(id);
-		applyStatus(found, dto);
+        Boolean active = dto.getActive();
+
+        if (active == null) {
+            throw new IllegalArgumentException("Active status is required");
+        }
+
+        if (active) {
+            found.activate();
+        } else {
+            found.deactivate();
+        }
 		return this.departmentsMapper.toResponse(this.departmentsRepository.save(found));
 	}
 
@@ -86,20 +97,5 @@ public class DepartmentServiceImpl implements DepartmentsCommandService, Departm
 	private Departments getDepartmentOrThrow(Integer id) {
 		return this.departmentsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("department", "Department Not Found"));
-	}
-
-	private void applyUpdate(Departments entity, DepartmentsUpdateRequestDTO dto) {
-		if (dto.getName() != null) {
-			entity.setName(dto.getName());
-		}
-		if (dto.getDescription() != null) {
-			entity.setDescription(dto.getDescription());
-		}
-	}
-
-	private void applyStatus(Departments entity, DepartmentsUpdateRequestDTO dto) {
-		if (dto.getActive() != null) {
-			entity.setIsActive(dto.getActive());
-		}
 	}
 }

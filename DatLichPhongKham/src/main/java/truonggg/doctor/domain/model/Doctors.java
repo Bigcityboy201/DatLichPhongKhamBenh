@@ -1,20 +1,23 @@
 package truonggg.doctor.domain.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Future;
 import lombok.*;
+import truonggg.Enum.DayOfWeek;
 import truonggg.appointment.domain.model.Appointments;
 import truonggg.department.domain.model.Departments;
 import truonggg.review.domain.model.review;
 import truonggg.schedules.domain.model.Schedules;
 import truonggg.user.domain.model.User;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Getter
 //@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 //@AllArgsConstructor
 //@Builder
 public class Doctors {
@@ -35,8 +38,8 @@ public class Doctors {
     private List<Appointments> list = new ArrayList();
     @OneToMany(mappedBy = "doctors")
     private List<review> list1 = new ArrayList<>();
-    @OneToMany(mappedBy = "doctors", fetch = FetchType.LAZY, orphanRemoval = true)
-    private List<Schedules> list2 = new ArrayList<>();
+    @OneToMany(mappedBy = "doctors", fetch = FetchType.LAZY, orphanRemoval = true,cascade = CascadeType.ALL)
+    private List<Schedules> schedules = new ArrayList<>();
     @ManyToOne
     @JoinColumn(name = "departments_id", referencedColumnName = "id")
     private Departments departments;
@@ -131,5 +134,69 @@ public class Doctors {
             throw new IllegalStateException("Doctor already inactive");
         }
         this.isActive = true;
+    }
+
+    //agregate schudules
+    public Schedules addSchedule(
+            DayOfWeek dayOfWeek,
+            LocalDateTime startAt,
+            LocalDateTime endAt
+    ) {
+        Schedules schedule = Schedules.create(dayOfWeek, startAt, endAt, this);
+
+        this.schedules.add(schedule);
+
+        return schedule;
+    }
+
+    public void removeSchedule(Integer scheduleId) {
+        schedules.removeIf(s -> s.getId().equals(scheduleId));
+    }
+
+    private void validateTime(LocalDateTime startAt, LocalDateTime endAt) {
+        if (startAt == null || endAt == null)
+            throw new IllegalArgumentException("Time is required");
+
+        if (!endAt.isAfter(startAt))
+            throw new IllegalArgumentException("End time must be after start time");
+    }
+
+    private void validateNoOverlap(
+            DayOfWeek day,
+            LocalDateTime start,
+            LocalDateTime end
+    ) {
+        for (Schedules s : schedules) {
+            if (s.getDayOfWeek().equals(day)) {
+
+                boolean overlap =
+                        start.isBefore(s.getEndAt()) &&
+                                end.isAfter(s.getStartAt());
+
+                if (overlap) {
+                    throw new IllegalStateException("Schedule overlap detected");
+                }
+            }
+        }
+    }
+    public Schedules updateSchedule(
+            Integer scheduleId,
+            DayOfWeek newDay,
+            LocalDateTime newStart,
+            LocalDateTime newEnd
+    ) {
+
+        Schedules schedule = schedules.stream()
+                .filter(s -> s.getId().equals(scheduleId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Schedule not found"));
+
+        validateTime(newStart, newEnd);
+        validateNoOverlap(newDay, newStart, newEnd);
+
+        schedule.changeDay(newDay);
+        schedule.changeTime(newStart, newEnd);
+
+        return schedule;
     }
 }

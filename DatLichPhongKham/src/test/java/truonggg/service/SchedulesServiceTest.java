@@ -24,15 +24,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-import truonggg.schedules.domain.model.Schedules;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
 import truonggg.dto.requestDTO.SchedulesRequestDTO;
 import truonggg.dto.requestDTO.SchedulesUpdateRequestDTO;
 import truonggg.schedules.mapper.SchedulesMapper;
 import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.reponse.PagedResult;
-import truonggg.schedules.application.impl.SchedulesServiceImpl;
+import truonggg.schedules.application.impl.SchedulesCommandServiceImpl;
+import truonggg.schedules.application.impl.SchedulesQueryServiceImpl;
 import truonggg.schedules.infrastructure.SchedulesRepository;
+import truonggg.schedules.domain.model.Schedules;
 import truonggg.doctor.domain.model.Doctors;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,22 +49,25 @@ public class SchedulesServiceTest {
 	private SchedulesMapper schedulesMapper;
 
 	@InjectMocks
-	private SchedulesServiceImpl schedulesService;
+	private SchedulesCommandServiceImpl schedulesCommandService;
+
+	@InjectMocks
+	private SchedulesQueryServiceImpl schedulesQueryService;
 
 	// ============= getAllPaged ============
 	@DisplayName("getAllPaged: success")
 	@Test
 	void getAllPaged_ShouldReturnPagedResult() {
 		Pageable pageable = PageRequest.of(0, 2);
-		Schedules s1 = new Schedules();
-		Schedules s2 = new Schedules();
+		Schedules s1 = org.mockito.Mockito.mock(Schedules.class);
+		Schedules s2 = org.mockito.Mockito.mock(Schedules.class);
 		Page<Schedules> page = new PageImpl<>(List.of(s1, s2), pageable, 2);
 
 		when(schedulesRepository.findAll(pageable)).thenReturn(page);
 		when(schedulesMapper.toDTO(s1)).thenReturn(new SchedulesReponseDTO());
 		when(schedulesMapper.toDTO(s2)).thenReturn(new SchedulesReponseDTO());
 
-		PagedResult<SchedulesReponseDTO> result = schedulesService.getAllPaged(pageable);
+		PagedResult<SchedulesReponseDTO> result = schedulesQueryService.getAllPaged(pageable);
 
 		assertNotNull(result);
 		assertEquals(2, result.getContent().size());
@@ -76,22 +80,25 @@ public class SchedulesServiceTest {
 	void save_ShouldCreateSchedule_WhenDoctorExists() {
 		SchedulesRequestDTO dto = new SchedulesRequestDTO();
 		dto.setDoctorId(1);
+		dto.setDayOfWeek(truonggg.Enum.DayOfWeek.MONDAY);
+		dto.setStartAt(java.time.LocalDateTime.now().plusDays(1));
+		dto.setEndAt(java.time.LocalDateTime.now().plusDays(1).plusHours(1));
 
-		Doctors doctor = new Doctors();
-		Schedules schedule = new Schedules();
-		Schedules saved = new Schedules();
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
+		Schedules schedule = org.mockito.Mockito.mock(Schedules.class);
 		SchedulesReponseDTO responseDTO = new SchedulesReponseDTO();
 
 		when(doctorsRepository.findById(1)).thenReturn(Optional.of(doctor));
-		when(schedulesMapper.toModel(dto)).thenReturn(schedule);
-		when(schedulesRepository.save(schedule)).thenReturn(saved);
-		when(schedulesMapper.toDTO(saved)).thenReturn(responseDTO);
+		when(doctor.addSchedule(dto.getDayOfWeek(), dto.getStartAt(), dto.getEndAt())).thenReturn(schedule);
+		when(doctorsRepository.save(doctor)).thenReturn(doctor);
+		when(schedulesMapper.toDTO(schedule)).thenReturn(responseDTO);
 
-		SchedulesReponseDTO result = schedulesService.save(dto);
+		SchedulesReponseDTO result = schedulesCommandService.save(dto);
 
 		assertNotNull(result);
 		verify(doctorsRepository).findById(1);
-		verify(schedulesRepository).save(schedule);
+		verify(doctorsRepository).save(doctor);
+		verify(schedulesRepository, never()).save(any());
 	}
 
 	@DisplayName("save: throw NotFoundException when doctor not found")
@@ -102,7 +109,7 @@ public class SchedulesServiceTest {
 
 		when(doctorsRepository.findById(1)).thenReturn(Optional.empty());
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesService.save(dto));
+		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesCommandService.save(dto));
 		assertEquals("doctor: Doctor Not Found!", ex.getMessage());
 
 		verify(schedulesRepository, never()).save(any());
@@ -113,18 +120,27 @@ public class SchedulesServiceTest {
 	@Test
 	void update_ShouldApplyChanges_WhenScheduleExists() {
 		Integer id = 1;
-		Schedules schedule = new Schedules();
+		Schedules foundSchedule = org.mockito.Mockito.mock(Schedules.class);
+		Schedules updatedSchedule = org.mockito.Mockito.mock(Schedules.class);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
 
 		SchedulesUpdateRequestDTO dto = new SchedulesUpdateRequestDTO();
+		dto.setDoctorId(10);
+		dto.setDayOfWeek(truonggg.Enum.DayOfWeek.TUESDAY);
+		dto.setStartAt(java.time.LocalDateTime.now().plusDays(2));
+		dto.setEndAt(java.time.LocalDateTime.now().plusDays(2).plusHours(2));
 
-		when(schedulesRepository.findById(id)).thenReturn(Optional.of(schedule));
-		when(schedulesRepository.save(schedule)).thenReturn(schedule);
-		when(schedulesMapper.toDTO(schedule)).thenReturn(new SchedulesReponseDTO());
+		when(schedulesRepository.findById(id)).thenReturn(Optional.of(foundSchedule));
+		when(doctorsRepository.findById(10)).thenReturn(Optional.of(doctor));
+		when(doctor.updateSchedule(id, dto.getDayOfWeek(), dto.getStartAt(), dto.getEndAt())).thenReturn(updatedSchedule);
+		when(doctorsRepository.save(doctor)).thenReturn(doctor);
+		when(schedulesMapper.toDTO(updatedSchedule)).thenReturn(new SchedulesReponseDTO());
 
-		SchedulesReponseDTO result = schedulesService.update(id, dto);
+		SchedulesReponseDTO result = schedulesCommandService.update(id, dto);
 
 		assertNotNull(result);
-		verify(schedulesRepository).save(schedule);
+		verify(doctorsRepository).save(doctor);
+		verify(schedulesRepository, never()).save(any());
 	}
 
 	@DisplayName("update: throw NotFoundException when schedule not found")
@@ -133,7 +149,7 @@ public class SchedulesServiceTest {
 		SchedulesUpdateRequestDTO dto = new SchedulesUpdateRequestDTO();
 		when(schedulesRepository.findById(1)).thenReturn(Optional.empty());
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesService.update(1, dto));
+		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesCommandService.update(1, dto));
 		assertEquals("schedule: Schedule Not Found", ex.getMessage());
 	}
 
@@ -142,20 +158,26 @@ public class SchedulesServiceTest {
 	@Test
 	void deleteSoft_ShouldUpdateStatus_WhenExists() {
 		Integer id = 1;
-		Schedules schedule = new Schedules();
+		Doctors doctor = Doctors.createDefault();
+		Schedules schedule = Schedules.create(
+				truonggg.Enum.DayOfWeek.MONDAY,
+				java.time.LocalDateTime.now().plusDays(1),
+				java.time.LocalDateTime.now().plusDays(1).plusHours(1),
+				doctor
+		);
+		schedule.activate(); // để đi nhánh deactivate
 
 		SchedulesUpdateRequestDTO dto = new SchedulesUpdateRequestDTO();
 		dto.setActive(false);
 
 		when(schedulesRepository.findById(id)).thenReturn(Optional.of(schedule));
-		when(schedulesRepository.save(schedule)).thenReturn(schedule);
 		when(schedulesMapper.toDTO(schedule)).thenReturn(new SchedulesReponseDTO());
 
-		SchedulesReponseDTO result = schedulesService.delete(id, dto);
+		SchedulesReponseDTO result = schedulesCommandService.delete(id, dto);
 
 		assertNotNull(result);
 		assertEquals(false, schedule.getIsActive());
-		verify(schedulesRepository).save(schedule);
+		verify(schedulesRepository, never()).save(any());
 	}
 
 	@DisplayName("delete (soft): throw NotFoundException when schedule not found")
@@ -166,7 +188,7 @@ public class SchedulesServiceTest {
 
 		when(schedulesRepository.findById(1)).thenReturn(Optional.empty());
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesService.delete(1, dto));
+		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesCommandService.delete(1, dto));
 		assertEquals("schedule: Schedule Not Found", ex.getMessage());
 	}
 
@@ -174,10 +196,10 @@ public class SchedulesServiceTest {
 	@DisplayName("delete (hard): success when schedule exists")
 	@Test
 	void deleteHard_ShouldDelete_WhenExists() {
-		Schedules schedule = new Schedules();
+		Schedules schedule = org.mockito.Mockito.mock(Schedules.class);
 		when(schedulesRepository.findById(1)).thenReturn(Optional.of(schedule));
 
-		boolean result = schedulesService.delete(1);
+		boolean result = schedulesCommandService.delete(1);
 
 		assertTrue(result);
 		verify(schedulesRepository).delete(schedule);
@@ -188,7 +210,7 @@ public class SchedulesServiceTest {
 	void deleteHard_ShouldThrow_WhenNotFound() {
 		when(schedulesRepository.findById(1)).thenReturn(Optional.empty());
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesService.delete(1));
+		NotFoundException ex = assertThrows(NotFoundException.class, () -> schedulesCommandService.delete(1));
 		assertEquals("schedule: Schedule Not Found", ex.getMessage());
 
 		verify(schedulesRepository, never()).delete(any());

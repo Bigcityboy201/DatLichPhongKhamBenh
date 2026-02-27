@@ -4,7 +4,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import truonggg.schedules.domain.model.Schedules;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
-import truonggg.dto.requestDTO.SchedulesRequestDTO;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,9 +15,13 @@ public interface SchedulesMapper {
     @Mapping(source = "isActive", target = "active")
     SchedulesReponseDTO toDTO(final Schedules dto);
 
-    // Không map ngược doctorId -> doctors.id trực tiếp, sẽ gán Doctors trong service
-    @Mapping(target = "doctors", ignore = true)
-    Schedules toModel(final SchedulesRequestDTO dto);
+    /**
+     * Entity dùng enum {@code truonggg.Enum.DayOfWeek} nhưng response DTO dùng {@code java.time.DayOfWeek},
+     * nên cần mapping thủ công để MapStruct hiểu cách convert.
+     */
+    default java.time.DayOfWeek map(final truonggg.Enum.DayOfWeek value) {
+        return value == null ? null : java.time.DayOfWeek.valueOf(value.name());
+    }
 
     default List<SchedulesReponseDTO> toDTOList(List<Schedules> list) {
         if (list == null || list.isEmpty()) {

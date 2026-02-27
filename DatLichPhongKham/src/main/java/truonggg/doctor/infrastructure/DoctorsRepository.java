@@ -23,7 +23,7 @@ public interface DoctorsRepository extends JpaRepository<Doctors, Integer> {
 
 	Page<Doctors> findByDepartmentsId(Integer departmentId, Pageable pageable);
 
-	@Query("SELECT d FROM Doctors d LEFT JOIN FETCH d.list2 WHERE d.id = :id")
+	@Query("SELECT d FROM Doctors d LEFT JOIN FETCH d.schedules WHERE d.id = :id")
 	Optional<Doctors> findByIdWithSchedules(@Param("id") Integer id);
 
 	Page<Doctors> findByUserFullNameContainingIgnoreCase(String keyword, Pageable pageable);

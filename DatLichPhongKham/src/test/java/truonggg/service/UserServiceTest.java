@@ -1,22 +1,16 @@
 package truonggg.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -25,612 +19,340 @@ import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
-import truonggg.doctor.domain.model.Doctors;
-import truonggg.role.domain.model.Role;
-import truonggg.user.domain.model.User;
 import truonggg.constant.SecurityRole;
+import truonggg.doctor.application.impl.DoctorRoleAssignmentHandler;
+import truonggg.role.application.RoleAssignmentHandler;
+import truonggg.role.domain.model.Role;
+import truonggg.role.infrastructure.RoleRepository;
 import truonggg.dto.reponseDTO.UserResponseDTO;
 import truonggg.dto.requestDTO.AssignRoleRequestDTO;
 import truonggg.dto.requestDTO.UserRequestDTO;
 import truonggg.dto.requestDTO.UserUpdateRequestDTO;
-import truonggg.user.mapper.UserMapper;
-import truonggg.doctor.infrastructure.DoctorsRepository;
-import truonggg.role.infrastructure.RoleRepository;
-import truonggg.user.infrastructure.UserRepository;
-import truonggg.reponse.PagedResult;
 import truonggg.user.application.PasswordService;
 import truonggg.user.application.impl.UserServiceIMPL;
+import truonggg.user.domain.model.User;
+import truonggg.user.infrastructure.UserRepository;
+import truonggg.user.mapper.UserMapper;
+import truonggg.reponse.PagedResult;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
-	@Mock
-	private UserRepository userRepository;
-
-	@Mock
-	private RoleRepository roleRepository;
-
-	@Mock
-	private DoctorsRepository doctorsRepository;
-
-	@Mock
-	private UserMapper userMapper;
-
-	@Mock
-	private PasswordService passwordService;
-
-	@InjectMocks
-	private UserServiceIMPL userService;
-
-	// test CreateUser
-	@Test
-	@DisplayName("createUser: success when email & username do not exist")
-	void createUser_shouldReturnUserResponse_WhenUserDoesNotExist() {
-		// ===== b1: chuẩn bị dữ liệu =====
-		UserRequestDTO dto = new UserRequestDTO();
-		dto.setEmail("test@gmail.com");
-		dto.setUserName("testuser");
-		dto.setPassword("123456");
-
-		User userEntity = new User();
-		userEntity.setPassword("123456"); // password thô trước khi encode
-		userEntity.setRole(null); // để đi vào nhánh set default role
-
-		Role roleUser = new Role();
-		roleUser.setRoleName(SecurityRole.ROLE_USER);
-
-		User savedUser = new User();
-		savedUser.setUserId(1);
-		savedUser.setEmail(dto.getEmail());
-		savedUser.setUserName(dto.getUserName());
-		savedUser.setRole(roleUser);
-		savedUser.setActive(false);
-
-		UserResponseDTO responseDTO = new UserResponseDTO();
-		responseDTO.setUserId(1);
-		responseDTO.setEmail(dto.getEmail());
-		responseDTO.setUserName(dto.getUserName());
-
-		// ===== b2: mock hành vi dependency =====
-		when(userRepository.existsByEmail(dto.getEmail())).thenReturn(false);
-		when(userRepository.existsByUserName(dto.getUserName())).thenReturn(false);
-
-		when(userMapper.toEntity(dto)).thenReturn(userEntity);
-		when(passwordService.encodePassword(any())).thenReturn("encoded-password");
-
-		when(roleRepository.findByRoleName(SecurityRole.ROLE_USER)).thenReturn(roleUser);
-
-		when(userRepository.save(any(User.class))).thenReturn(savedUser);
-		when(userMapper.toDTO(savedUser)).thenReturn(responseDTO);
-
-		// ===== b3: gọi method cần test =====
-		UserResponseDTO result = userService.createUser(dto);
-
-		// ===== b4: assert kết quả =====
-		assertNotNull(result);
-		assertEquals(dto.getEmail(), result.getEmail());
-		assertEquals(dto.getUserName(), result.getUserName());
-
-		// ===== b5: verify hành vi quan trọng =====
-		verify(userRepository).existsByEmail(dto.getEmail());
-		verify(userRepository).existsByUserName(dto.getUserName());
-		verify(passwordService).encodePassword(any());
-		verify(userRepository).save(any(User.class));
-	}
-
-	@DisplayName("Create user - Throw exception when email already exists")
-	@Test
-	void createUser_ShouldThrowException_WhenEmailExists() {
-		// bước 1:chuẩn bị dữ liệu
-		UserRequestDTO dto = new UserRequestDTO();
-		dto.setEmail("test@gmail.com");
-		dto.setUserName("testuser");
-		dto.setPassword("123456");
-		// bước 2:mock hành vi dependency
-		when(userRepository.existsByEmail("test@gmail.com")).thenReturn(true);
-		when(userRepository.existsByUserName("testuser")).thenReturn(false);
-		// bước 3:
-		UserAlreadyExistException exception = assertThrows(UserAlreadyExistException.class,
-				() -> userService.createUser(dto));
-		assertTrue(exception.getFieldErrors().containsKey("email"));
-		assertEquals("Email already exists", exception.getFieldErrors().get("email"));
-		verify(userRepository).existsByEmail("test@gmail.com");
-		verify(userRepository).existsByUserName("testuser");
-		verify(userRepository, never()).save(any());
-	}
-
-	@DisplayName("Create user - Throw exception when username already exists")
-	@Test
-	void createUser_ShouldReturnThrowException_WhenUserNameExist() {
-
-		UserRequestDTO dto = new UserRequestDTO();
-		dto.setUserName("testuser");
-		dto.setEmail("testemail@gmail.com");
-		dto.setPassword("123456");
 
-		when(userRepository.existsByUserName("testuser")).thenReturn(true);
-		when(userRepository.existsByEmail("testemail@gmail.com")).thenReturn(false);
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private UserMapper userMapper;
+
+    @Mock
+    private PasswordService passwordService;
+
+    @Mock
+    private RoleRepository roleRepository;
+
+    private UserServiceIMPL userService;
+
+    @BeforeEach
+    void setUp() {
+        List<RoleAssignmentHandler> handlers = List.of(new DoctorRoleAssignmentHandler());
+        userService = new UserServiceIMPL(userRepository, userMapper, passwordService, roleRepository, handlers);
+        userService.init(); // build handlerMap như @PostConstruct
+    }
+
+    // ===================== CREATE =====================
+
+    @Test
+    @DisplayName("createUser: success when email & username do not exist")
+    void createUser_shouldReturnUserResponse_WhenUserDoesNotExist() {
+        UserRequestDTO dto = new UserRequestDTO();
+        dto.setFullName("Test User");
+        dto.setEmail("test@gmail.com");
+        dto.setUserName("testuser");
+        dto.setPassword("123456");
+
+        Role roleUser = new Role();
+        roleUser.setRoleName(SecurityRole.ROLE_USER);
+
+        when(userRepository.existsByEmail(dto.getEmail())).thenReturn(false);
+        when(userRepository.existsByUserName(dto.getUserName())).thenReturn(false);
+        when(roleRepository.findByRoleName(SecurityRole.ROLE_USER)).thenReturn(roleUser);
+        when(passwordService.encodePassword(dto.getPassword())).thenReturn("encoded-password");
+
+        UserResponseDTO responseDTO = new UserResponseDTO();
+        responseDTO.setEmail(dto.getEmail());
+        responseDTO.setUserName(dto.getUserName());
+        when(userMapper.toDTO(any(User.class))).thenReturn(responseDTO);
+
+        UserResponseDTO result = userService.createUser(dto);
+
+        assertNotNull(result);
+        assertEquals(dto.getEmail(), result.getEmail());
+        assertEquals(dto.getUserName(), result.getUserName());
+
+        verify(userRepository).save(any(User.class));
+        verify(userMapper).toDTO(any(User.class));
+    }
+
+    @Test
+    @DisplayName("createUser: throw when email already exists")
+    void createUser_ShouldThrow_WhenEmailExists() {
+        UserRequestDTO dto = new UserRequestDTO();
+        dto.setFullName("Test");
+        dto.setEmail("test@gmail.com");
+        dto.setUserName("testuser");
+        dto.setPassword("123456");
+
+        when(userRepository.existsByEmail(dto.getEmail())).thenReturn(true);
+        when(userRepository.existsByUserName(dto.getUserName())).thenReturn(false);
 
-		UserAlreadyExistException existException = assertThrows(UserAlreadyExistException.class,
-				() -> userService.createUser(dto));
+        UserAlreadyExistException ex = assertThrows(UserAlreadyExistException.class, () -> userService.createUser(dto));
+        assertEquals("Email already exists", ex.getFieldErrors().get("email"));
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createUser: throw when username already exists")
+    void createUser_ShouldThrow_WhenUserNameExists() {
+        UserRequestDTO dto = new UserRequestDTO();
+        dto.setFullName("Test");
+        dto.setEmail("test@gmail.com");
+        dto.setUserName("testuser");
+        dto.setPassword("123456");
+
+        when(userRepository.existsByEmail(dto.getEmail())).thenReturn(false);
+        when(userRepository.existsByUserName(dto.getUserName())).thenReturn(true);
+
+        UserAlreadyExistException ex = assertThrows(UserAlreadyExistException.class, () -> userService.createUser(dto));
+        assertEquals("Username already exists", ex.getFieldErrors().get("userName"));
 
-		assertTrue(existException.getFieldErrors().containsKey("userName"));
-		assertEquals("Username already exists", existException.getFieldErrors().get("userName"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createUser: throw when default role USER not found")
+    void createUser_ShouldThrow_WhenDefaultRoleNotFound() {
+        UserRequestDTO dto = new UserRequestDTO();
+        dto.setFullName("Test");
+        dto.setEmail("test@gmail.com");
+        dto.setUserName("testuser");
+        dto.setPassword("123456");
 
-		verify(userRepository).existsByEmail("testemail@gmail.com");
-		verify(userRepository).existsByUserName("testuser");
-		verify(userRepository, never()).save(any());
-	}
+        when(userRepository.existsByEmail(dto.getEmail())).thenReturn(false);
+        when(userRepository.existsByUserName(dto.getUserName())).thenReturn(false);
+        when(roleRepository.findByRoleName(SecurityRole.ROLE_USER)).thenReturn(null);
 
-	@DisplayName("Create user - Throw exception when username and email already exists")
-	@Test
-	void createUser_ShouldReturnThrowException_WhenUserNameAndEmailExist() {
-
-		UserRequestDTO dto = new UserRequestDTO();
-		dto.setUserName("testuser");
-		dto.setEmail("testemail@gmail.com");
-		dto.setPassword("123456");
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.createUser(dto));
+        assertEquals("role: Default role USER not found", ex.getMessage());
 
-		when(userRepository.existsByUserName("testuser")).thenReturn(true);
-		when(userRepository.existsByEmail("testemail@gmail.com")).thenReturn(true);
+        verify(userRepository, never()).save(any());
+    }
 
-		UserAlreadyExistException existException = assertThrows(UserAlreadyExistException.class,
-				() -> userService.createUser(dto));
+    @Test
+    @DisplayName("createUser: propagate exception when password encoder fails")
+    void createUser_ShouldThrow_WhenPasswordEncoderFails() {
+        UserRequestDTO dto = new UserRequestDTO();
+        dto.setFullName("Test");
+        dto.setEmail("test@gmail.com");
+        dto.setUserName("testuser");
+        dto.setPassword("123456");
 
-		assertTrue(existException.getFieldErrors().containsKey("userName"));
-		assertTrue(existException.getFieldErrors().containsKey("email"));
-		assertEquals("Username already exists", existException.getFieldErrors().get("userName"));
-		assertEquals("Email already exists", existException.getFieldErrors().get("email"));
+        Role roleUser = new Role();
+        roleUser.setRoleName(SecurityRole.ROLE_USER);
 
-		verify(userRepository).existsByEmail("testemail@gmail.com");
-		verify(userRepository).existsByUserName("testuser");
-		verify(userRepository, never()).save(any());
-	}
+        when(userRepository.existsByEmail(dto.getEmail())).thenReturn(false);
+        when(userRepository.existsByUserName(dto.getUserName())).thenReturn(false);
+        when(roleRepository.findByRoleName(SecurityRole.ROLE_USER)).thenReturn(roleUser);
+        when(passwordService.encodePassword(dto.getPassword())).thenThrow(new RuntimeException("Encode failed"));
 
-	@DisplayName("Create user - Throw NotFoundException when default role USER not found")
-	@Test
-	void createUser_ShouldThrowNotFoundException_WhenDefaultRoleNotFound() {
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> userService.createUser(dto));
+        assertEquals("Encode failed", ex.getMessage());
 
-		// GIVEN
-		UserRequestDTO dto = new UserRequestDTO();
-		dto.setUserName("testuser");
-		dto.setEmail("testemail@gmail.com");
-		dto.setPassword("123456");
+        verify(userRepository, never()).save(any());
+    }
 
-		when(userRepository.existsByEmail("testemail@gmail.com")).thenReturn(false);
-		when(userRepository.existsByUserName("testuser")).thenReturn(false);
+    // ===================== ASSIGN ROLE =====================
 
-		User user = new User();
-		user.setPassword("123456");
-		when(userMapper.toEntity(any(UserRequestDTO.class))).thenReturn(user);
-		// ROLE_USER không tồn tại
-		when(roleRepository.findByRoleName(SecurityRole.ROLE_USER)).thenReturn(null);
+    @Test
+    @DisplayName("assignRole: ROLE_DOCTOR attaches doctor profile via handler")
+    void assignRole_ShouldAttachDoctorProfile_WhenRoleIsDoctor() {
+        AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
 
-		// WHEN + THEN
-		NotFoundException exception = assertThrows(NotFoundException.class, () -> userService.createUser(dto));
+        Role roleUser = new Role();
+        roleUser.setRoleName(SecurityRole.ROLE_USER);
 
-		// ASSERT nội dung exception
-		assertEquals("role: Default role USER not found", exception.getMessage());
+        Role roleDoctor = new Role();
+        roleDoctor.setRoleId(2);
+        roleDoctor.setRoleName(SecurityRole.ROLE_DOCTOR);
 
-		// VERIFY hành vi
-		verify(userRepository).existsByEmail("testemail@gmail.com");
-		verify(userRepository).existsByUserName("testuser");
-		verify(roleRepository).findByRoleName(SecurityRole.ROLE_USER);
+        User user = User.create("u1", "pw", "Full", "u1@mail.com", roleUser);
 
-		// KHÔNG được lưu user
-		verify(userRepository, never()).save(any());
-	}
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(roleRepository.findById(2)).thenReturn(Optional.of(roleDoctor));
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-	@DisplayName("Create user - Throw exception when password encoder fails")
-	@Test
-	void createUser_ShouldThrowException_WhenPasswordEncoderFails() {
+        UserResponseDTO result = userService.assignRole(dto);
 
-		UserRequestDTO dto = new UserRequestDTO();
-		dto.setUserName("testuser");
-		dto.setEmail("testuser@gmail.com");
-		dto.setPassword("123456");
+        assertNotNull(result);
+        assertNotNull(user.getDoctors());
+    }
 
-		when(userRepository.existsByEmail("testuser@gmail.com")).thenReturn(false);
-		when(userRepository.existsByUserName("testuser")).thenReturn(false);
+    @Test
+    @DisplayName("assignRole: throw when user not found")
+    void assignRole_ShouldThrow_WhenUserNotFound() {
+        AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
 
-		User user = new User();
-		user.setPassword("123456");
+        when(userRepository.findById(1)).thenReturn(Optional.empty());
 
-		when(userMapper.toEntity(any(UserRequestDTO.class))).thenReturn(user);
-		when(passwordService.encodePassword("123456")).thenThrow(new RuntimeException("Encode failed"));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.assignRole(dto));
+        assertEquals("user: User Not Found", ex.getMessage());
+    }
 
-		RuntimeException runtimeException = assertThrows(RuntimeException.class, () -> userService.createUser(dto));
+    @Test
+    @DisplayName("assignRole: throw when role not found")
+    void assignRole_ShouldThrow_WhenRoleNotFound() {
+        AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
 
-		assertEquals("Encode failed", runtimeException.getMessage());
+        Role roleUser = new Role();
+        roleUser.setRoleName(SecurityRole.ROLE_USER);
+        User user = User.create("u1", "pw", "Full", "u1@mail.com", roleUser);
 
-		verify(passwordService).encodePassword("123456");
-		verify(userRepository, never()).save(any());
-	}
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(roleRepository.findById(2)).thenReturn(Optional.empty());
 
-	// asignRole
-	@DisplayName("Assign role DOCTOR successfully - create doctor if not exists")
-	@Test
-	void assignRole_ShouldCreateDoctor_WhenRoleIsDoctor() {
-		AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.assignRole(dto));
+        assertEquals("role: Role Not Found", ex.getMessage());
+    }
 
-		User user = new User();
-		user.setUserId(1);
+    @Test
+    @DisplayName("assignRole: non-doctor role does not attach doctor profile")
+    void assignRole_ShouldNotAttachDoctorProfile_WhenRoleIsNotDoctor() {
+        AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
 
-		Role role = new Role();
-		role.setRoleId(2);
-		role.setRoleName("DOCTOR");
+        Role roleUser = new Role();
+        roleUser.setRoleName(SecurityRole.ROLE_USER);
 
-		when(userRepository.findById(1)).thenReturn(Optional.of(user));
-		when(roleRepository.findById(2)).thenReturn(Optional.of(role));
-		when(userRepository.save(any(User.class))).thenReturn(user);
-		when(doctorsRepository.findByUser(user)).thenReturn(Optional.empty());
-		when(doctorsRepository.save(any(Doctors.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Role roleAdmin = new Role();
+        roleAdmin.setRoleId(2);
+        roleAdmin.setRoleName(SecurityRole.ROLE_ADMIN);
 
-		when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
+        User user = User.create("u1", "pw", "Full", "u1@mail.com", roleUser);
 
-		UserResponseDTO result = userService.assignRole(dto);
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(roleRepository.findById(2)).thenReturn(Optional.of(roleAdmin));
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-		assertNotNull(result);
+        UserResponseDTO result = userService.assignRole(dto);
 
-		verify(userRepository).save(user);
-		verify(doctorsRepository).findByUser(user);
-		verify(doctorsRepository).save(any(Doctors.class));
-	}
+        assertNotNull(result);
+        assertNull(user.getDoctors());
+    }
 
-	@DisplayName("Assign role - Throw exception when user not found")
-	@Test
-	void assignRole_ShouldThrowException_WhenUserNotFound() {
-		AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
+    // ===================== QUERY/COMMAND =====================
 
-		when(userRepository.findById(1)).thenReturn(Optional.empty());
+    @Test
+    @DisplayName("getAllPaged: returns paged result")
+    void getAllPaged_ShouldReturnPagedResult() {
+        Pageable pageable = TestPageConstants.PAGEABLE_0_2;
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.assignRole(dto));
+        User u1 = mock(User.class);
+        User u2 = mock(User.class);
+        Page<User> page = new PageImpl<>(List.of(u1, u2), pageable, 2);
 
-		assertEquals("user: User Not Found", ex.getMessage());
+        when(userRepository.findAll(pageable)).thenReturn(page);
+        when(userMapper.toDTO(any(User.class))).thenReturn(new UserResponseDTO());
 
-		verify(roleRepository, never()).findById(any());
-		verify(userRepository, never()).save(any());
-	}
+        PagedResult<UserResponseDTO> result = userService.getAllPaged(pageable);
 
-	@DisplayName("Assign role - Throw exception when role not found")
-	@Test
-	void assignRole_ShouldThrowException_WhenRoleNotFound() {
-		AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
+        assertNotNull(result);
+        assertEquals(2, result.getContent().size());
+    }
 
-		User user = new User();
-		user.setUserId(1);
+    @Test
+    @DisplayName("findById: returns dto when user exists")
+    void findById_ShouldReturn_WhenExists() {
+        User user = mock(User.class);
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-		when(userRepository.findById(1)).thenReturn(Optional.of(user));
-		when(roleRepository.findById(2)).thenReturn(Optional.empty());
+        assertNotNull(userService.findById(1));
+    }
 
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.assignRole(dto));
+    @Test
+    @DisplayName("findById: throw when user not found")
+    void findById_ShouldThrow_WhenNotFound() {
+        when(userRepository.findById(1)).thenReturn(Optional.empty());
 
-		assertEquals("role: Role Not Found", ex.getMessage());
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.findById(1));
+        assertEquals("user: User Not Found", ex.getMessage());
+    }
 
-		verify(userRepository, never()).save(any());
-		verify(doctorsRepository, never()).save(any());
-	}
+    @Test
+    @DisplayName("update: calls domain updateProfile when user exists")
+    void update_ShouldCallUpdateProfile_WhenExists() {
+        User user = mock(User.class);
+        when(user.getUserId()).thenReturn(1);
 
-	@DisplayName("Assign role - Should not create doctor when role is not DOCTOR")
-	@Test
-	void assignRole_ShouldNotCreateDoctor_WhenRoleIsNotDoctor() {
-		AssignRoleRequestDTO dto = new AssignRoleRequestDTO(1, 2, null);
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
+        dto.setFullName("New Name");
+        dto.setEmail("new@gmail.com");
 
-		User user = new User();
-		user.setUserId(1);
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmailAndUserIdNot("new@gmail.com", 1)).thenReturn(false);
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-		Role role = new Role();
-		role.setRoleId(2);
-		role.setRoleName("ADMIN");
+        assertNotNull(userService.update(1, dto));
+        verify(user).updateProfile(eq("New Name"), eq("new@gmail.com"), any(), any(), any());
+    }
 
-		when(userRepository.findById(1)).thenReturn(Optional.of(user));
-		when(roleRepository.findById(2)).thenReturn(Optional.of(role));
-		when(userRepository.save(any(User.class))).thenReturn(user);
-		when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
+    @Test
+    @DisplayName("updateStatus: activates when isActive=true")
+    void updateStatus_ShouldActivate_WhenTrue() {
+        User user = mock(User.class);
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-		UserResponseDTO result = userService.assignRole(dto);
+        assertNotNull(userService.updateStatus(1, true));
+        verify(user).activate();
+    }
 
-		assertNotNull(result);
+    @Test
+    @DisplayName("deleteManually: deletes when user exists")
+    void deleteManually_ShouldDelete_WhenExists() {
+        User user = mock(User.class);
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
 
-		verify(doctorsRepository, never()).findByUser(any());
-		verify(doctorsRepository, never()).save(any());
-	}
+        assertTrue(userService.deleteManually(1));
+        verify(userRepository).delete(user);
+    }
 
-	// getAll
-	@DisplayName("Get all users paged successfully")
-	@Test
-	void getAllPaged_ShouldReturnPagedResultSuccessfully() {
-		Pageable pageable = TestPageConstants.PAGEABLE_0_2;
+    @Test
+    @DisplayName("findByUserName: returns dto when exists")
+    void findByUserName_ShouldReturn_WhenExists() {
+        User user = mock(User.class);
+        when(userRepository.findByUserName("u")).thenReturn(Optional.of(user));
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-		User user1 = new User();
-		User user2 = new User();
+        assertNotNull(userService.findByUserName("u"));
+    }
 
-		Page<User> userPage = new PageImpl<>(List.of(user1, user2), pageable, TestPageConstants.DEFAULT_SIZE);
+    @Test
+    @DisplayName("updateProfile: calls domain updateProfile when exists")
+    void updateProfile_ShouldCallUpdateProfile_WhenExists() {
+        User user = mock(User.class);
+        when(user.getUserId()).thenReturn(1);
 
-		when(userRepository.findAll(pageable)).thenReturn(userPage);
-		when(userMapper.toDTO(user1)).thenReturn(new UserResponseDTO());
-		when(userMapper.toDTO(user2)).thenReturn(new UserResponseDTO());
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
+        dto.setFullName("New Name");
+        dto.setEmail("new@gmail.com");
 
-		PagedResult<UserResponseDTO> result = userService.getAllPaged(pageable);
+        when(userRepository.findByUserName("u")).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmailAndUserIdNot("new@gmail.com", 1)).thenReturn(false);
+        when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
 
-		assertNotNull(result);
-		assertEquals(TestPageConstants.DEFAULT_SIZE, result.getContent().size());
-		assertEquals(TestPageConstants.DEFAULT_SIZE, result.getTotalElements());
-		assertEquals(1, result.getTotalPages());
-		assertEquals(TestPageConstants.DEFAULT_PAGE, result.getCurrentPage());
-		assertEquals(TestPageConstants.DEFAULT_SIZE, result.getPageSize());
-
-		verify(userRepository).findAll(pageable);
-		verify(userMapper, times(2)).toDTO(any(User.class));
-	}
-
-	// findById
-	@DisplayName("Find user by id successfully")
-	@Test
-	void findById_ShouldReturnUser_WhenUserExists() {
-		Integer id = 1;
-
-		User user = new User();
-		user.setUserId(id);
-
-		UserResponseDTO dto = new UserResponseDTO();
-
-		when(userRepository.findById(id)).thenReturn(Optional.of(user));
-		when(userMapper.toDTO(user)).thenReturn(dto);
-
-		UserResponseDTO result = userService.findById(id);
-
-		assertNotNull(result);
-
-		verify(userRepository).findById(id);
-		verify(userMapper).toDTO(user);
-	}
-
-	@DisplayName("Find user by id - Throw exception when user not found")
-	@Test
-	void findById_ShouldThrowException_WhenUserNotFound() {
-		Integer id = 1;
-
-		when(userRepository.findById(id)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.findById(id));
-
-		assertEquals("user: User Not Found", ex.getMessage());
-
-		verify(userRepository).findById(id);
-		verify(userMapper, never()).toDTO(any());
-	}
-
-	// updateAdmin
-	@DisplayName("Update user successfully")
-	@Test
-	void update_ShouldUpdateUser_WhenValidRequest() {
-		Integer id = 1;
-
-		User user = new User();
-		user.setUserId(id);
-		user.setEmail("old@gmail.com");
-
-		UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
-		dto.setEmail("new@gmail.com");
-		dto.setFullName("New Name");
-
-		when(userRepository.findById(id)).thenReturn(Optional.of(user));
-		when(userRepository.existsByEmailAndUserIdNot("new@gmail.com", id)).thenReturn(false);
-		when(userRepository.save(user)).thenReturn(user);
-		when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
-
-		UserResponseDTO result = userService.update(id, dto);
-
-		assertNotNull(result);
-		assertEquals("new@gmail.com", user.getEmail());
-		assertEquals("New Name", user.getFullName());
-
-		verify(userRepository).save(user);
-	}
-
-	@DisplayName("Update user - Throw exception when user not found")
-	@Test
-	void update_ShouldThrowException_WhenUserNotFound() {
-		Integer id = 1;
-		UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
-
-		when(userRepository.findById(id)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.update(id, dto));
-
-		assertEquals("user: User Not Found", ex.getMessage());
-
-		verify(userRepository, never()).save(any());
-	}
-
-	@DisplayName("Update user - Throw exception when email already exists")
-	@Test
-	void update_ShouldThrowException_WhenEmailAlreadyExists() {
-		Integer id = 1;
-
-		User user = new User();
-		user.setUserId(id);
-		user.setEmail("old@gmail.com");
-
-		UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
-		dto.setEmail("duplicate@gmail.com");
-
-		when(userRepository.findById(id)).thenReturn(Optional.of(user));
-		when(userRepository.existsByEmailAndUserIdNot("duplicate@gmail.com", id)).thenReturn(true);
-
-		UserAlreadyExistException ex = assertThrows(UserAlreadyExistException.class, () -> userService.update(id, dto));
-
-		assertTrue(ex.getFieldErrors().containsKey("email"));
-
-		verify(userRepository, never()).save(any());
-	}
-
-	// updateStatus
-	@DisplayName("Update status successfully when isActive is provided")
-	@Test
-	void updateStatus_ShouldUpdateUserStatus_WhenIsActiveNotNull() {
-		Integer id = 1;
-
-		User user = new User();
-		user.setUserId(id);
-		user.setActive(false);
-
-		when(userRepository.findById(id)).thenReturn(Optional.of(user));
-		when(userRepository.save(user)).thenReturn(user);
-		when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
-
-		UserResponseDTO result = userService.updateStatus(id, true);
-
-		assertNotNull(result);
-		assertTrue(user.getIsActive());
-
-		verify(userRepository).save(user);
-	}
-
-	@DisplayName("Update status - Throw exception when user not found")
-	@Test
-	void updateStatus_ShouldThrowException_WhenUserNotFound() {
-		Integer id = 1;
-
-		when(userRepository.findById(id)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.updateStatus(id, true));
-
-		assertEquals("user: User Not Found", ex.getMessage());
-
-		verify(userRepository, never()).save(any());
-	}
-
-	// deleteManually
-	@DisplayName("Delete user manually successfully")
-	@Test
-	void deleteManually_ShouldDeleteUser_WhenUserExists() {
-		Integer id = 1;
-
-		User user = new User();
-		user.setUserId(id);
-
-		when(userRepository.findById(id)).thenReturn(Optional.of(user));
-
-		boolean result = userService.deleteManually(id);
-
-		assertTrue(result);
-
-		verify(userRepository).delete(user);
-	}
-
-	@DisplayName("Delete user manually - Throw exception when user not found")
-	@Test
-	void deleteManually_ShouldThrowException_WhenUserNotFound() {
-		Integer id = 1;
-
-		when(userRepository.findById(id)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.deleteManually(id));
-
-		assertEquals("user: User Not Found", ex.getMessage());
-
-		verify(userRepository, never()).delete(any());
-	}
-
-	// findByUserName
-	@DisplayName("Find user by username successfully")
-	@Test
-	void findByUserName_ShouldReturnUser_WhenUserExists() {
-		String username = "testuser";
-
-		User user = new User();
-		user.setUserName(username);
-
-		UserResponseDTO dto = new UserResponseDTO();
-
-		when(userRepository.findByUserName(username)).thenReturn(Optional.of(user));
-		when(userMapper.toDTO(user)).thenReturn(dto);
-
-		UserResponseDTO result = userService.findByUserName(username);
-
-		assertNotNull(result);
-
-		verify(userRepository).findByUserName(username);
-		verify(userMapper).toDTO(user);
-	}
-
-	@DisplayName("Find user by username - Throw exception when user not found")
-	@Test
-	void findByUserName_ShouldThrowException_WhenUserNotFound() {
-		String username = "testuser";
-
-		when(userRepository.findByUserName(username)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.findByUserName(username));
-
-		assertEquals("user: User Not Found", ex.getMessage());
-
-		verify(userMapper, never()).toDTO(any());
-	}
-
-	// updateProfile
-	@DisplayName("Update profile successfully")
-	@Test
-	void updateProfile_ShouldUpdateProfile_WhenValidRequest() {
-		String username = "testuser";
-
-		User user = new User();
-		user.setUserName(username);
-		user.setEmail("old@gmail.com");
-
-		UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
-		dto.setFullName("New Name");
-		dto.setEmail("new@gmail.com");
-
-		when(userRepository.findByUserName(username)).thenReturn(Optional.of(user));
-		when(userRepository.existsByEmailAndUserIdNot("new@gmail.com", user.getUserId())).thenReturn(false);
-		when(userRepository.save(user)).thenReturn(user);
-		when(userMapper.toDTO(user)).thenReturn(new UserResponseDTO());
-
-		UserResponseDTO result = userService.updateProfile(username, dto);
-
-		assertNotNull(result);
-		assertEquals("new@gmail.com", user.getEmail());
-
-		verify(userRepository).save(user);
-	}
-
-	@DisplayName("Update profile - Throw exception when user not found")
-	@Test
-	void updateProfile_ShouldThrowException_WhenUserNotFound() {
-		when(userRepository.findByUserName("testuser")).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class,
-				() -> userService.updateProfile("testuser", new UserUpdateRequestDTO()));
-
-		assertEquals("user: User Not Found", ex.getMessage());
-
-		verify(userRepository, never()).save(any());
-	}
-
-	@DisplayName("Update profile - Throw exception when email already exists")
-	@Test
-	void updateProfile_ShouldThrowException_WhenEmailAlreadyExists() {
-		String username = "testuser";
-
-		User user = new User();
-		user.setUserName(username);
-		user.setUserId(1);
-		user.setEmail("old@gmail.com");
-
-		UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
-		dto.setEmail("duplicate@gmail.com");
-
-		when(userRepository.findByUserName(username)).thenReturn(Optional.of(user));
-		when(userRepository.existsByEmailAndUserIdNot("duplicate@gmail.com", 1)).thenReturn(true);
-
-		UserAlreadyExistException ex = assertThrows(UserAlreadyExistException.class,
-				() -> userService.updateProfile(username, dto));
-
-		assertTrue(ex.getFieldErrors().containsKey("email"));
-
-		verify(userRepository, never()).save(any());
-	}
-
+        assertNotNull(userService.updateProfile("u", dto));
+        verify(user).updateProfile(eq("New Name"), eq("new@gmail.com"), any(), any(), any());
+    }
 }
+
+

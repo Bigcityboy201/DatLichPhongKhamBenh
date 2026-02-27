@@ -95,18 +95,19 @@ public class DepartmentServiceTest {
 	@Test
 	void createDepartment_ShouldReturnCreated() {
 		DepartmentsRequestDTO dto = new DepartmentsRequestDTO();
-		Departments dep = new Departments();
-		Departments saved = new Departments();
+		dto.setName("Khoa Nội");
+		dto.setDescription("Mô tả");
+
+		Departments saved = Departments.create(dto.getName(), dto.getDescription());
 		DepartmentsResponseDTO responseDTO = new DepartmentsResponseDTO();
 
-		when(departmentsMapper.toEntity(dto)).thenReturn(dep);
-		when(departmentsRepository.save(dep)).thenReturn(saved);
+		when(departmentsRepository.save(any(Departments.class))).thenReturn(saved);
 		when(departmentsMapper.toResponse(saved)).thenReturn(responseDTO);
 
 		DepartmentsResponseDTO result = departmentService.createDepartment(dto);
 
 		assertNotNull(result);
-		verify(departmentsRepository).save(dep);
+		verify(departmentsRepository).save(any(Departments.class));
 	}
 
 	// ============= update ============
@@ -114,8 +115,7 @@ public class DepartmentServiceTest {
 	@Test
 	void update_ShouldApplyChanges_WhenExists() {
 		Integer id = 1;
-		Departments dep = new Departments();
-		dep.setName("Old");
+		Departments dep = Departments.create("Old", "Old desc");
 
 		DepartmentsUpdateRequestDTO dto = new DepartmentsUpdateRequestDTO();
 		dto.setName("New");
@@ -146,7 +146,7 @@ public class DepartmentServiceTest {
 	@Test
 	void deleteSoft_ShouldUpdateStatus_WhenExists() {
 		Integer id = 1;
-		Departments dep = new Departments();
+		Departments dep = Departments.create("Khoa A", "desc"); // mặc định active=true
 
 		DepartmentsUpdateRequestDTO dto = new DepartmentsUpdateRequestDTO();
 		dto.setActive(false);

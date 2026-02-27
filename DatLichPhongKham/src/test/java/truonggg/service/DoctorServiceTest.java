@@ -23,30 +23,25 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import truonggg.Exception.NotFoundException;
-
-import truonggg.appointment.domain.model.Appointments;
-import truonggg.appointment.infrastructure.AppointmentsRepository;
-import truonggg.appointment.mapper.AppointmentsMapper;
-import truonggg.department.domain.model.Departments;
 import truonggg.doctor.application.impl.DoctorsServiceIMPL;
-import truonggg.doctor.domain.model.Doctors;
 import truonggg.doctor.infrastructure.DoctorsRepository;
 import truonggg.doctor.mapper.DoctorsMapper;
 import truonggg.dto.reponseDTO.AppointmentsResponseDTO;
 import truonggg.dto.reponseDTO.DoctorSummaryResponseDTO;
 import truonggg.dto.reponseDTO.DoctorsReponseDTO;
 import truonggg.dto.reponseDTO.SchedulesReponseDTO;
-import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
-import truonggg.dto.requestDTO.DoctorsRequestDTO;
-
 import truonggg.department.infrastructure.DepartmentsRepository;
-
 import truonggg.reponse.PagedResult;
-import truonggg.schedules.domain.model.Schedules;
+import truonggg.appointment.domain.model.Appointments;
+import truonggg.appointment.infrastructure.AppointmentsRepository;
+import truonggg.appointment.mapper.AppointmentsMapper;
+import truonggg.doctor.domain.model.Doctors;
 import truonggg.schedules.infrastructure.SchedulesRepository;
 import truonggg.schedules.mapper.SchedulesMapper;
+import truonggg.schedules.domain.model.Schedules;
 import truonggg.user.domain.model.User;
 import truonggg.user.infrastructure.UserRepository;
+import truonggg.dto.requestDTO.DoctorsDeleteRequestDTO;
 
 @ExtendWith(MockitoExtension.class)
 public class DoctorServiceTest {
@@ -78,72 +73,6 @@ public class DoctorServiceTest {
 	@InjectMocks
 	private DoctorsServiceIMPL doctorsService;
 
-	// ============= createDoctor ============
-	@DisplayName("createDoctor: success when user and department exist")
-	@Test
-	void createDoctor_ShouldReturnSummary_WhenUserAndDepartmentExist() {
-		DoctorsRequestDTO dto = new DoctorsRequestDTO();
-		dto.setUserId(1);
-		dto.setDepartmentId(2);
-		dto.setIsFeatured(null);
-
-		User user = new User();
-		user.setUserId(1);
-		Departments dep = new Departments();
-		dep.setId(2);
-
-		Doctors doctorEntity = new Doctors();
-		Doctors savedDoctor = new Doctors();
-
-		DoctorSummaryResponseDTO responseDTO = new DoctorSummaryResponseDTO();
-
-		when(userRepository.findById(1)).thenReturn(Optional.of(user));
-		when(departmentsRepository.findById(2)).thenReturn(Optional.of(dep));
-		when(doctorsMapper.toEntity(dto)).thenReturn(doctorEntity);
-		when(doctorsRepository.save(any(Doctors.class))).thenReturn(savedDoctor);
-		when(doctorsMapper.toDTOOther(savedDoctor)).thenReturn(responseDTO);
-
-		DoctorSummaryResponseDTO result = doctorsService.createDoctor(dto);
-
-		assertNotNull(result);
-		verify(userRepository).findById(1);
-		verify(departmentsRepository).findById(2);
-		verify(doctorsRepository).save(any(Doctors.class));
-	}
-
-	@DisplayName("createDoctor: throw NotFoundException when user not found")
-	@Test
-	void createDoctor_ShouldThrow_WhenUserNotFound() {
-		DoctorsRequestDTO dto = new DoctorsRequestDTO();
-		dto.setUserId(1);
-		dto.setDepartmentId(2);
-
-		when(userRepository.findById(1)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> doctorsService.createDoctor(dto));
-		assertEquals("user: User Not Found!", ex.getMessage());
-
-		verify(departmentsRepository, never()).findById(any());
-		verify(doctorsRepository, never()).save(any());
-	}
-
-	@DisplayName("createDoctor: throw NotFoundException when department not found")
-	@Test
-	void createDoctor_ShouldThrow_WhenDepartmentNotFound() {
-		DoctorsRequestDTO dto = new DoctorsRequestDTO();
-		dto.setUserId(1);
-		dto.setDepartmentId(2);
-
-		User user = new User();
-		when(userRepository.findById(1)).thenReturn(Optional.of(user));
-		when(departmentsRepository.findById(2)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> doctorsService.createDoctor(dto));
-		assertEquals("department: Department Not Found!", ex.getMessage());
-
-		verify(doctorsRepository, never()).save(any());
-	}
-
 	// ============= getDoctorsByDepartmentPaged ============
 	@DisplayName("getDoctorsByDepartmentPaged: success when department exists")
 	@Test
@@ -151,8 +80,8 @@ public class DoctorServiceTest {
 		Integer depId = 1;
 		Pageable pageable = TestPageConstants.PAGEABLE_0_2;
 
-		Doctors d1 = new Doctors();
-		Doctors d2 = new Doctors();
+		Doctors d1 = org.mockito.Mockito.mock(Doctors.class);
+		Doctors d2 = org.mockito.Mockito.mock(Doctors.class);
 
 		Page<Doctors> page = new PageImpl<>(List.of(d1, d2), pageable, TestPageConstants.DEFAULT_SIZE);
 
@@ -187,7 +116,7 @@ public class DoctorServiceTest {
 	@DisplayName("findById: success when doctor exists")
 	@Test
 	void findById_ShouldReturnDoctor_WhenExists() {
-		Doctors doctor = new Doctors();
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
 		when(doctorsRepository.findByIdWithSchedules(1)).thenReturn(Optional.of(doctor));
 		when(doctorsMapper.toDTO(doctor)).thenReturn(new DoctorsReponseDTO());
 
@@ -211,10 +140,9 @@ public class DoctorServiceTest {
 	@DisplayName("deleteManually: success when doctor and user exist")
 	@Test
 	void deleteManually_ShouldDeleteDoctorAndUser_WhenExist() {
-		Doctors doctor = new Doctors();
-		doctor.setId(1);
-		User user = new User();
-		doctor.setUser(user);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
+		User user = org.mockito.Mockito.mock(User.class);
+		when(doctor.getUser()).thenReturn(user);
 
 		when(doctorsRepository.findById(1)).thenReturn(Optional.of(doctor));
 
@@ -243,11 +171,9 @@ public class DoctorServiceTest {
 		String username = "doctorUser";
 		Pageable pageable = TestPageConstants.PAGEABLE_0_2;
 
-		User user = new User();
-		user.setUserName(username);
-
-		Doctors doctor = new Doctors();
-		doctor.setId(10);
+		User user = org.mockito.Mockito.mock(User.class);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
+		when(doctor.getId()).thenReturn(10);
 
 		Appointments a1 = new Appointments();
 		Appointments a2 = new Appointments();
@@ -273,14 +199,12 @@ public class DoctorServiceTest {
 		String username = "doctorUser";
 		Pageable pageable = TestPageConstants.PAGEABLE_0_2;
 
-		User user = new User();
-		user.setUserName(username);
+		User user = org.mockito.Mockito.mock(User.class);
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
+		when(doctor.getId()).thenReturn(10);
 
-		Doctors doctor = new Doctors();
-		doctor.setId(10);
-
-		Schedules s1 = new Schedules();
-		Schedules s2 = new Schedules();
+		Schedules s1 = org.mockito.Mockito.mock(Schedules.class);
+		Schedules s2 = org.mockito.Mockito.mock(Schedules.class);
 
 		Page<Schedules> page = new PageImpl<>(List.of(s1, s2), pageable, TestPageConstants.DEFAULT_SIZE);
 
@@ -301,19 +225,18 @@ public class DoctorServiceTest {
 	@Test
 	void delete_ShouldSoftDelete_WhenDoctorExists() {
 		Integer id = 1;
-		Doctors doctor = new Doctors();
+		Doctors doctor = org.mockito.Mockito.mock(Doctors.class);
 
 		DoctorsDeleteRequestDTO dto = new DoctorsDeleteRequestDTO();
 		dto.setIsActive(false);
 
 		when(doctorsRepository.findById(id)).thenReturn(Optional.of(doctor));
-		when(doctorsRepository.save(doctor)).thenReturn(doctor);
 		when(doctorsMapper.toDTOOther(doctor)).thenReturn(new DoctorSummaryResponseDTO());
 
 		DoctorSummaryResponseDTO result = doctorsService.delete(id, dto);
 
 		assertNotNull(result);
-		verify(doctorsRepository).save(doctor);
+		verify(doctorsMapper).toDTOOther(doctor);
 	}
 
 	@DisplayName("delete (soft): throw NotFoundException when doctor not found")

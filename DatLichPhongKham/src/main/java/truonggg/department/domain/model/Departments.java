@@ -10,10 +10,10 @@ import java.util.List;
 
 @Entity
 @Getter
-@Setter
+//@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
+//@AllArgsConstructor
+//@Builder
 public class Departments {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +31,50 @@ public class Departments {
         return isActive;
     }
 
-    public void setIsActive(boolean isActive) {
-        this.isActive = isActive;
+    public static Departments create(String name, String description) {
+
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Department name is required");
+        }
+
+        Departments department = new Departments();
+        department.name = name;
+        department.description = description;
+        department.isActive = true; // default business rule
+        department.createdAt = LocalDateTime.now();
+        department.updatedAt = LocalDateTime.now();
+
+        return department;
+    }
+    public void changeInfo(String name, String description) {
+
+        if (name != null) {
+            if (name.isBlank()) {
+                throw new IllegalArgumentException("Department name cannot be blank");
+            }
+            this.name = name;
+        }
+
+        if (description != null) {
+            this.description = description;
+        }
+
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void activate() {
+        if (this.isActive) {
+            throw new IllegalStateException("Department already active");
+        }
+        this.isActive = true;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void deactivate() {
+        if (!this.isActive) {
+            throw new IllegalStateException("Department already inactive");
+        }
+        this.isActive = false;
+        this.updatedAt = LocalDateTime.now();
     }
 }

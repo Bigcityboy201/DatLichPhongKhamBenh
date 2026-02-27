@@ -57,9 +57,8 @@ public class NotificationsServiceTest {
 		dto.setUserId(1);
 		dto.setMessage("Hello");
 
-		User user = new User();
-		user.setUserId(1);
-		user.setFullName("Test User");
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getFullName()).thenReturn("Test User");
 
 		when(userRepository.findById(1)).thenReturn(Optional.of(user));
 		when(notificationsRepository.save(any(Notifications.class))).thenReturn(new Notifications());
@@ -112,9 +111,8 @@ public class NotificationsServiceTest {
 		Integer id = 1;
 		String username = "user1";
 
-		User user = new User();
-		user.setUserId(1);
-		user.setUserName(username);
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getUserId()).thenReturn(1);
 
 		Notifications notification = new Notifications();
 		notification.setUser(user);
@@ -134,12 +132,11 @@ public class NotificationsServiceTest {
 		Integer id = 1;
 		String username = "user1";
 
-		User user = new User();
-		user.setUserId(1);
-		user.setUserName(username);
+		User user = org.mockito.Mockito.mock(User.class);
+		when(user.getUserId()).thenReturn(1);
 
-		User otherUser = new User();
-		otherUser.setUserId(2);
+		User otherUser = org.mockito.Mockito.mock(User.class);
+		when(otherUser.getUserId()).thenReturn(2);
 
 		Notifications notification = new Notifications();
 		notification.setUser(otherUser);
