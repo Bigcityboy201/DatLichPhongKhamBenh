@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SchedulesServiceImpl implements SchedulesQueryService, SchedulesCommandService {
+public class SchedulesServiceImpl implements SchedulesCommandService {
     private final SchedulesRepository schedulesRepository;
 
     private final DoctorsRepository doctorsRepository;
@@ -31,36 +31,10 @@ public class SchedulesServiceImpl implements SchedulesQueryService, SchedulesCom
     private final SchedulesMapper schedulesMapper;
 
     @Override
-    public List<SchedulesReponseDTO> getAll() {
-        List<Schedules> schedules = this.schedulesRepository.findAll();
-        return this.schedulesMapper.toDTOList(schedules);
-    }
-
-    @Override
-    public PagedResult<SchedulesReponseDTO> getAllPaged(Pageable pageable) {
-        Page<Schedules> schedulesPage = this.schedulesRepository.findAll(pageable);
-        List<SchedulesReponseDTO> dtoList = schedulesPage.stream().map(schedulesMapper::toDTO)
-                .collect(Collectors.toList());
-
-        return PagedResult.from(schedulesPage, dtoList);
-    }
-
-    @Override
-    public PagedResult<SchedulesReponseDTO> getByDoctorId(Integer doctorId, Pageable pageable) {
-        Page<Schedules> schedulesPage = this.schedulesRepository.findByDoctorsId(doctorId, pageable);
-        List<SchedulesReponseDTO> dtoList = schedulesPage.stream()
-                .map(schedulesMapper::toDTO)
-                .collect(Collectors.toList());
-
-        return PagedResult.from(schedulesPage, dtoList);
-    }
-
-    @Override
     public SchedulesReponseDTO save(SchedulesRequestDTO dto) {
         Doctors doctors = this.doctorsRepository.findById(dto.getDoctorId())
                 .orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found!"));
-        Schedules schedules = this.schedulesMapper.toModel(dto);
-        schedules.setDoctors(doctors);
+        Schedules schedules =Schedules.create(dto.getDayOfWeek(),dto.getStartAt(),dto.getEndAt(),doctors);
         return this.schedulesMapper.toDTO(schedulesRepository.save(schedules));
     }
 
@@ -69,26 +43,14 @@ public class SchedulesServiceImpl implements SchedulesQueryService, SchedulesCom
         Schedules foundSchedule = this.schedulesRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("schedule", "Schedule Not Found"));
 
-        // Cập nhật dayOfWeek nếu có
-        if (dto.getDayOfWeek() != null) {
-            foundSchedule.setDayOfWeek(dto.getDayOfWeek());
-        }
-
-        // Cập nhật startAt nếu có
-        if (dto.getStartAt() != null) {
-            foundSchedule.setStartAt(dto.getStartAt());
-        }
-
-        // Cập nhật endAt nếu có
-        if (dto.getEndAt() != null) {
-            foundSchedule.setEndAt(dto.getEndAt());
-        }
+        foundSchedule.changeDay(dto.getDayOfWeek());
+        foundSchedule.changeTime(dto.getStartAt(),dto.getEndAt());
 
         // Cập nhật doctor nếu có
         if (dto.getDoctorId() != null) {
             Doctors doctors = this.doctorsRepository.findById(dto.getDoctorId())
                     .orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
-            foundSchedule.setDoctors(doctors);
+            foundSchedule.assignDoctor(doctors);
         }
 
         return this.schedulesMapper.toDTO(this.schedulesRepository.save(foundSchedule));
@@ -99,9 +61,14 @@ public class SchedulesServiceImpl implements SchedulesQueryService, SchedulesCom
         Schedules foundSchedule = this.schedulesRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("schedule", "Schedule Not Found"));
 
-        if (dto.getActive() != null) {
-            foundSchedule.setIsActive(dto.getActive());
-            this.schedulesRepository.save(foundSchedule);
+        if (dto.getActive() == null) {
+            throw new IllegalArgumentException("Active status is required");
+        }
+
+        if (dto.getActive()) {
+            foundSchedule.activate();
+        } else {
+            foundSchedule.deactivate();
         }
         return this.schedulesMapper.toDTO(foundSchedule);
     }
