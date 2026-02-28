@@ -7,8 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 import lombok.RequiredArgsConstructor;
 import truonggg.Exception.NotFoundException;
 import truonggg.siteInfo.domain.model.SiteInfo;
@@ -40,7 +38,7 @@ public class SiteInfoServiceIMPL implements SiteInfoQueryService, SiteInfoComman
 
 	@Override
 	public SiteInfoResponseDTO save(SiteInfoRequestDTO dto) {
-		SiteInfo siteInfo = this.siteInfoMapper.toModel(dto);
+		SiteInfo siteInfo = SiteInfo.create(dto.getInfoKey(), dto.getValue());
 		return this.siteInfoMapper.toDTO(this.siteInfoRepository.save(siteInfo));
 	}
 
@@ -49,18 +47,7 @@ public class SiteInfoServiceIMPL implements SiteInfoQueryService, SiteInfoComman
 		SiteInfo foundSiteInfo = this.siteInfoRepository.findById(dto.getId())
 				.orElseThrow(() -> new NotFoundException("siteInfo", "SiteInfo Not Found"));
 
-		// Cập nhật infoKey nếu có
-		if (dto.getInfoKey() != null) {
-			foundSiteInfo.setInfoKey(dto.getInfoKey());
-		}
-
-		// Cập nhật value nếu có
-		if (dto.getValue() != null) {
-			foundSiteInfo.setValue(dto.getValue());
-		}
-
-		// Cập nhật updatedAt
-		foundSiteInfo.setUpdatedAt(LocalDateTime.now());
+		foundSiteInfo.updateInfo(dto.getInfoKey(), dto.getValue());
 
 		return this.siteInfoMapper.toDTO(this.siteInfoRepository.save(foundSiteInfo));
 	}
@@ -71,8 +58,11 @@ public class SiteInfoServiceIMPL implements SiteInfoQueryService, SiteInfoComman
 				.orElseThrow(() -> new NotFoundException("siteInfo", "SiteInfo Not Found"));
 
 		if (dto.getIsActive() != null) {
-			foundSiteInfo.setIsActive(dto.getIsActive());
-			foundSiteInfo.setUpdatedAt(LocalDateTime.now());
+			if (dto.getIsActive()) {
+				foundSiteInfo.activate();
+			} else {
+				foundSiteInfo.deactivate();
+			}
 			this.siteInfoRepository.save(foundSiteInfo);
 		}
 		return true;
