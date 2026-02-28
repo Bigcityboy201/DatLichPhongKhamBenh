@@ -60,6 +60,19 @@ public class Payments {
 	@ManyToOne
 	@JoinColumn(name = "appointment_id", referencedColumnName = "id")
 	private Appointments appointments;
+
+    public void refund() {
+
+        if (!this.isDeposit()) {
+            throw new IllegalStateException("Only deposit can be refunded");
+        }
+
+        if (this.status != PaymentStatus.CONFIRMED) {
+            throw new IllegalStateException("Only confirmed payment can be refunded");
+        }
+
+        this.status = PaymentStatus.REFUNDED;
+    }
 }
 
 

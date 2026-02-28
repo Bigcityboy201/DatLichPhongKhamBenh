@@ -18,7 +18,7 @@ public class Schedules {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     @Column(columnDefinition = "BIT DEFAULT 1")
-    private boolean isActive;
+    private boolean isActive=true;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", referencedColumnName = "id")
     private Doctors doctors;
@@ -46,9 +46,15 @@ public class Schedules {
             LocalDateTime endAt,
             Doctors doctor
     ) {
-        if (doctor == null)
+        if (doctor == null) {
             throw new IllegalArgumentException("Doctor is required");
-
+        }
+        if (startAt == null || endAt == null) {
+            throw new IllegalArgumentException("Start time and end time are required");
+        }
+        if (!endAt.isAfter(startAt)) {
+            throw new IllegalArgumentException("End time must be after start time");
+        }
         return new Schedules(dayOfWeek, startAt, endAt, doctor);
     }
 

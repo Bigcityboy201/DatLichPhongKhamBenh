@@ -21,7 +21,7 @@ public class review {
     private String comment;
     private Date createAt;
     @Column(columnDefinition = "BIT DEFAULT 1")
-    private boolean isActive;
+    private boolean isActive=true;
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "userId")
     private User user;

@@ -4,6 +4,7 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import truonggg.appointment.domain.model.Appointments;
@@ -40,12 +41,17 @@ public class User {
 	@JoinColumn(name = "role_id", referencedColumnName = "roleId")
 	private Role role;
 
+	// @JsonIgnore để tránh serialize các collection lazy, gây lỗi "force initializing collection loading"
+	@JsonIgnore
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Doctors doctors;
+	@JsonIgnore
 	@OneToMany(mappedBy = "user")
 	private List<Appointments> list1 = new ArrayList();
+	@JsonIgnore
 	@OneToMany(mappedBy = "user")
 	private List<review> list2 = new ArrayList<>();
+	@JsonIgnore
 	@OneToMany(mappedBy = "user")
 	private List<Notifications> list3 = new ArrayList<>();
 

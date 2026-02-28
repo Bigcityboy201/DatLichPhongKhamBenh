@@ -27,7 +27,43 @@ public class Role {
     @OneToMany(mappedBy = "role")
     private List<User> users = new ArrayList();
 
-    // Thêm method thủ công cho boolean isActive
+    // ===== Domain behaviour =====
+
+    public static Role create(String roleName, String description) {
+        if (roleName == null || roleName.isBlank()) {
+            throw new IllegalArgumentException("Role name is required");
+        }
+        Role role = new Role();
+        role.roleName = roleName;
+        role.Description = description;
+        role.isActive = true;
+        return role;
+    }
+
+    public void updateInfo(String newName, String newDescription) {
+        if (newName != null && !newName.isBlank()) {
+            this.roleName = newName;
+        }
+        if (newDescription != null) {
+            this.Description = newDescription;
+        }
+    }
+
+    public void activate() {
+        if (this.isActive) {
+            throw new IllegalStateException("Role already active");
+        }
+        this.isActive = true;
+    }
+
+    public void deactivate() {
+        if (!this.isActive) {
+            throw new IllegalStateException("Role already inactive");
+        }
+        this.isActive = false;
+    }
+
+    // Thêm method thủ công cho boolean isActive (giữ lại cho JPA/Lombok tương thích)
     public boolean getIsActive() {
         return isActive;
     }

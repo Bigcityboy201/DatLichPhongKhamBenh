@@ -1,6 +1,5 @@
-package truonggg.doctor.application.impl;
+package truonggg.doctor.domain.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import truonggg.constant.SecurityRole;
 import truonggg.doctor.domain.model.Doctors;
