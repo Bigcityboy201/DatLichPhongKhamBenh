@@ -12,5 +12,4 @@ public interface SchedulesCommandService {
 
     SchedulesReponseDTO delete(Integer id, SchedulesUpdateRequestDTO dto);
 
-    boolean delete(Integer id);
 }

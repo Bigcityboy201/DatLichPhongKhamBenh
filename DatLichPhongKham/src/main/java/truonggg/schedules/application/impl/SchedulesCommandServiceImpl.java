@@ -18,9 +18,7 @@ import truonggg.schedules.application.SchedulesCommandService;
 @RequiredArgsConstructor
 public class SchedulesCommandServiceImpl implements SchedulesCommandService {
     private final SchedulesRepository schedulesRepository;
-
     private final DoctorsRepository doctorsRepository;
-
     private final SchedulesMapper schedulesMapper;
 
     @Override
@@ -30,35 +28,43 @@ public class SchedulesCommandServiceImpl implements SchedulesCommandService {
         Doctors doctor = this.doctorsRepository.findById(dto.getDoctorId())
                 .orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found!"));
 
-        var schedule = doctor.addSchedule(
+        // Lịch (Schedules) là aggregate root độc lập, chỉ tham chiếu Doctor
+        Schedules schedule = Schedules.create(
                 dto.getDayOfWeek(),
                 dto.getStartAt(),
-                dto.getEndAt()
+                dto.getEndAt(),
+                doctor
         );
 
-        doctorsRepository.save(doctor);
+        schedule = schedulesRepository.save(schedule);
 
         return schedulesMapper.toDTO(schedule);
     }
 
     @Override
+    @Transactional
     public SchedulesReponseDTO update(Integer id, SchedulesUpdateRequestDTO dto) {
         Schedules foundSchedule = this.schedulesRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("schedule", "Schedule Not Found"));
 
-        Doctors doctor = doctorsRepository.findById(dto.getDoctorId())
-                .orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+        // Nếu DTO có doctorId mới, chỉ đơn giản validate sự tồn tại (không thay đổi chủ sở hữu ở đây)
+        if (dto.getDoctorId() != null) {
+            doctorsRepository.findById(dto.getDoctorId())
+                    .orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
+        }
 
-        Schedules schedule = doctor.updateSchedule(
-                id,
-                dto.getDayOfWeek(),
-                dto.getStartAt(),
-                dto.getEndAt()
-        );
+        if (dto.getDayOfWeek() != null) {
+            foundSchedule.changeDay(dto.getDayOfWeek());
+        }
+        if (dto.getStartAt() != null || dto.getEndAt() != null) {
+            // Lấy thời gian mới, nếu null thì giữ nguyên giá trị cũ
+            var newStart = dto.getStartAt() != null ? dto.getStartAt() : foundSchedule.getStartAt();
+            var newEnd = dto.getEndAt() != null ? dto.getEndAt() : foundSchedule.getEndAt();
+            foundSchedule.changeTime(newStart, newEnd);
+        }
 
-        doctorsRepository.save(doctor);
-
-        return schedulesMapper.toDTO(schedule);
+        // JPA dirty checking sẽ lưu thay đổi trong transaction
+        return schedulesMapper.toDTO(foundSchedule);
     }
 
     @Override
@@ -78,13 +84,4 @@ public class SchedulesCommandServiceImpl implements SchedulesCommandService {
         return this.schedulesMapper.toDTO(foundSchedule);
     }
 
-    @Transactional
-    @Override
-    public boolean delete(Integer id) {
-        Schedules foundSchedule = this.schedulesRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("schedule", "Schedule Not Found"));
-
-        this.schedulesRepository.delete(foundSchedule);
-        return true;
-    }
 }

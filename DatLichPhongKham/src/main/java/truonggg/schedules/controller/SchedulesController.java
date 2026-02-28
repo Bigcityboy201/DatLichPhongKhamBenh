@@ -66,11 +66,4 @@ public class SchedulesController {
         return SuccessReponse.of(this.schedulesCommandService.delete(id, dto));
     }
 
-    // DELETE /api/schedules/{id} - Hard delete
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','EMPLOYEE')")
-    public SuccessReponse<String> hardDeleteSchedule(@PathVariable Integer id) {
-        this.schedulesCommandService.delete(id);
-        return SuccessReponse.of("Xóa thành công lịch làm việc");
-    }
 }
