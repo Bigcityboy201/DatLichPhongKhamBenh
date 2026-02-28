@@ -1,0 +1,26 @@
+1)SRP:nói về việc một object chỉ nên có một lí do để thay đổi
+ví dụ:
+-Khi thêm đơn hàng
++)tạo đơn hàng
++)gửi mail
++)thanh toán 
++)....
+2)Hướng giải quyết
+-private method:dùng khi service đó chỉ chịu trách nhiệm cho chính nó không liên quan gì đến service khác
+ví dụ:
++Thêm user chỉ đáp ứng nhu cầu duy nhất cho service User
+-helper service:dùng khi mà có hành vi kĩ thuật,không phải business rule,không thuộc domain core
+ví dụ:
++Khi thêm đơn hàng thì có thêm hành động gửi mail,thanh toán vâng vâng nên tách gửi gmail ra
++Không hợp lệ khi mà refund là business rule → nó là Domain Service.
+-Utility:khi xử lí logic code như convert vâng vâng không gọi JPA,Framework
+ví dụ:như convert datetime vâng vâng
+-Domain Service:dùng khi mà sử lí business rule,không thuộc về entity,liên quan nhiều entity
+ví dụ:
++refund lại tiền khi hủy lịch đúng thời gian cần truy cập db
+-Domain Event:dùng khi các thành phần khác cần phản ứng,Muốn decouple,Có side-effect,Có thể async
+Ví dụ:
+
+OrderCreated
+
+AppointmentCancelled
