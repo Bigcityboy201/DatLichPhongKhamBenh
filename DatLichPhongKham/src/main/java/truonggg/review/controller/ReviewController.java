@@ -118,11 +118,4 @@ public class ReviewController {
 		return SuccessReponse.of(this.reviewSelfService.softDeleteByCurrentUser(id, username));
 	}
 
-	// DELETE /api/reviews/{id} - Hard delete
-	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	@DeleteMapping("/{id}")
-	public SuccessReponse<String> hardDeleteReview(@PathVariable Integer id) {
-		this.reviewAdminService.delete(id);
-		return SuccessReponse.of("Xóa thành công review!");
-	}
 }

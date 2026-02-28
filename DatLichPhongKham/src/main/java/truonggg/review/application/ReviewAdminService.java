@@ -21,7 +21,6 @@ public interface ReviewAdminService {
 
 	ReviewResponseDTO delete(Integer id, ReviewUpdateRequestDTO dto);
 
-	boolean delete(Integer id);
 }
 
 

@@ -186,15 +186,6 @@ public class ReviewServiceIMPL implements ReviewAdminService, ReviewSelfService 
 	}
 
 	@Override
-	public boolean delete(Integer id) {
-		review foundReview = this.reviewRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
-
-		this.reviewRepository.delete(foundReview);
-		return true;
-	}
-
-	@Override
 	public ReviewResponseDTO softDeleteByCurrentUser(Integer id, String userName) {
 		review foundReview = this.reviewRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("review", "Review Not Found"));
