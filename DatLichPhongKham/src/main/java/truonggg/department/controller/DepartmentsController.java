@@ -71,14 +71,6 @@ public class DepartmentsController {
 		return SuccessReponse.of(this.departmentsCommandService.delete(id, dto));
 	}
 
-	// DELETE /api/departments/{id} - Hard delete
-	@DeleteMapping("/manually/{id}")
-	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	public SuccessReponse<String> hardDeleteDepartment(@PathVariable Integer id) {
-		this.departmentsCommandService.delete(id);
-		return SuccessReponse.of("Xóa thành công khoa");
-	}
-
 	@GetMapping("/search")
 	public SuccessReponse<List<DepartmentsResponseDTO>> searchDepartments(@RequestParam String keyword,
 			@RequestParam(value = "page", defaultValue = "0") int page,

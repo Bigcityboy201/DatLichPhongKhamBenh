@@ -84,14 +84,6 @@ public class DepartmentServiceImpl implements DepartmentsCommandService, Departm
 		return this.departmentsMapper.toResponse(this.departmentsRepository.save(found));
 	}
 
-	@Override
-	@Transactional
-	public boolean delete(Integer id) {
-		Departments found = getDepartmentOrThrow(id);
-		this.departmentsRepository.delete(found);
-		return true;
-	}
-
 	// ================= INTERNAL =================
 
 	private Departments getDepartmentOrThrow(Integer id) {

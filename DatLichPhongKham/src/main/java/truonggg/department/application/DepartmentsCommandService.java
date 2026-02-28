@@ -10,8 +10,6 @@ public interface DepartmentsCommandService {
 	DepartmentsResponseDTO update(Integer id, DepartmentsUpdateRequestDTO dto);
 
 	DepartmentsResponseDTO delete(Integer id, DepartmentsUpdateRequestDTO dto);
-
-	boolean delete(Integer id);
 }
 
 
