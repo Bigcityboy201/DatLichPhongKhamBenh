@@ -17,6 +17,7 @@ import truonggg.Enum.PaymentMethod;
 import truonggg.Enum.PaymentStatus;
 import truonggg.Exception.NotFoundException;
 import truonggg.appointment.domain.model.Appointments;
+import truonggg.appointment.domain.service.AppointmentAccessValidator;
 import truonggg.payment.domain.model.Payments;
 import truonggg.user.domain.model.User;
 import truonggg.dto.reponseDTO.PaymentResponseDTO;
@@ -45,7 +46,7 @@ public class PaymentServiceIMPL implements PaymentService {
 	private final AppointmentsRepository appointmentsRepository;
 	private final UserRepository userRepository;
 	private final PaymentMapper paymentMapper;
-	// private final QRCodeService qrCodeService;
+    private final AppointmentAccessValidator appointmentAccessValidator;
 
 	private final PaymentStrategyFactory paymentStrategyFactory;
 
@@ -53,23 +54,21 @@ public class PaymentServiceIMPL implements PaymentService {
 	@Transactional
 	public PaymentResponseDTO createPayment(PaymentRequestDTO dto, String username) {
 
-		// 1️ Kiểm tra user
+		// 1Kiểm tra user
 		User user = userRepository.findByUserName(username)
 				.orElseThrow(() -> new NotFoundException("user", "User not found"));
 
-		// 2️ Kiểm tra appointment
+		// 2Kiểm tra appointment
 		Appointments appointment = appointmentsRepository.findById(dto.getAppointmentId())
 				.orElseThrow(() -> new NotFoundException("appointment", "Appointment not found"));
 
-		// 3️ Kiểm tra đã thanh toán thành công chưa
+		// 3Kiểm tra đã thanh toán thành công chưa
 		boolean hasSuccessPayment = paymentsRepository.existsByAppointmentsAndStatus(appointment,
 				PaymentStatus.CONFIRMED);
 
-		if (hasSuccessPayment) {
-			throw new IllegalStateException("Appointment này đã được thanh toán");
-		}
+        appointment.ensureCanBePaid();
 
-		// 4️ Kiểm tra pending
+		// 4Kiểm tra pending
 		Optional<Payments> pendingPaymentOpt = paymentsRepository.findByAppointmentsAndStatus(appointment,
 				PaymentStatus.PENDING);
 
@@ -77,27 +76,27 @@ public class PaymentServiceIMPL implements PaymentService {
 			return paymentMapper.toDTO(pendingPaymentOpt.get());
 		}
 
-		// 5️ Kiểm tra quyền
-		validatePermission(user, appointment);
+		// 5 Kiểm tra quyền
+        this.appointmentAccessValidator.validatePermission(user, appointment);
 
-		// 6️ Kiểm tra appointment bị hủy
+		// 6 Kiểm tra appointment bị hủy
 		if (appointment.getStatus() == Appointments_Enum.CANCELLED) {
 			throw new IllegalArgumentException("Không thể thanh toán cho appointment đã bị hủy");
 		}
 
-		// 7️ Resolve PaymentMethod
+		// 7 Resolve PaymentMethod
 		PaymentMethod method = resolvePaymentMethod(dto.getPaymentMethod());
 
-		// 8️ Lấy Strategy tương ứng
+		// 8 Lấy Strategy tương ứng
 		PaymentStrategy strategy = paymentStrategyFactory.getStrategy(method);
 
-		// 9️ Strategy xử lý payment
+		// 9 Strategy xử lý payment
 		Payments payment = strategy.processPayment(appointment, dto, user);
 
-		// 10️ Save DB
+		// 10 Save DB
 		payment = paymentsRepository.save(payment);
 
-		// 11️ Map DTO
+		// 11 Map DTO
 		return paymentMapper.toDTO(payment);
 	}
 
@@ -157,12 +156,12 @@ public class PaymentServiceIMPL implements PaymentService {
 	public PaymentResponseDTO confirmBankTransferPayment(BankTransferCallbackDTO callbackDTO) {
 		Payments payment = null;
 
-		// 1️)Khớp theo gatewayTransactionNo (tid từ bank)
+		// 1)Khớp theo gatewayTransactionNo (tid từ bank)
 		if (callbackDTO.getBankTransactionId() != null && !callbackDTO.getBankTransactionId().isEmpty()) {
 			payment = paymentsRepository.findByGatewayTransactionNo(callbackDTO.getBankTransactionId()).orElse(null);
 		}
 
-		// 2️) Nếu không tìm thấy, parse appointmentId từ content và tìm payment
+		// 2) Nếu không tìm thấy, parse appointmentId từ content và tìm payment
 		if (payment == null && callbackDTO.getContent() != null && !callbackDTO.getContent().isEmpty()) {
 			Integer appointmentId = parseAppointmentIdFromContent(callbackDTO.getContent());
 
@@ -187,7 +186,7 @@ public class PaymentServiceIMPL implements PaymentService {
 			return null;
 		}
 
-		// ✅ Cập nhật trạng thái payment
+		//  Cập nhật trạng thái payment
 		payment.setStatus(PaymentStatus.CONFIRMED);
 
 		// Lưu gatewayTransactionNo nếu có
@@ -395,16 +394,6 @@ public class PaymentServiceIMPL implements PaymentService {
 		}
 	}
 
-	private void validatePermission(User user, Appointments appointment) {
-
-		boolean isAdminOrEmployee = user.getRole() != null && Boolean.TRUE.equals(user.getRole().getIsActive())
-				&& ("ADMIN".equals(user.getRole().getRoleName()) || "EMPLOYEE".equals(user.getRole().getRoleName()));
-
-		if (!isAdminOrEmployee && !appointment.getUser().getUserId().equals(user.getUserId())) {
-
-			throw new AccessDeniedException("Bạn không có quyền thanh toán cho appointment này");
-		}
-	}
 }
 
 
