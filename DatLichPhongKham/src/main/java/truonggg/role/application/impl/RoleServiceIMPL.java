@@ -29,12 +29,9 @@ public class RoleServiceIMPL implements RoleQueryService, RoleCommandService {
 
 	@Override
 	public RoleResponseDTO createRole(RoleRequestDTO dto) {
-		Role role = this.roleMapper.toEntity(dto);
-		role.setIsActive(true);
-		role = this.roleRepository.save(role);
+		Role role = Role.create(dto.getRoleName(), dto.getDescription());
+		role = roleRepository.save(role);
 		RoleResponseDTO response = this.roleMapper.toDTO(role);
-		response.setDescription(role.getDescription());
-		response.setIsActive(role.getIsActive());
 		return response;
 	}
 
@@ -55,10 +52,7 @@ public class RoleServiceIMPL implements RoleQueryService, RoleCommandService {
 	public RoleResponseDTO findById(Integer id) {
 		Role role = this.roleRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
-		RoleResponseDTO dto = this.roleMapper.toDTO(role);
-		dto.setDescription(role.getDescription());
-		dto.setIsActive(role.getIsActive());
-		return dto;
+		return this.roleMapper.toDTO(role);
 	}
 
 	@Override
@@ -66,18 +60,10 @@ public class RoleServiceIMPL implements RoleQueryService, RoleCommandService {
 		Role foundRole = this.roleRepository.findById(dto.getRoleId())
 				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
-		if (dto.getRoleName() != null) {
-			foundRole.setRoleName(dto.getRoleName());
-		}
-		if (dto.getDescription() != null) {
-			foundRole.setDescription(dto.getDescription());
-		}
+		foundRole.updateInfo(dto.getRoleName(), dto.getDescription());
 
 		Role savedRole = this.roleRepository.save(foundRole);
-		RoleResponseDTO response = this.roleMapper.toDTO(savedRole);
-		response.setDescription(savedRole.getDescription());
-		response.setIsActive(savedRole.getIsActive());
-		return response;
+		return this.roleMapper.toDTO(savedRole);
 	}
 
 	@Override
@@ -86,18 +72,18 @@ public class RoleServiceIMPL implements RoleQueryService, RoleCommandService {
 				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
 		if (dto.getIsActive() != null) {
-			foundRole.setIsActive(dto.getIsActive());
-			this.roleRepository.save(foundRole);
+			if (dto.getIsActive()) {
+				if (!foundRole.getIsActive()) {
+					foundRole.activate();
+				}
+			} else {
+				if (foundRole.getIsActive()) {
+					foundRole.deactivate();
+				}
+			}
+			roleRepository.save(foundRole);
 		}
 		return true;
 	}
 
-	@Override
-	public boolean delete(Integer id) {
-		Role foundRole = this.roleRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
-
-		this.roleRepository.delete(foundRole);
-		return true;
-	}
 }

@@ -147,11 +147,26 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
     }
 
 	@Override
-	public PagedResult<UserResponseDTO> getAllPaged(Pageable pageable) {
-		Page<User> userPage = this.userRepository.findAll(pageable);
-		List<UserResponseDTO> dtoList = userPage.stream().map(userMapper::toDTO).collect(Collectors.toList());
+	public PagedResult<UserResponseDTO> getAllPaged(Pageable pageable,Integer roleId) {
+        Page<User> userPage;
 
-		return PagedResult.from(userPage, dtoList);
+        if (roleId != null) {
+            boolean roleExists = roleRepository.existsById(roleId);
+            if (!roleExists) {
+                throw new NotFoundException("role", "Role not found!");
+            }
+
+            userPage = this.userRepository.findByRole_RoleId(roleId, pageable);
+        } else {
+            userPage = this.userRepository.findAll(pageable);
+        }
+
+        List<UserResponseDTO> dtoList =
+                userPage.stream()
+                        .map(userMapper::toDTO)
+                        .collect(Collectors.toList());
+
+        return PagedResult.from(userPage, dtoList);
 	}
 
 	@Override

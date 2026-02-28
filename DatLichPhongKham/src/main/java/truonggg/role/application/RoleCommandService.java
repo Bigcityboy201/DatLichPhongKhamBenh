@@ -13,7 +13,6 @@ public interface RoleCommandService {
 
 	boolean delete(RoleDeleteRequestDTO dto);
 
-	boolean delete(Integer id);
 }
 
 

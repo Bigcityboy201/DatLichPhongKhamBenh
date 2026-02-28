@@ -71,10 +71,4 @@ public class RoleController {
 		return SuccessReponse.of(this.roleCommandService.delete(dto));
 	}
 
-	// DELETE /api/roles/{id} - Hard delete
-	@DeleteMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('ADMIN')")
-	public SuccessReponse<Boolean> hardDeleteRole(@PathVariable Integer id) {
-		return SuccessReponse.of(this.roleCommandService.delete(id));
-	}
 }

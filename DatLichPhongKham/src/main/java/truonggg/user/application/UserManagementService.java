@@ -12,7 +12,7 @@ public interface UserManagementService {
 
 	UserResponseDTO createUser(UserRequestDTO dto);
 
-	PagedResult<UserResponseDTO> getAllPaged(Pageable pageable);
+	PagedResult<UserResponseDTO> getAllPaged(Pageable pageable,Integer roleId);
 
 	UserResponseDTO findById(Integer id);
 

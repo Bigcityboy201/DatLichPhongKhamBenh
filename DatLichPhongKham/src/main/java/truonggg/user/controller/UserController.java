@@ -39,9 +39,9 @@ public class UserController {
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	@GetMapping
 	public SuccessReponse<?> getAllUsers(@RequestParam(value = "page", defaultValue = "0") int page,
-			@RequestParam(value = "size", defaultValue = "10") int size) {
+			@RequestParam(value = "size", defaultValue = "10") int size,@RequestParam(value ="roleId") int roleId) {
 		Pageable pageable = PageRequest.of(page, size);
-		PagedResult<UserResponseDTO> pagedResult = userManagementService.getAllPaged(pageable);
+		PagedResult<UserResponseDTO> pagedResult = userManagementService.getAllPaged(pageable,roleId);
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
