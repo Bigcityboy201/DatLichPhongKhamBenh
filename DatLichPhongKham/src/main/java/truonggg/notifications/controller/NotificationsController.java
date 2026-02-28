@@ -96,19 +96,6 @@ public class NotificationsController {
 		return SuccessReponse.of(this.notificationsAdminService.markAsRead(id));
 	}
 
-	// DELETE /api/notifications/{id} - Delete notification
-	@DeleteMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
-	public SuccessReponse<NotificationsResponseDTO> deleteNotification(@PathVariable Integer id) {
-		return SuccessReponse.of(this.notificationsAdminService.delete(id));
-	}
-
-	// DELETE /api/notifications/manually/{id} - Hard delete notification
-	@DeleteMapping("/manually/{id}")
-	@PreAuthorize("hasAnyAuthority('ADMIN', 'EMPLOYEE')")
-	public SuccessReponse<Boolean> hardDeleteNotification(@PathVariable Integer id) {
-		return SuccessReponse.of(this.notificationsAdminService.hardDelete(id));
-	}
 
 	@GetMapping("/me")
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR')")

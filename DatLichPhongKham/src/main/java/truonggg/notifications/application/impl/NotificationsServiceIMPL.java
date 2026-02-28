@@ -1,6 +1,5 @@
 package truonggg.notifications.application.impl;
 
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,18 +35,9 @@ public class NotificationsServiceIMPL implements NotificationsAdminService, Noti
 		User user = this.userRepository.findById(dto.getUserId())
 				.orElseThrow(() -> new NotFoundException("user", "User Not Found"));
 
-		Notifications notification = new Notifications();
-		notification.setMessage(dto.getMessage());
-		notification.setUser(user);
-		notification.setCreatedAt(new Date());
-		// notification.setIsRead(dto.getIsRead() != null ? dto.getIsRead() : false);
-
+		Notifications notification = Notifications.create(user, dto.getMessage());
 		notification = this.notificationsRepository.save(notification);
-		NotificationsResponseDTO response = this.notificationsMapper.toDTO(notification);
-		response.setIsRead(notification.getIsRead());
-		// Đảm bảo userName được set đúng từ user đã load (luôn set để đảm bảo có giá trị)
-		response.setUserName(user.getFullName());
-		return response;
+		return this.notificationsMapper.toDTO(notification);
 	}
 
 	@Override
@@ -91,9 +81,7 @@ public class NotificationsServiceIMPL implements NotificationsAdminService, Noti
 	public NotificationsResponseDTO findById(Integer id) {
 		Notifications notification = this.notificationsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("notification", "Notification Not Found"));
-		NotificationsResponseDTO dto = this.notificationsMapper.toDTO(notification);
-		dto.setIsRead(notification.getIsRead());
-		return dto;
+		return this.notificationsMapper.toDTO(notification);
 	}
 
 	@Override
@@ -102,9 +90,7 @@ public class NotificationsServiceIMPL implements NotificationsAdminService, Noti
 				.orElseThrow(() -> new NotFoundException("notification", "Notification Not Found"));
 
 		// Cập nhật message nếu có
-		if (dto.getMessage() != null) {
-			foundNotification.setMessage(dto.getMessage());
-		}
+		foundNotification.updateMessage(dto.getMessage());
 
 		// Cập nhật user nếu có
 		if (dto.getUserId() != null) {
@@ -115,37 +101,15 @@ public class NotificationsServiceIMPL implements NotificationsAdminService, Noti
 
 		// Cập nhật isRead nếu có
 		if (dto.getIsRead() != null) {
-			foundNotification.setIsRead(dto.getIsRead());
+			if (dto.getIsRead()) {
+				foundNotification.markAsRead();
+			} else {
+				foundNotification.setIsRead(false);
+			}
 		}
 
 		Notifications savedNotification = this.notificationsRepository.save(foundNotification);
-		NotificationsResponseDTO response = this.notificationsMapper.toDTO(savedNotification);
-		response.setIsRead(savedNotification.getIsRead());
-		return response;
-	}
-
-	@Override
-	public NotificationsResponseDTO delete(Integer id) {
-		Notifications foundNotification = this.notificationsRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("notification", "Notification Not Found"));
-
-		// Soft delete: xóa thực sự khỏi database (vì model không có field
-		// deleted/isActive)
-		this.notificationsRepository.delete(foundNotification);
-
-		// Trả về DTO trước khi xóa
-		NotificationsResponseDTO response = this.notificationsMapper.toDTO(foundNotification);
-		response.setIsRead(foundNotification.getIsRead());
-		return response;
-	}
-
-	@Override
-	public boolean hardDelete(Integer id) {
-		Notifications foundNotification = this.notificationsRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("notification", "Notification Not Found"));
-
-		this.notificationsRepository.delete(foundNotification);
-		return true;
+		return this.notificationsMapper.toDTO(savedNotification);
 	}
 
 	@Override
@@ -153,12 +117,10 @@ public class NotificationsServiceIMPL implements NotificationsAdminService, Noti
 		Notifications foundNotification = this.notificationsRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("notification", "Notification Not Found"));
 
-		foundNotification.setIsRead(true);
+		foundNotification.markAsRead();
 		Notifications savedNotification = this.notificationsRepository.save(foundNotification);
 
-		NotificationsResponseDTO response = this.notificationsMapper.toDTO(savedNotification);
-		response.setIsRead(savedNotification.getIsRead());
-		return response;
+		return this.notificationsMapper.toDTO(savedNotification);
 	}
 
 	@Override
@@ -190,7 +152,7 @@ public class NotificationsServiceIMPL implements NotificationsAdminService, Noti
 			throw new AccessDeniedException("You cannot modify this notification");
 		}
 
-		foundNotification.setIsRead(true);
+		foundNotification.markAsRead();
 		this.notificationsRepository.save(foundNotification);
 		return true;
 	}

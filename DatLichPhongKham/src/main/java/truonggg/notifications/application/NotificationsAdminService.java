@@ -21,10 +21,6 @@ public interface NotificationsAdminService {
 
 	NotificationsResponseDTO update(Integer id, NotificationsUpdateRequestDTO dto);
 
-	NotificationsResponseDTO delete(Integer id);
-
-	boolean hardDelete(Integer id);
-
 	NotificationsResponseDTO markAsRead(Integer id);
 }
 
