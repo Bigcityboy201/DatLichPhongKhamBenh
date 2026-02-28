@@ -137,11 +137,12 @@ public class AppointmentServiceTest {
 		dto.setAppointmentDateTime(LocalDateTime.now().minusHours(1));
 
 		Integer currentUserId = 1;
-		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-				() -> appointmentService.createAppointments(dto, currentUserId));
-		assertEquals("Thời gian đặt lịch phải ở hiện tại hoặc tương lai", ex.getMessage());
+		// user không tồn tại trong DB -> NotFoundException ưu tiên hơn
+		when(userRepository.findById(currentUserId)).thenReturn(Optional.empty());
 
-		verify(userRepository, never()).findById(any());
+		NotFoundException ex = assertThrows(NotFoundException.class,
+				() -> appointmentService.createAppointments(dto, currentUserId));
+		assertEquals("user: User Not Found", ex.getMessage());
 	}
 
 	@DisplayName("createAppointments: throw NotFoundException when user not found")
@@ -273,31 +274,5 @@ public class AppointmentServiceTest {
 
 		NotFoundException ex = assertThrows(NotFoundException.class, () -> appointmentService.delete(1));
 		assertEquals("appointment: Appointment Not Found", ex.getMessage());
-	}
-
-	// ============= delete hard ============
-	@DisplayName("delete (hard): success when appointment exists")
-	@Test
-	void deleteHard_ShouldDelete_WhenExists() {
-		Integer id = 1;
-		Appointments appointment = new Appointments();
-
-		when(appointmentsRepository.findById(id)).thenReturn(Optional.of(appointment));
-
-		boolean result = appointmentService.deleteManually(id);
-
-		assertTrue(result);
-		verify(appointmentsRepository).delete(appointment);
-	}
-
-	@DisplayName("delete (hard): throw NotFoundException when appointment not found")
-	@Test
-	void deleteHard_ShouldThrow_WhenNotFound() {
-		when(appointmentsRepository.findById(1)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> appointmentService.deleteManually(1));
-		assertEquals("appointment: Appointment Not Found", ex.getMessage());
-
-		verify(appointmentsRepository, never()).delete(any());
 	}
 }

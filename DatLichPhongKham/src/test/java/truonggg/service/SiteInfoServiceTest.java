@@ -69,17 +69,17 @@ public class SiteInfoServiceTest {
 	@Test
 	void save_ShouldCreateSiteInfo() {
 		SiteInfoRequestDTO dto = new SiteInfoRequestDTO();
-		SiteInfo entity = new SiteInfo();
+		dto.setInfoKey("SITE_NAME");
+		dto.setValue("Clinic A");
 		SiteInfo saved = new SiteInfo();
 
-		when(siteInfoMapper.toModel(dto)).thenReturn(entity);
-		when(siteInfoRepository.save(entity)).thenReturn(saved);
+		when(siteInfoRepository.save(any(SiteInfo.class))).thenReturn(saved);
 		when(siteInfoMapper.toDTO(saved)).thenReturn(new SiteInfoResponseDTO());
 
 		SiteInfoResponseDTO result = siteInfoService.save(dto);
 
 		assertNotNull(result);
-		verify(siteInfoRepository).save(entity);
+		verify(siteInfoRepository).save(any(SiteInfo.class));
 	}
 
 	@DisplayName("update: throw NotFoundException when siteInfo not found")

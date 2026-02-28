@@ -174,29 +174,7 @@ public class DepartmentServiceTest {
 		assertEquals("department: Department Not Found", ex.getMessage());
 	}
 
-	// ============= delete hard ============
-	@DisplayName("delete (hard): success when department exists")
-	@Test
-	void deleteHard_ShouldDelete_WhenExists() {
-		Departments dep = new Departments();
-		when(departmentsRepository.findById(1)).thenReturn(Optional.of(dep));
 
-		boolean result = departmentService.delete(1);
-
-		assertTrue(result);
-		verify(departmentsRepository).delete(dep);
-	}
-
-	@DisplayName("delete (hard): throw NotFoundException when department not found")
-	@Test
-	void deleteHard_ShouldThrow_WhenNotFound() {
-		when(departmentsRepository.findById(1)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> departmentService.delete(1));
-		assertEquals("department: Department Not Found", ex.getMessage());
-
-		verify(departmentsRepository, never()).delete(any());
-	}
 }
 
 

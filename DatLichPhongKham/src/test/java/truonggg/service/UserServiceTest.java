@@ -20,7 +20,7 @@ import org.springframework.data.domain.Pageable;
 import truonggg.Exception.NotFoundException;
 import truonggg.Exception.UserAlreadyExistException;
 import truonggg.constant.SecurityRole;
-import truonggg.doctor.application.impl.DoctorRoleAssignmentHandler;
+import truonggg.doctor.domain.service.DoctorRoleAssignmentHandler;
 import truonggg.role.application.RoleAssignmentHandler;
 import truonggg.role.domain.model.Role;
 import truonggg.role.infrastructure.RoleRepository;
@@ -262,7 +262,7 @@ public class UserServiceTest {
         when(userRepository.findAll(pageable)).thenReturn(page);
         when(userMapper.toDTO(any(User.class))).thenReturn(new UserResponseDTO());
 
-        PagedResult<UserResponseDTO> result = userService.getAllPaged(pageable);
+        PagedResult<UserResponseDTO> result = userService.getAllPaged(pageable, null);
 
         assertNotNull(result);
         assertEquals(2, result.getContent().size());

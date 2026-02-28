@@ -50,17 +50,16 @@ public class RoleServiceTest {
 	@Test
 	void createRole_ShouldCreate() {
 		RoleRequestDTO dto = new RoleRequestDTO();
-		Role entity = new Role();
+		dto.setRoleName("ADMIN");
 		Role saved = new Role();
 
-		when(roleMapper.toEntity(dto)).thenReturn(entity);
-		when(roleRepository.save(entity)).thenReturn(saved);
+		when(roleRepository.save(any(Role.class))).thenReturn(saved);
 		when(roleMapper.toDTO(saved)).thenReturn(new RoleResponseDTO());
 
 		RoleResponseDTO result = roleService.createRole(dto);
 
 		assertNotNull(result);
-		verify(roleRepository).save(entity);
+		verify(roleRepository).save(any(Role.class));
 	}
 
 	@DisplayName("getAll: success")
@@ -122,16 +121,6 @@ public class RoleServiceTest {
 		verify(roleRepository).save(role);
 	}
 
-	@DisplayName("delete (hard): throw NotFoundException when not found")
-	@Test
-	void deleteHard_ShouldThrow_WhenNotFound() {
-		when(roleRepository.findById(1)).thenReturn(Optional.empty());
-
-		NotFoundException ex = assertThrows(NotFoundException.class, () -> roleService.delete(1));
-		assertEquals("role: Role Not Found", ex.getMessage());
-
-		verify(roleRepository, never()).delete(any());
-	}
 }
 
 

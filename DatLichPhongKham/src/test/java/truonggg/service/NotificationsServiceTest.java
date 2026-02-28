@@ -58,8 +58,6 @@ public class NotificationsServiceTest {
 		dto.setMessage("Hello");
 
 		User user = org.mockito.Mockito.mock(User.class);
-		when(user.getFullName()).thenReturn("Test User");
-
 		when(userRepository.findById(1)).thenReturn(Optional.of(user));
 		when(notificationsRepository.save(any(Notifications.class))).thenReturn(new Notifications());
 		when(notificationsMapper.toDTO(any(Notifications.class))).thenReturn(new NotificationsResponseDTO());
