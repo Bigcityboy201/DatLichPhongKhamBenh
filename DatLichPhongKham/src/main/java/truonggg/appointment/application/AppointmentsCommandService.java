@@ -13,8 +13,6 @@ public interface AppointmentsCommandService {
 
 	AppointmentsResponseDTO delete(Integer id);
 
-	boolean deleteManually(Integer id);
-
 	CancelAppointmentResponse cancelByUser(Integer id, String userName);
 
 	AppointmentsResponseDTO assignDoctor(Integer appointmentId, Integer doctorId);

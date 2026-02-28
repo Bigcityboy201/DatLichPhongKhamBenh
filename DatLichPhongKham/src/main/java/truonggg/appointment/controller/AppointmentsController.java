@@ -82,14 +82,6 @@ public class AppointmentsController {
 		return SuccessReponse.of(this.appointmentsCommandService.delete(id));
 	}
 
-	// DELETE /api/appointments/{id} - Hard delete
-	@DeleteMapping("/{id}")
-	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
-	public SuccessReponse<String> hardDeleteAppointment(@PathVariable Integer id) {
-		this.appointmentsCommandService.deleteManually(id);
-		return SuccessReponse.of("Xóa thành công!");
-	}
-
 	@GetMapping("/me")
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<List<AppointmentsResponseDTO>> getMyAppointments(
