@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -32,6 +33,8 @@ import truonggg.payment.infrastructure.PaymentsRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.user.domain.model.User;
 import truonggg.user.infrastructure.UserRepository;
+import truonggg.domain.event.AppointmentCreatedEvent;
+import truonggg.domain.event.AppointmentCancelledEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +48,7 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
     private final AppointmentScheduleValidator scheduleValidator;
     private final AppointmentConflictValidator conflictValidator;
     private final AppointmentCancellationService appointmentCancellationService;
+	private final ApplicationEventPublisher eventPublisher;
 
 
 	// ================= QUERY =================
@@ -88,51 +92,38 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 		if (dto.getDoctorId() != null) {
 			doctors = this.doctorsRepository.findById(dto.getDoctorId())
 					.orElseThrow(() -> new NotFoundException("doctor", "Doctor Not Found"));
-
-            scheduleValidator.validate(doctors.getId(),
-                    dto.getAppointmentDateTime());
-            conflictValidator.validate(doctors.getId(),
-                    dto.getAppointmentDateTime(), null);
-
+            scheduleValidator.validate(doctors.getId(), dto.getAppointmentDateTime());
+            conflictValidator.validate(doctors.getId(), dto.getAppointmentDateTime(), null);
 		}
 
 		// Tạo lịch hẹn (áp dụng rule thời gian ở entity)
 		Appointments appointment = Appointments.create(user, doctors, appointmentTime, dto.getNote());
 
-		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(appointment));
+		appointment = this.appointmentsRepository.save(appointment);
+
+		// Publish domain event
+		eventPublisher.publishEvent(new AppointmentCreatedEvent(appointment));
+
+		return this.appointmentsMapper.toDTO(appointment);
 	}
 
     @Override
-    public AppointmentsResponseDTO update(
-            Integer id,
-            AppointmentsUpdateRequestDTO dto) {
+    public AppointmentsResponseDTO update(Integer id, AppointmentsUpdateRequestDTO dto) {
 
-        Appointments appointment =
-                appointmentsRepository.findById(id)
-                        .orElseThrow(() ->
-                                new NotFoundException("appointment", "Not Found"));
+        Appointments appointment = appointmentsRepository.findById(id).orElseThrow(() -> new NotFoundException("appointment", "Not Found"));
 
         if (dto.getAppointmentDateTime() != null) {
 
-            scheduleValidator.validate(
-                    appointment.getDoctors().getId(),
-                    dto.getAppointmentDateTime());
+            scheduleValidator.validate(appointment.getDoctors().getId(), dto.getAppointmentDateTime());
 
-            conflictValidator.validate(
-                    appointment.getDoctors().getId(),
-                    dto.getAppointmentDateTime(),
-                    id);
+            conflictValidator.validate(appointment.getDoctors().getId(), dto.getAppointmentDateTime(), id);
 
-            appointment.reschedule(
-                    dto.getAppointmentDateTime());
+            appointment.reschedule(dto.getAppointmentDateTime());
         }
 
         if (dto.getDoctorId() != null) {
 
-            Doctors doctor =
-                    doctorsRepository.findById(dto.getDoctorId())
-                            .orElseThrow(() ->
-                                    new NotFoundException("doctor", "Not Found"));
+            Doctors doctor = doctorsRepository.findById(dto.getDoctorId()).orElseThrow(() -> new NotFoundException("doctor", "Not Found"));
 
             appointment.assignDoctor(doctor);
         }
@@ -140,8 +131,7 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
         if (dto.getNote() != null) {
             appointment.setNote(dto.getNote());
         }
-        return this.appointmentsMapper.toDTO(
-                appointmentsRepository.save(appointment));
+        return this.appointmentsMapper.toDTO(appointmentsRepository.save(appointment));
     }
 
 	@Override
@@ -152,7 +142,13 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
 
 		// Soft delete - cập nhật status thành CANCELLED
         foundAppointment.cancel();
-		return this.appointmentsMapper.toDTO(this.appointmentsRepository.save(foundAppointment));
+		foundAppointment = this.appointmentsRepository.save(foundAppointment);
+
+		// Publish domain event
+		eventPublisher.publishEvent(new AppointmentCancelledEvent(foundAppointment, foundAppointment.getStatus(), "ADMIN"
+		));
+
+		return this.appointmentsMapper.toDTO(foundAppointment);
 	}
 
     @Override
@@ -160,18 +156,12 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
     public CancelAppointmentResponse cancelByUser(Integer appointmentId, String username) {
 
         //2Lấy appointment
-        Appointments appointment =
-                appointmentsRepository.findById(appointmentId)
-                        .orElseThrow(() ->
-                                new NotFoundException("appointment", "Not Found"));
+        Appointments appointment = appointmentsRepository.findById(appointmentId).orElseThrow(() -> new NotFoundException("appointment", "Not Found"));
 
         //2Kiểm tra quyền sở hữu
         if (!appointment.getUser().getUserName().equals(username)) {
             throw new AccessDeniedException("Not allowed");
         }
-
-        //3Domain tự kiểm tra có thể hủy không
-        appointment.cancel();
 
         String message;
 
@@ -208,39 +198,26 @@ public class AppointmentServiceImpl implements AppointmentsCommandService, Appoi
         // 6Lưu appointment
         appointmentsRepository.save(appointment);
 
-        return new CancelAppointmentResponse(
-                appointmentsMapper.toDTO(appointment),
-                message
-        );
+        // Publish domain event
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(appointment, appointment.getStatus(), "USER"
+        ));
+
+        return new CancelAppointmentResponse(appointmentsMapper.toDTO(appointment), message);
     }
 
     @Override
-    public AppointmentsResponseDTO assignDoctor(
-            Integer appointmentId,
-            Integer doctorId) {
+    public AppointmentsResponseDTO assignDoctor(Integer appointmentId, Integer doctorId) {
 
-        Appointments appointment =
-                appointmentsRepository.findById(appointmentId)
-                        .orElseThrow(() ->
-                                new NotFoundException("appointment", "Not Found"));
+        Appointments appointment = appointmentsRepository.findById(appointmentId).orElseThrow(() -> new NotFoundException("appointment", "Not Found"));
 
-        Doctors doctor =
-                doctorsRepository.findById(doctorId)
-                        .orElseThrow(() ->
-                                new NotFoundException("doctor", "Not Found"));
+        Doctors doctor = doctorsRepository.findById(doctorId).orElseThrow(() -> new NotFoundException("doctor", "Not Found"));
 
-        scheduleValidator.validate(
-                doctor.getId(),
-                appointment.getAppointmentDateTime());
+        scheduleValidator.validate(doctor.getId(), appointment.getAppointmentDateTime());
 
-        conflictValidator.validate(
-                doctor.getId(),
-                appointment.getAppointmentDateTime(),
-                appointmentId);
+        conflictValidator.validate(doctor.getId(), appointment.getAppointmentDateTime(), appointmentId);
 
         appointment.assignDoctor(doctor);
 
-        return this.appointmentsMapper.toDTO(
-                appointmentsRepository.save(appointment));
+        return this.appointmentsMapper.toDTO(appointmentsRepository.save(appointment));
     }
 }

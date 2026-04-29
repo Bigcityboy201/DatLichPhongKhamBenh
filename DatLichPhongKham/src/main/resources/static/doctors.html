@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách bác sĩ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+        .page-subtitle {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .doctor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .doctor-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .doctor-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+        }
+        .doctor-avatar-wrapper {
+            width: 100%;
+            padding-top: 60%;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #e0f2fe, #fef3c7);
+        }
+        .doctor-avatar {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .doctor-fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #1f2933;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .doctor-content {
+            padding: 12px 14px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .doctor-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+        }
+        .doctor-dept {
+            font-size: 13px;
+            color: #4b5563;
+        }
+        .doctor-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #ecfdf5;
+            color: #15803d;
+        }
+        .badge.inactive {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+        .badge.featured {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .empty {
+            margin-top: 24px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #fef3c7;
+            font-size: 13px;
+            color: #92400e;
+        }
+        .error {
+            margin-top: 24px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #fee2e2;
+            font-size: 13px;
+            color: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="page-title">Danh sách bác sĩ</div>
+            <div class="page-subtitle">
+                Hiển thị các bác sĩ đang hoạt động trong hệ thống. Bấm vào thẻ bác sĩ để xem chi tiết và bắt đầu chat.
+            </div>
+        </div>
+    </div>
+
+    <div id="error" class="error" style="display:none;"></div>
+    <div id="empty" class="empty" style="display:none;">Chưa có bác sĩ nào được cấu hình.</div>
+    <div id="grid" class="doctor-grid"></div>
+</div>
+
+<script>
+    function getToken() {
+        return localStorage.getItem("chat_jwt") || localStorage.getItem("token") || "";
+    }
+
+    async function loadDoctors() {
+        const token = getToken();
+        const errorEl = document.getElementById("error");
+        const emptyEl = document.getElementById("empty");
+        const grid = document.getElementById("grid");
+
+        errorEl.style.display = "none";
+        emptyEl.style.display = "none";
+        grid.innerHTML = "";
+
+        try {
+            const res = await fetch("/api/doctors?page=0&size=50", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": "Bearer " + token } : {})
+                }
+            });
+            const body = await res.json();
+            if (!res.ok || body.code !== "OK") {
+                errorEl.textContent = body.message || "Không tải được danh sách bác sĩ.";
+                errorEl.style.display = "block";
+                return;
+            }
+            const doctors = body.data || [];
+            if (!doctors.length) {
+                emptyEl.style.display = "block";
+                return;
+            }
+
+            doctors.forEach(d => {
+                const card = document.createElement("div");
+                card.className = "doctor-card";
+                card.onclick = () => {
+                    window.location.href = "/doctor-detail.html?id=" + encodeURIComponent(d.id);
+                };
+
+                const avatarWrapper = document.createElement("div");
+                avatarWrapper.className = "doctor-avatar-wrapper";
+
+                if (d.imageUrl) {
+                    const img = document.createElement("img");
+                    img.className = "doctor-avatar";
+                    img.src = d.imageUrl;
+                    img.alt = d.fullName || "Bác sĩ";
+                    avatarWrapper.appendChild(img);
+                } else {
+                    const fallback = document.createElement("div");
+                    fallback.className = "doctor-fallback";
+                    const initials = (d.fullName || "BS").split(" ")
+                        .map(p => p[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2);
+                    fallback.textContent = initials;
+                    avatarWrapper.appendChild(fallback);
+                }
+
+                const content = document.createElement("div");
+                content.className = "doctor-content";
+
+                const name = document.createElement("div");
+                name.className = "doctor-name";
+                name.textContent = d.fullName || "Bác sĩ";
+
+                const dept = document.createElement("div");
+                dept.className = "doctor-dept";
+                dept.textContent = d.departmentName
+                    ? "Chuyên khoa: " + d.departmentName
+                    : "Chưa cập nhật chuyên khoa";
+
+                const meta = document.createElement("div");
+                meta.className = "doctor-meta";
+                const exp = document.createElement("span");
+                exp.textContent = (d.experienceYears || 0) + " năm kinh nghiệm";
+
+                const statusWrap = document.createElement("div");
+                if (d.isFeatured) {
+                    const b = document.createElement("span");
+                    b.className = "badge featured";
+                    b.textContent = "Nổi bật";
+                    statusWrap.appendChild(b);
+                }
+                const active = document.createElement("span");
+                active.className = "badge" + (d.active === false ? " inactive" : "");
+                active.textContent = d.active === false ? "Tạm dừng" : "Đang hoạt động";
+                statusWrap.appendChild(active);
+
+                meta.appendChild(exp);
+                meta.appendChild(statusWrap);
+
+                content.appendChild(name);
+                content.appendChild(dept);
+                content.appendChild(meta);
+
+                card.appendChild(avatarWrapper);
+                card.appendChild(content);
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+            errorEl.textContent = "Lỗi khi gọi API danh sách bác sĩ.";
+            errorEl.style.display = "block";
+        }
+    }
+
+    loadDoctors();
+</script>
+
+<script src="/support-chat-widget.js"></script>
+</body>
+</html>
+
+

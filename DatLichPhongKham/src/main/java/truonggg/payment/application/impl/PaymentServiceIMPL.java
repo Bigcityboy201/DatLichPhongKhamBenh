@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,13 +32,16 @@ import truonggg.reponse.PagedResult;
 import truonggg.payment.application.PaymentService;
 import truonggg.strategy.PaymentStrategy;
 import truonggg.strategy.impl.PaymentStrategyFactory;
+import truonggg.domain.event.PaymentCompletedEvent;
+import truonggg.constant.ValidationConstants;
+import truonggg.utils.ValidationUtils;
 
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceIMPL implements PaymentService {
 
 	// Số tiền cọc mặc định cho thanh toán chuyển khoản (QR)
-	// private static final double DEFAULT_DEPOSIT_AMOUNT = 2000.0;
+	// Sử dụng BusinessConstants.DEFAULT_DEPOSIT_AMOUNT thay vì hard-code
 
 	@Value("${casso.webhook.secret-key}")
 	private String cassoWebhookSecretKey;
@@ -47,6 +51,7 @@ public class PaymentServiceIMPL implements PaymentService {
 	private final UserRepository userRepository;
 	private final PaymentMapper paymentMapper;
     private final AppointmentAccessValidator appointmentAccessValidator;
+	private final ApplicationEventPublisher eventPublisher;
 
 	private final PaymentStrategyFactory paymentStrategyFactory;
 
@@ -157,12 +162,12 @@ public class PaymentServiceIMPL implements PaymentService {
 		Payments payment = null;
 
 		// 1)Khớp theo gatewayTransactionNo (tid từ bank)
-		if (callbackDTO.getBankTransactionId() != null && !callbackDTO.getBankTransactionId().isEmpty()) {
+		if (ValidationUtils.isNotEmpty(callbackDTO.getBankTransactionId())) {
 			payment = paymentsRepository.findByGatewayTransactionNo(callbackDTO.getBankTransactionId()).orElse(null);
 		}
 
 		// 2) Nếu không tìm thấy, parse appointmentId từ content và tìm payment
-		if (payment == null && callbackDTO.getContent() != null && !callbackDTO.getContent().isEmpty()) {
+		if (payment == null && ValidationUtils.isNotEmpty(callbackDTO.getContent())) {
 			Integer appointmentId = parseAppointmentIdFromContent(callbackDTO.getContent());
 
 			if (appointmentId != null) {
@@ -200,17 +205,19 @@ public class PaymentServiceIMPL implements PaymentService {
 			String payerName = payment.getAppointments() != null && payment.getAppointments().getUser() != null
 					? payment.getAppointments().getUser().getFullName()
 					: null;
-			if (payerName == null || payerName.isBlank()) {
+			if (!ValidationUtils.isNotBlank(payerName)) {
 				payerName = callbackDTO.getFromName();
 			}
-			if (payerName != null && !payerName.isBlank()) {
-				if (payerName.length() > 50) {
-					payerName = payerName.substring(0, 50);
+			if (ValidationUtils.isNotBlank(payerName)) {
+				if (payerName.length() > ValidationConstants.MAX_NAME_LENGTH) {
+					payerName = payerName.substring(0, ValidationConstants.MAX_NAME_LENGTH);
 				}
 				responseCodeValue += " | Tên: " + payerName;
 			}
-			if (responseCodeValue.length() > 100) {
-				responseCodeValue = responseCodeValue.substring(0, 100);
+			// Limit response code length to reasonable size
+			int maxResponseCodeLength = 100;
+			if (responseCodeValue.length() > maxResponseCodeLength) {
+				responseCodeValue = responseCodeValue.substring(0, maxResponseCodeLength);
 			}
 			payment.setResponseCode(responseCodeValue);
 		}
@@ -225,6 +232,11 @@ public class PaymentServiceIMPL implements PaymentService {
 			appointmentsRepository.saveAndFlush(appointment);
 		}
 
+		// Publish domain event when payment is confirmed
+		if (payment.getStatus() == PaymentStatus.CONFIRMED) {
+			eventPublisher.publishEvent(new PaymentCompletedEvent(payment));
+		}
+
 		return paymentMapper.toDTO(payment);
 	}
 
@@ -233,7 +245,7 @@ public class PaymentServiceIMPL implements PaymentService {
 	 * "COCLK19", "LK_19", "LK19", hoặc chỉ số
 	 */
 	private Integer parseAppointmentIdFromContent(String content) {
-		if (content == null || content.isBlank())
+		if (!ValidationUtils.isNotBlank(content))
 			return null;
 
 		// Remove all non-digit characters at the start, extract digits at the beginning
@@ -241,12 +253,12 @@ public class PaymentServiceIMPL implements PaymentService {
 		for (char c : content.toCharArray()) {
 			if (Character.isDigit(c)) {
 				digits += c;
-			} else if (!digits.isEmpty()) {
+			} else if (ValidationUtils.isNotEmpty(digits)) {
 				break; // Dừng khi gặp ký tự đầu tiên không phải số sau khi đã bắt đầu lấy số
 			}
 		}
 
-		if (digits.isEmpty())
+		if (!ValidationUtils.isNotEmpty(digits))
 			return null;
 
 		try {
@@ -314,7 +326,7 @@ public class PaymentServiceIMPL implements PaymentService {
 	// VERIFY WEBHOOK
 	private void verifyCassoWebhook(Map<String, Object> cassoData, String signatureHeader, String secretKeyHeader) {
 
-		if (secretKeyHeader != null && !secretKeyHeader.isEmpty()) {
+		if (ValidationUtils.isNotEmpty(secretKeyHeader)) {
 			if (!cassoWebhookSecretKey.equals(secretKeyHeader)) {
 				throw new SecurityException("Secret key không hợp lệ từ header");
 			}
@@ -352,7 +364,7 @@ public class PaymentServiceIMPL implements PaymentService {
 		for (Object v : values) {
 			if (v != null) {
 				String s = v.toString().trim();
-				if (!s.isEmpty()) {
+				if (ValidationUtils.isNotEmpty(s)) {
 					return s;
 				}
 			}
@@ -383,7 +395,7 @@ public class PaymentServiceIMPL implements PaymentService {
 
 	private PaymentMethod resolvePaymentMethod(String method) {
 
-		if (method == null || method.isBlank()) {
+		if (!ValidationUtils.isNotBlank(method)) {
 			return PaymentMethod.BANK_TRANSFER;
 		}
 

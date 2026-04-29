@@ -1,7 +1,7 @@
 package truonggg.dto.requestDTO;
 
 import jakarta.persistence.Column;
-import jakarta.validation.constraints.Email;
+import truonggg.validation.ValidEmail;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -21,7 +21,7 @@ public class SignUpRequest {
 	private String fullName;
 
 	@NotBlank(message = "Email không được để trống")
-	@Email(message = "Email không hợp lệ")
+	@ValidEmail()
 	@Column(nullable = false, unique = true)
 	private String email;
 

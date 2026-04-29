@@ -7,10 +7,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +33,8 @@ import truonggg.reponse.PagedResult;
 import truonggg.user.application.PasswordService;
 import truonggg.user.application.UserManagementService;
 import truonggg.user.application.UserSelfService;
+import truonggg.domain.event.UserCreatedEvent;
+import truonggg.domain.event.RoleAssignedEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +43,7 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
 	private final UserMapper userMapper;
 	private final PasswordService passwordService;
 	private final RoleRepository roleRepository;
+	private final ApplicationEventPublisher eventPublisher;
     // Spring inject tất cả handler vào đây
     private final List<RoleAssignmentHandler> handlers;
 
@@ -82,7 +87,10 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
                 roleUser
         );
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+
+        // Publish domain event
+        eventPublisher.publishEvent(new UserCreatedEvent(user, "ADMIN_CREATE"));
 
         return userMapper.toDTO(user);
     }
@@ -116,8 +124,9 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
         Role newRole = roleRepository.findById(dto.getRoleId())
                 .orElseThrow(() -> new NotFoundException("role", "Role Not Found"));
 
-        String oldRoleName = user.getRole() != null
-                ? user.getRole().getRoleName()
+        Role oldRole = user.getRole();
+        String oldRoleName = oldRole != null
+                ? oldRole.getRoleName()
                 : null;
 
         String newRoleName = newRole.getRoleName();
@@ -142,6 +151,9 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
         if (newHandler != null) {
             newHandler.onAssigned(user);
         }
+
+        // Publish domain event
+        eventPublisher.publishEvent(new RoleAssignedEvent(user, newRole, oldRole));
 
         return userMapper.toDTO(user);
     }
@@ -245,6 +257,43 @@ public class UserServiceIMPL implements UserManagementService, UserSelfService {
                 dto.getAddress(),
                 dto.getDateOfBirth()
         );
+
+        return userMapper.toDTO(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO uploadAvatar(String userName, MultipartFile file) {
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File ảnh không được để trống");
+        }
+
+        User user = userRepository.findByUserName(userName)
+                .orElseThrow(() -> new NotFoundException("user", "User Not Found"));
+
+        // Thư mục lưu file trên server (tương đối theo working directory)
+        String uploadDir = "uploads/avatars";
+        java.io.File dir = new java.io.File(uploadDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        // Tạo tên file đơn giản: userId_timestamp_originalName
+        String originalName = file.getOriginalFilename();
+        String safeName = originalName != null ? originalName.replaceAll("[^a-zA-Z0-9\\.\\-_]", "_") : "avatar.png";
+        String filename = "user-" + user.getUserId() + "-" + System.currentTimeMillis() + "-" + safeName;
+
+        java.io.File destination = new java.io.File(dir, filename);
+        try {
+            file.transferTo(destination);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Không thể lưu file ảnh đại diện", e);
+        }
+
+        // URL truy cập từ client, ví dụ: /uploads/avatars/doctor123.png
+        String avatarUrl = "/uploads/avatars/" + filename;
+        user.updateAvatar(avatarUrl);
 
         return userMapper.toDTO(user);
     }

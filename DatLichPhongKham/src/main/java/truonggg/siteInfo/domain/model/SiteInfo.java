@@ -2,8 +2,7 @@ package truonggg.siteInfo.domain.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDateTime;
+import truonggg.domain.model.BaseEntity;
 
 @Entity
 @Getter
@@ -11,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SiteInfo {
+public class SiteInfo extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -19,32 +18,27 @@ public class SiteInfo {
     private String value;
     @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     // ===== Domain behaviour =====
 
     public static SiteInfo create(String infoKey, String value) {
-        if (infoKey == null || infoKey.isBlank()) {
+        if (!truonggg.utils.ValidationUtils.isNotBlank(infoKey)) {
             throw new IllegalArgumentException("Info key is required");
         }
         SiteInfo siteInfo = new SiteInfo();
         siteInfo.infoKey = infoKey;
         siteInfo.value = value;
         siteInfo.isActive = true;
-        siteInfo.createdAt = LocalDateTime.now();
-        siteInfo.updatedAt = siteInfo.createdAt;
         return siteInfo;
     }
 
     public void updateInfo(String newKey, String newValue) {
-        if (newKey != null && !newKey.isBlank()) {
+        if (truonggg.utils.ValidationUtils.isNotBlank(newKey)) {
             this.infoKey = newKey;
         }
         if (newValue != null) {
             this.value = newValue;
         }
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void activate() {
@@ -52,7 +46,6 @@ public class SiteInfo {
             return;
         }
         this.isActive = true;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void deactivate() {
@@ -60,7 +53,6 @@ public class SiteInfo {
             return;
         }
         this.isActive = false;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public boolean getIsActive() {

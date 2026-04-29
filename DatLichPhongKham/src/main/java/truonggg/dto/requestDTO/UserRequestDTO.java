@@ -3,7 +3,7 @@ package truonggg.dto.requestDTO;
 import java.util.Date;
 
 import jakarta.persistence.Column;
-import jakarta.validation.constraints.Email;
+import truonggg.validation.ValidEmail;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
@@ -25,7 +25,7 @@ public class UserRequestDTO {
 	private String fullName;
 
 	@NotBlank(message = "Email is required")
-	@Email(message = "Email must be valid")
+	@ValidEmail()
 	@Column(nullable = false, unique = true)
 	private String email;
 

@@ -13,16 +13,17 @@ import truonggg.dto.requestDTO.SignInRequest;
 import truonggg.dto.requestDTO.SignUpRequest;
 import truonggg.reponse.SuccessReponse;
 import truonggg.user.application.AuthService;
+import truonggg.constant.ApiConstants;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = "/auth")
+@RequestMapping(path = ApiConstants.AUTH_BASE)
 public class AuthController {
 
 	private final AuthService authService;
 
 	// 123
-	@PostMapping(path = "/signUp")
+	@PostMapping(path = ApiConstants.AUTH_SIGNUP)
 	public SuccessReponse<UserResponseDTO> signUp(@RequestBody @Valid SignUpRequest request) {
 		return SuccessReponse.of(this.authService.signUp(request));
 	}
@@ -32,7 +33,7 @@ public class AuthController {
 		return SuccessReponse.of(true);
 	}
 
-	@PostMapping(path = "/signIn")
+	@PostMapping(path = ApiConstants.AUTH_SIGNIN)
 	public SuccessReponse<SignInResponse> signIn(@RequestBody @Valid SignInRequest request) {
 		return SuccessReponse.of(this.authService.signIn(request));
 	}

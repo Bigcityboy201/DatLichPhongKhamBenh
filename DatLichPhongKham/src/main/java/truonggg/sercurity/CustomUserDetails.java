@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +21,7 @@ import truonggg.user.domain.model.User;
 @Setter
 //(1)
 public class CustomUserDetails implements UserDetails {
+	private static final Logger logger = LoggerFactory.getLogger(CustomUserDetails.class);
 	private static final long serialVersionUID = 1L;
 	private final String userName;
 	private final String password;
@@ -38,14 +41,14 @@ public class CustomUserDetails implements UserDetails {
 			this.authorities = Set.of();
 			this.roles = Set.of();
 			if (user.getRole() == null) {
-				System.out.println("WARNING: User " + this.userName + " has no role assigned!");
+				logger.warn("User {} has no role assigned!", this.userName);
 			} else if (!user.getRole().getIsActive()) {
-				System.out.println("WARNING: User " + this.userName + " has inactive role (ngưng): " + user.getRole().getRoleName());
+				logger.warn("User {} has inactive role (ngưng): {}", this.userName, user.getRole().getRoleName());
 			}
 		}
 		
 		// Debug: log authorities để kiểm tra
-		System.out.println("User: " + this.userName + " has authorities: " + 
+		logger.debug("User: {} has authorities: {}", this.userName, 
 			this.authorities.stream().map(auth -> auth.getAuthority()).collect(Collectors.toList()));
 	}
 

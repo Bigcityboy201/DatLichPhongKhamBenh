@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,18 +18,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import truonggg.Enum.PaymentStatus;
 import truonggg.dto.reponseDTO.PaymentResponseDTO;
 import truonggg.dto.requestDTO.PaymentRequestDTO;
+import truonggg.payment.domain.model.Payments;
+import truonggg.payment.infrastructure.PaymentsRepository;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
 import truonggg.payment.application.PaymentService;
+import truonggg.constant.ApiConstants;
 
 @RestController
-@RequestMapping(path = "/api/payments")
+@RequestMapping(path = ApiConstants.PAYMENTS_BASE)
 @RequiredArgsConstructor
 public class PaymentController {
 
 	private final PaymentService paymentService;
+    private final PaymentsRepository paymentRepository;
 
 	@PostMapping
 	@PreAuthorize("hasAnyAuthority('USER', 'ADMIN', 'EMPLOYEE')")
@@ -96,7 +102,7 @@ public class PaymentController {
 		return SuccessReponse.of(paymentService.checkPaymentStatus(id, username));
 	}
 
-	@PostMapping("/casso-webhook")
+	@PostMapping(ApiConstants.PAYMENTS_CASSO_WEBHOOK)
 	public SuccessReponse<String> handleCassoWebhook(@RequestBody Map<String, Object> cassoData,
 			@RequestHeader(value = "X-Casso-Signature", required = false) String signatureHeader,
 			@RequestHeader(value = "X-Secret-Key", required = false) String secretKeyHeader) {
@@ -106,6 +112,32 @@ public class PaymentController {
 		return SuccessReponse.of("RECEIVED");
 	}
 
-}
+	/**
+	 * Endpoint VNPAY redirect về sau khi thanh toán.
+	 * URL đầy đủ: /api/payments/vnpay-return
+	 */
+	@GetMapping("/vnpay-return")
+    public ResponseEntity<?> vnpayReturn(@RequestParam Map<String, String> params) {
 
+        String responseCode = params.get("vnp_ResponseCode");
+        String txnRef = params.get("vnp_TxnRef");
+
+        if ("00".equals(responseCode)) {
+			// Thanh toán thành công
+			Payments payment = paymentRepository.findByTransactionId(txnRef).orElse(null);
+
+			if (payment != null) {
+            payment.setStatus(PaymentStatus.CONFIRMED);
+            paymentRepository.save(payment);
+
+				return ResponseEntity.ok("Thanh toán thành công");
+			} else {
+				return ResponseEntity.status(400).body("Không tìm thấy giao dịch với mã: " + txnRef);
+			}
+        }
+
+		// Các mã khác coi là thất bại
+		return ResponseEntity.status(400).body("Thanh toán thất bại với mã: " + responseCode);
+    }
+}
 

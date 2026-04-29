@@ -15,6 +15,7 @@ public interface PaymentMapper {
 	@Mapping(source = "appointments.id", target = "appointmentId")
 	@Mapping(source = "gatewayTransactionNo", target = "gatewayTransactionNo")
 	@Mapping(source = "responseCode", target = "responseCode")
+	@Mapping(source = "paymentUrl", target = "paymentUrl")
 	PaymentResponseDTO toDTO(Payments payment);
 
 	default List<PaymentResponseDTO> toDTOList(List<Payments> payments) {

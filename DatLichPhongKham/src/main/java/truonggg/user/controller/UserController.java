@@ -4,6 +4,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,13 +28,25 @@ import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
 import truonggg.user.application.UserManagementService;
 import truonggg.user.application.UserSelfService;
+import truonggg.constant.ApiConstants;
 
 @RestController
-@RequestMapping(path = "/api/users")
+@RequestMapping(path = ApiConstants.USERS_BASE)
 @RequiredArgsConstructor
 public class UserController {
 	private final UserManagementService userManagementService;
 	private final UserSelfService userSelfService;
+
+	/**
+	 * API upload ảnh đại diện cho user đang đăng nhập.
+	 * Người dùng phải đăng nhập mới được upload ảnh.
+	 */
+	@org.springframework.web.bind.annotation.PostMapping("/avatar")
+	@PreAuthorize("hasAnyAuthority('USER','DOCTOR','EMPLOYEE','ADMIN')")
+	public SuccessReponse<UserResponseDTO> uploadAvatar(@RequestPart("file") MultipartFile file) {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		return SuccessReponse.of(userSelfService.uploadAvatar(username, file));
+	}
 
 	// GET /api/users - Lấy tất cả (phân trang)
 	// 1234
@@ -74,28 +88,28 @@ public class UserController {
 	}
 
 	// POST /api/users/assign-role - Admin phân role cho user
-	@PostMapping("/assign-role")
+	@PostMapping(ApiConstants.USERS_ASSIGN_ROLE)
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<UserResponseDTO> assignRoleToUser(@RequestBody @Valid AssignRoleRequestDTO dto) {
 		return SuccessReponse.of(this.userManagementService.assignRole(dto));
 	}
 
 	// DELETE /api/users/{id} - Hard delete
-	@DeleteMapping("/manually/{id}")
+	@DeleteMapping(ApiConstants.USERS_DELETE_MANUAL)
 	@PreAuthorize("hasAnyAuthority('ADMIN')")
 	public SuccessReponse<String> hardDeleteUser(@PathVariable Integer id) {
 		this.userManagementService.deleteManually(id);
 		return SuccessReponse.of("Đã xóa thành công user with id:" + id);
 	}
 
-	@GetMapping("/me")
+	@GetMapping(ApiConstants.USERS_ME)
 	@PreAuthorize("hasAnyAuthority('USER','EMPLOYEE', 'ADMIN','DOCTOR')")
 	public SuccessReponse<UserResponseDTO> getMyProfile() {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		return SuccessReponse.of(this.userManagementService.findByUserName(username));
 	}
 
-	@PutMapping("/profile")
+	@PutMapping(ApiConstants.USERS_PROFILE)
 	@PreAuthorize("hasAnyAuthority('USER', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<UserResponseDTO> updateMyProfile(@RequestBody @Valid UserUpdateRequestDTO dto) {
 		// Lấy username từ token đã được JwtAuthenticationFilter set vào SecurityContext

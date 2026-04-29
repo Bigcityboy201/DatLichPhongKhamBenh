@@ -13,11 +13,6 @@ public class AppointmentConflictValidator {
 
     private final AppointmentsRepository repository;
 
-//    public AppointmentConflictValidator(
-//            AppointmentsRepository repository) {
-//        this.repository = repository;
-//    }
-
     public void validate(Integer doctorId,
                          LocalDateTime time,
                          Integer excludeId) {

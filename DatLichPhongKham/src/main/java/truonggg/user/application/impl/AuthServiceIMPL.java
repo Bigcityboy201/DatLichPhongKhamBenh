@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -28,6 +29,7 @@ import truonggg.user.infrastructure.UserRepository;
 import truonggg.user.application.AuthService;
 import truonggg.user.application.PasswordService;
 import truonggg.utils.JwtUtils;
+import truonggg.domain.event.UserCreatedEvent;
 
 @RequiredArgsConstructor
 @Service
@@ -39,6 +41,7 @@ public class AuthServiceIMPL implements AuthService {
 	private final UserMapper userMapper;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
 	@Transactional
@@ -84,6 +87,9 @@ public class AuthServiceIMPL implements AuthService {
 
 		// lưu user
 		user = userRepository.save(user);
+
+		// Publish domain event
+		eventPublisher.publishEvent(new UserCreatedEvent(user, "SIGNUP"));
 
 		return userMapper.toDTO(user);
 	}

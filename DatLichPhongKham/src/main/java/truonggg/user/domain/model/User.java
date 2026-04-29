@@ -24,6 +24,7 @@ public class User {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer userId;
 	private String fullName;
+	private String avatarUrl;
 
 	@Column(unique = true)
 	private String email;
@@ -47,13 +48,13 @@ public class User {
     private Doctors doctors;
 	@JsonIgnore
 	@OneToMany(mappedBy = "user")
-	private List<Appointments> list1 = new ArrayList();
+	private List<Appointments> appointments = new ArrayList();
 	@JsonIgnore
 	@OneToMany(mappedBy = "user")
-	private List<review> list2 = new ArrayList<>();
+	private List<review> reviews = new ArrayList<>();
 	@JsonIgnore
 	@OneToMany(mappedBy = "user")
-	private List<Notifications> list3 = new ArrayList<>();
+	private List<Notifications> notifications = new ArrayList<>();
 
     public static User create(
             String username,
@@ -138,11 +139,11 @@ public class User {
 
     private void validateInvariant() {
 
-        if (userName == null || userName.isBlank()) {
+        if (!truonggg.utils.ValidationUtils.isNotBlank(userName)) {
             throw new IllegalStateException("Username is required");
         }
 
-        if (password == null || password.isBlank()) {
+        if (!truonggg.utils.ValidationUtils.isNotBlank(password)) {
             throw new IllegalStateException("Password is required");
         }
 
@@ -153,6 +154,13 @@ public class User {
 
     public void deactivate() {
         this.isActive = false;
+    }
+
+	/**
+	 * Cập nhật URL ảnh đại diện.
+	 */
+	public void updateAvatar(String avatarUrl) {
+		this.avatarUrl = avatarUrl;
     }
 }
 

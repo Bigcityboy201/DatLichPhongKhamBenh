@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết bác sĩ</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+        .header {
+            margin-bottom: 24px;
+        }
+        .title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #111827;
+        }
+        .subtitle {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+            gap: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            padding: 16px 18px;
+        }
+        .doctor-head {
+            display: flex;
+            gap: 14px;
+        }
+        .avatar {
+            width: 96px;
+            height: 96px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #e0f2fe, #fef3c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #1f2933;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .doctor-info-main {
+            flex: 1;
+        }
+        .doctor-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+        .doctor-dept {
+            font-size: 14px;
+            color: #4b5563;
+            margin-top: 4px;
+        }
+        .meta-row {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #ecfdf5;
+            color: #15803d;
+            margin-right: 4px;
+        }
+        .badge.inactive {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+        .badge.featured {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin-top: 12px;
+            margin-bottom: 4px;
+        }
+        .text {
+            font-size: 13px;
+            color: #374151;
+            white-space: pre-line;
+        }
+        /* Chat panel */
+        .chat-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        .chat-subtitle {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        .chat-status {
+            font-size: 11px;
+            color: #16a34a;
+            margin-bottom: 6px;
+        }
+        .messages {
+            border-radius: 10px;
+            background: #f9fafb;
+            min-height: 220px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 8px 8px 10px;
+            list-style: none;
+            margin: 0;
+        }
+        .messages li {
+            margin: 4px 0;
+            max-width: 75%;
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            word-wrap: break-word;
+        }
+        .messages li.me {
+            background: #dbeafe;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .messages li.other {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            margin-right: auto;
+        }
+        .messages li.system {
+            background: #f3f4f6;
+            color: #6b7280;
+            text-align: center;
+            border-radius: 8px;
+            margin: 6px auto;
+            font-style: italic;
+        }
+        .input-row {
+            display: flex;
+            margin-top: 8px;
+            gap: 6px;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            font-size: 13px;
+            outline: none;
+        }
+        .input-row button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .input-row button:hover {
+            background: #1d4ed8;
+        }
+        .error {
+            margin-top: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #b91c1c;
+            background: #fee2e2;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="header">
+        <div class="title">Thông tin bác sĩ</div>
+        <div class="subtitle">
+            Xem chi tiết và bắt đầu chat riêng với bác sĩ.
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="card">
+            <div class="doctor-head">
+                <div class="avatar" id="doctorAvatar">
+                    BS
+                </div>
+                <div class="doctor-info-main">
+                    <div class="doctor-name" id="doctorName">Đang tải...</div>
+                    <div class="doctor-dept" id="doctorDept"></div>
+                    <div class="meta-row">
+                        <span id="experience"></span>
+                    </div>
+                    <div class="meta-row">
+                        <span id="statusBadges"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">Mô tả / Kinh nghiệm</div>
+            <div class="text" id="description">Đang tải...</div>
+        </div>
+
+        <div class="card" id="doctorChatCard">
+            <div class="chat-header">Khung chat riêng với bác sĩ</div>
+            <div class="chat-subtitle" id="chatSubtitle">Đang khởi tạo kết nối...</div>
+            <div class="chat-status" id="chatStatus"></div>
+
+            <ul class="messages" id="messages"></ul>
+
+            <div class="input-row">
+                <input id="msg" type="text" placeholder="Nhập tin nhắn..." />
+                <button type="button" onclick="send()">Gửi</button>
+            </div>
+            <div id="chatError" class="error" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let currentDoctorUserId = null;
+    let currentDoctorName = null;
+    let currentUserRole = null;
+    let currentUserId = null;
+
+    // Lưu token theo từng tab để tránh bị ghi đè khi đăng nhập tài khoản khác ở tab khác (localStorage dùng chung).
+    // Quy tắc: nếu sessionStorage chưa có token thì copy từ localStorage sang; sau đó luôn ưu tiên sessionStorage.
+    function getToken() {
+        const sToken = sessionStorage.getItem("chat_jwt") || sessionStorage.getItem("token");
+        if (sToken) return sToken;
+
+        const lToken = localStorage.getItem("chat_jwt") || localStorage.getItem("token");
+        if (lToken) {
+            // cache theo tab
+            sessionStorage.setItem("chat_jwt", lToken);
+            return lToken;
+        }
+        return "";
+    }
+
+    function getDoctorIdFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("id");
+    }
+
+    async function loadDoctor() {
+        const id = getDoctorIdFromUrl();
+        const token = getToken();
+        const nameEl = document.getElementById("doctorName");
+        const deptEl = document.getElementById("doctorDept");
+        const expEl = document.getElementById("experience");
+        const descEl = document.getElementById("description");
+        const avatarEl = document.getElementById("doctorAvatar");
+        const statusBadgesEl = document.getElementById("statusBadges");
+
+        if (!id) {
+            nameEl.textContent = "Không tìm thấy ID bác sĩ.";
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/doctors/" + encodeURIComponent(id), {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": "Bearer " + token } : {})
+                }
+            });
+            const body = await res.json();
+            if (!res.ok || body.code !== "OK") {
+                nameEl.textContent = "Không tải được thông tin bác sĩ.";
+                descEl.textContent = body.message || "Đã xảy ra lỗi.";
+                return;
+            }
+            const d = body.data;
+            currentDoctorUserId = d.userId;
+            currentDoctorName = d.fullName || "Bác sĩ";
+
+            nameEl.textContent = currentDoctorName;
+            deptEl.textContent = d.departmentName
+                ? "Chuyên khoa: " + d.departmentName
+                : "Chưa cập nhật chuyên khoa";
+
+            expEl.textContent = (d.experienceYears || 0) + " năm kinh nghiệm";
+            descEl.textContent = d.description || "Chưa có mô tả.";
+
+            // avatar
+            avatarEl.innerHTML = "";
+            if (d.imageUrl) {
+                const img = document.createElement("img");
+                img.src = d.imageUrl;
+                img.alt = currentDoctorName;
+                avatarEl.appendChild(img);
+            } else {
+                const initials = currentDoctorName
+                    .split(" ")
+                    .map(p => p[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2);
+                avatarEl.textContent = initials;
+            }
+
+            // badges
+            statusBadgesEl.innerHTML = "";
+            if (d.isFeatured) {
+                const b = document.createElement("span");
+                b.className = "badge featured";
+                b.textContent = "Nổi bật";
+                statusBadgesEl.appendChild(b);
+            }
+            const active = document.createElement("span");
+            active.className = "badge" + (d.active === false ? " inactive" : "");
+            active.textContent = d.active === false ? "Tạm dừng" : "Đang hoạt động";
+            statusBadgesEl.appendChild(active);
+
+            document.getElementById("chatSubtitle").textContent =
+                "Bạn đang chat với: " + currentDoctorName;
+        } catch (e) {
+            console.error(e);
+            nameEl.textContent = "Lỗi khi gọi API chi tiết bác sĩ.";
+            descEl.textContent = "";
+        }
+    }
+
+    async function loadCurrentUser() {
+        const token = getToken();
+        if (!token) return null;
+        try {
+            const res = await fetch("/api/users/me", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                }
+            });
+            const data = await res.json();
+            if (!res.ok || data.code !== "OK") {
+                return null;
+            }
+            return data.data || data;
+        } catch (e) {
+            console.error("Lỗi lấy thông tin user hiện tại:", e);
+            return null;
+        }
+    }
+
+    function connectChat() {
+        const token = getToken();
+        const statusEl = document.getElementById("chatStatus");
+        const errorEl = document.getElementById("chatError");
+
+        errorEl.style.display = "none";
+
+        if (!token) {
+            statusEl.textContent = "";
+            errorEl.textContent = "Bạn cần đăng nhập để sử dụng chức năng chat.";
+            errorEl.style.display = "block";
+            return;
+        }
+
+        const socket = new SockJS("/ws-chat");
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect(
+            { Authorization: "Bearer " + token },
+            function (frame) {
+                console.log("Connected:", frame);
+                statusEl.textContent = "Đã kết nối WebSocket.";
+
+                stompClient.subscribe("/user/queue/messages", function (message) {
+                    const msg = JSON.parse(message.body);
+                    // Chỉ hiển thị message của cuộc trò chuyện mà CẢ bác sĩ hiện tại và người dùng hiện tại tham gia
+                    if (
+                        currentUserId &&
+                        (msg.senderUserId === currentUserId || msg.receiverUserId === currentUserId) &&
+                        (msg.senderUserId === currentDoctorUserId || msg.receiverUserId === currentDoctorUserId)
+                    ) {
+                        renderMessage(msg);
+                    }
+                });
+
+                if (currentDoctorUserId) {
+                    loadConversation(currentDoctorUserId);
+                }
+            },
+            function (error) {
+                console.error("WebSocket error:", error);
+                statusEl.textContent = "Lỗi kết nối WebSocket.";
+                errorEl.textContent = "Không thể kết nối kênh chat.";
+                errorEl.style.display = "block";
+            }
+        );
+    }
+
+    function renderMessage(msg) {
+        const list = document.getElementById("messages");
+        const li = document.createElement("li");
+
+        if (msg.senderType === "SYSTEM") {
+            li.className = "system";
+            li.textContent = msg.content;
+        } else {
+            const isMine = currentUserId && msg.senderUserId === currentUserId;
+            li.className = isMine ? "me" : "other";
+
+            const name = msg.senderName || "Người dùng";
+            const time = msg.sentAt ? new Date(msg.sentAt).toLocaleString("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            }) : "";
+
+            li.innerHTML =
+                "<div>" + name + "</div>" +
+                "<div>" + msg.content + "</div>" +
+                "<div style='font-size:11px;color:#6b7280;margin-top:2px;'>" + time + "</div>";
+        }
+
+        list.appendChild(li);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    async function loadConversation(partnerUserId) {
+        const token = getToken();
+        if (!token) return;
+        try {
+            const res = await fetch("/api/chat/history/" + partnerUserId, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                }
+            });
+            const body = await res.json();
+            if (!res.ok || body.code !== "OK") {
+                console.warn("Không tải được lịch sử hội thoại:", body);
+                return;
+            }
+            const messages = body.data || [];
+            const list = document.getElementById("messages");
+            list.innerHTML = "";
+            messages.forEach(renderMessage);
+        } catch (e) {
+            console.error("Lỗi load hội thoại:", e);
+        }
+    }
+
+    function send() {
+        const errorEl = document.getElementById("chatError");
+        errorEl.style.display = "none";
+
+        if (!stompClient || !stompClient.connected) {
+            errorEl.textContent = "Chưa kết nối WebSocket.";
+            errorEl.style.display = "block";
+            return;
+        }
+        if (!currentDoctorUserId) {
+            errorEl.textContent = "Không xác định được bác sĩ để chat.";
+            errorEl.style.display = "block";
+            return;
+        }
+        const input = document.getElementById("msg");
+        const content = input.value.trim();
+        if (!content) return;
+
+        const payload = {
+            receiverUserId: currentDoctorUserId,
+            content: content
+        };
+        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(payload));
+        input.value = "";
+    }
+
+    (async function init() {
+        await loadDoctor();
+        const me = await loadCurrentUser();
+        // Normalize role string (VD: "ROLE_USER" -> "USER") để tránh hiểu sai role sau khi reload
+        function normalizeRole(role) {
+            if (!role) return null;
+            const r = String(role).trim().toUpperCase();
+            return r.startsWith("ROLE_") ? r.substring(5) : r;
+        }
+        currentUserRole = me && me.role ? normalizeRole(me.role) : null;
+        currentUserId = me && typeof me.userId === "number" ? me.userId : null;
+
+        // Nếu là bác sĩ / nhân viên / admin thì không dùng khung chat này,
+        // họ sẽ dùng màn hình chat chính với conversation list
+        if (currentUserRole === "DOCTOR" || currentUserRole === "EMPLOYEE" || currentUserRole === "ADMIN") {
+            const chatCard = document.getElementById("doctorChatCard");
+            if (chatCard) {
+                chatCard.innerHTML =
+                    "<div class='chat-header'>Khung chat riêng với bác sĩ</div>" +
+                    "<div class='chat-subtitle'>Vui lòng sử dụng màn hình chat chính để trao đổi với bệnh nhân/bác sĩ.</div>";
+            }
+            return;
+        }
+
+        connectChat();
+    })();
+</script>
+
+<script src="/support-chat-widget.js"></script>
+</body>
+</html>
+
+

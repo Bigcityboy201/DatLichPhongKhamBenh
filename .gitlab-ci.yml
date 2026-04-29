@@ -3,22 +3,23 @@ stages:
   - test
   - deploy
 
-# ================= BUILD =================
+# BUILD
 build_job:
   stage: build
   tags:
     - local
   script:
     - echo "===== VAO THU MUC CHUA CODE ====="
-    - cd DatLichPhongKham  # <<< LENH QUAN TRONG NHAT
+    - cd DatLichPhongKham #vì gitlab-ci nằm ngoài nên phải vào thư mục
     - echo "===== BAT DAU BUILD ====="
     - mvn clean package -DskipTests
+#output:ta được file .jar để lưu vào
   artifacts:
     paths:
       - "DatLichPhongKham/target/*.jar"
     expire_in: 1 hour
 
-# ================= TEST =================
+#TEST 
 test_job:
   stage: test
   tags:
@@ -28,7 +29,7 @@ test_job:
     - echo "===== RUN TESTS ====="
     - mvn test
 
-# ================= DEPLOY =================
+#DEPLOY 
 deploy_job:
   stage: deploy
   tags:
@@ -42,3 +43,5 @@ deploy_job:
     - docker-compose up -d --build
     - Start-Sleep -Seconds 10
     - docker ps -a
+#cd vào thư mục nhiều lần vì build,test,deploy chạy ở môi trường riêng biệt nên không biết
+#đang ở thư mục nào

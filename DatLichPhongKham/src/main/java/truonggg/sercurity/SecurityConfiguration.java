@@ -27,7 +27,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
-	private static final String[] WHITE_LIST = { "/auth/**" };
+	private static final String[] WHITE_LIST = { "/api/auth/**" };
 
 	private final JwtAuthenticationFilter jwtRequestFilter;
 	private final UserDetailsService userDetailsService;
@@ -89,12 +89,39 @@ public class SecurityConfiguration {
 
 		http.authorizeHttpRequests(auths -> auths
 				// Public endpoints - không cần xác thực
+				// static resources + trang test chat/login chat + trang bác sĩ & widget chat
+				.requestMatchers(
+						"/",
+						"/index.html",
+						"/chat.html",
+						"/login-chat.html",
+						"/doctors.html",
+						"/doctor-detail.html",
+						"/support-chat-widget.js",
+						"/static/**",
+						"/css/**",
+						"/js/**",
+						"/images/**",
+						"/webjars/**",
+						"/uploads/**"
+				).permitAll()
+				// Swagger UI + OpenAPI docs (không cần đăng nhập)
+				.requestMatchers(
+						"/swagger-ui.html",
+						"/swagger-ui/**",
+						"/v3/api-docs/**",
+						"/swagger-resources/**"
+				).permitAll()
 				.requestMatchers(WHITE_LIST).permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/payments/bank-transfer-callback").permitAll()
 				// Casso webhook: allow POST + health check GET/HEAD
 				.requestMatchers(HttpMethod.POST, "/api/payments/casso-webhook").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/payments/casso-webhook").permitAll()
 				.requestMatchers(HttpMethod.HEAD, "/api/payments/casso-webhook").permitAll()
+				// VNPAY return URL
+				.requestMatchers(HttpMethod.GET, "/api/payments/vnpay-return").permitAll()
+				// WebSocket handshake cho chat
+				.requestMatchers("/ws-chat/**").permitAll()
 
 				.requestMatchers(HttpMethod.GET, "/api/doctors/me", "/api/doctors/me/**").hasAuthority("DOCTOR")
 				.requestMatchers(HttpMethod.GET, "/api/doctors", "/api/doctors/*", "/api/doctors/department",

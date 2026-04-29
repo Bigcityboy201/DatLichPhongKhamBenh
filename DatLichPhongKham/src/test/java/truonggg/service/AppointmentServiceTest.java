@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +34,9 @@ import truonggg.Exception.NotFoundException;
 import truonggg.appointment.application.impl.AppointmentServiceImpl;
 import truonggg.appointment.domain.model.Appointments;
 import truonggg.appointment.infrastructure.AppointmentsRepository;
+import truonggg.appointment.domain.service.AppointmentScheduleValidator;
+import truonggg.appointment.domain.service.AppointmentConflictValidator;
+import truonggg.appointment.domain.service.AppointmentCancellationService;
 import truonggg.appointment.mapper.AppointmentsMapper;
 import truonggg.doctor.domain.model.Doctors;
 import truonggg.doctor.infrastructure.DoctorsRepository;
@@ -63,11 +67,23 @@ public class AppointmentServiceTest {
 	@Mock
 	private SchedulesRepository schedulesRepository;
 
-	@InjectMocks
-	private AppointmentServiceImpl appointmentService;
-
 	@Mock
 	private PaymentsRepository paymentsRepository;
+
+	@Mock
+	private AppointmentScheduleValidator scheduleValidator;
+
+	@Mock
+	private AppointmentConflictValidator conflictValidator;
+
+	@Mock
+	private AppointmentCancellationService appointmentCancellationService;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
+	@InjectMocks
+	private AppointmentServiceImpl appointmentService;
 
 	// ============= getAllPaged ============
 	@DisplayName("getAllPaged: success")
@@ -112,11 +128,6 @@ public class AppointmentServiceTest {
 
 		when(userRepository.findById(1)).thenReturn(Optional.of(user));
 		when(doctorsRepository.findById(2)).thenReturn(Optional.of(doctor));
-
-		when(schedulesRepository.existsByDoctors_IdAndStartAtLessThanEqualAndEndAtGreaterThanEqual(eq(2),
-				any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(true);
-		when(appointmentsRepository.existsByDoctors_IdAndAppointmentDateTimeAndStatusNot(eq(2),
-				any(LocalDateTime.class), eq(Appointments_Enum.CANCELLED))).thenReturn(false);
 
 		when(appointmentsRepository.save(any(Appointments.class))).thenReturn(saved);
 		when(appointmentsMapper.toDTO(saved)).thenReturn(responseDTO);
@@ -188,7 +199,7 @@ public class AppointmentServiceTest {
 		CancelAppointmentResponse result = appointmentService.cancelByUser(id, username);
 
 		assertNotNull(result);
-		assertEquals("Hủy lịch thành công.", result.getMessage());
+		assertEquals("Cancelled", result.getMessage());
 
 		verify(appointmentsRepository).save(any(Appointments.class));
 	}
@@ -212,7 +223,7 @@ public class AppointmentServiceTest {
 		AccessDeniedException ex = assertThrows(AccessDeniedException.class,
 				() -> appointmentService.cancelByUser(id, "user1"));
 
-		assertEquals("You cannot cancel this appointment", ex.getMessage());
+		assertEquals("Not allowed", ex.getMessage());
 	}
 
 	@Test
@@ -232,10 +243,10 @@ public class AppointmentServiceTest {
 
 		when(appointmentsRepository.findById(id)).thenReturn(Optional.of(appointment));
 
-		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+		IllegalStateException ex = assertThrows(IllegalStateException.class,
 				() -> appointmentService.cancelByUser(id, username));
 
-		assertEquals("Không thể hủy lịch hẹn ở trạng thái hiện tại", ex.getMessage());
+		assertEquals("Appointment cannot be cancelled", ex.getMessage());
 	}
 
 	@Test

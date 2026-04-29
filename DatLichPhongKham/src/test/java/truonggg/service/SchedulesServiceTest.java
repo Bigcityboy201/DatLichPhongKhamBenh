@@ -156,7 +156,6 @@ public class SchedulesServiceTest {
 				java.time.LocalDateTime.now().plusDays(1).plusHours(1),
 				doctor
 		);
-		schedule.activate(); // để đi nhánh deactivate
 
 		SchedulesUpdateRequestDTO dto = new SchedulesUpdateRequestDTO();
 		dto.setActive(false);

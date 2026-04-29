@@ -1,0 +1,25 @@
+src/main/java
+
+domain
+   entity
+   valueobject
+   repository
+   service
+   event
+   aggregate
+
+application
+   service
+   dto
+   usecase
+   command
+   query
+
+infrastructure
+   repository
+   config
+   kafka
+   redis
+
+presentation
+   controller

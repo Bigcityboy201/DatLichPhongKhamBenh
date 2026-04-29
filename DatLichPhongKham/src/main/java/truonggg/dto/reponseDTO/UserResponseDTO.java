@@ -23,7 +23,10 @@ public class UserResponseDTO {
 	private Date dateOfBirth;
 	private Date createdAt;
 	private boolean isActive;
-	
+
+	// URL ảnh đại diện của user
+	private String avatarUrl;
+
 	// Role duy nhất của user
 	private String role;
 }

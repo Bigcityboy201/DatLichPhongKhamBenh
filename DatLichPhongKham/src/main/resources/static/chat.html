@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <title>Chat Realtime</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+
+    <style>
+        body {
+          font-family: Arial;
+          background: #f3f4f6;
+          margin: 0;
+          padding: 0;
+        }
+
+        .page {
+          max-width: 1000px;
+          margin: auto;
+          padding: 20px;
+        }
+
+        .layout {
+          display: grid;
+          grid-template-columns: 260px 1fr;
+          gap: 20px;
+        }
+
+        .card {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          overflow: hidden;
+        }
+
+        .sidebar-title {
+          padding: 10px 12px;
+          font-weight: 600;
+          border-bottom: 1px solid #eee;
+          background: #fafafa;
+        }
+
+        #partnersList button {
+          width: 100%;
+          padding: 10px;
+          border: none;
+          border-bottom: 1px solid #eee;
+          background: white;
+          cursor: pointer;
+          text-align: left;
+        }
+
+        #partnersList button:hover {
+          background: #f3f4f6;
+        }
+
+        .chat-header {
+          padding: 10px 12px;
+          border-bottom: 1px solid #eee;
+          font-weight: 600;
+        }
+
+        .messages {
+          list-style: none;
+          margin: 0;
+          padding: 10px;
+          height: 360px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          background: #f9fafb;
+        }
+
+        .messages li {
+          margin: 4px 0;
+          max-width: 75%;
+          padding: 6px 10px;
+          border-radius: 12px;
+          font-size: 13px;
+        }
+
+        .messages li.me {
+          background: #dbeafe;
+          align-self: flex-end;
+          margin-left: auto;
+        }
+
+        .messages li.other {
+          background: white;
+          border: 1px solid #e5e7eb;
+          margin-right: auto;
+        }
+
+        .input-row {
+          display: flex;
+          gap: 6px;
+          padding: 10px;
+          border-top: 1px solid #eee;
+        }
+
+        .input-row input {
+          flex: 1;
+          padding: 8px 10px;
+          border-radius: 999px;
+          border: 1px solid #ccc;
+        }
+
+        .input-row button {
+          padding: 8px 14px;
+          border: none;
+          border-radius: 999px;
+          background: #2563eb;
+          color: white;
+          cursor: pointer;
+        }
+
+        .status {
+          font-size: 12px;
+          color: #16a34a;
+          padding: 4px 10px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <div class="layout">
+        <div class="card">
+            <div class="sidebar-title">Danh sách chat</div>
+            <div id="partnersList"></div>
+        </div>
+
+        <div class="card">
+            <div class="chat-header">
+                Đang chat với: <span id="currentTargetLabel">Chưa chọn</span>
+            </div>
+
+            <div class="status" id="status">Đang kết nối...</div>
+
+            <ul id="messages" class="messages"></ul>
+
+            <div class="input-row">
+                <input id="msg" placeholder="Nhập tin nhắn..." />
+                <button onclick="send()">Gửi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let currentReceiverId = null;
+    let currentUserId = null;
+
+    const partnerButtonsById = new Map();
+
+    // Lấy token theo từng tab để tránh bị ghi đè khi đăng nhập tài khoản khác ở tab khác (localStorage dùng chung).
+    function getToken() {
+      const sToken =
+        sessionStorage.getItem("chat_jwt") ||
+        sessionStorage.getItem("token");
+      if (sToken) return sToken;
+
+      const lToken =
+        localStorage.getItem("chat_jwt") || localStorage.getItem("token");
+      if (lToken) {
+        sessionStorage.setItem("chat_jwt", lToken);
+        return lToken;
+      }
+      return "";
+    }
+
+    async function loadCurrentUser() {
+      const token = getToken();
+
+      const res = await fetch("/api/users/me", {
+        headers: { Authorization: "Bearer " + token },
+      });
+
+      const data = await res.json();
+
+      return data.data || data;
+    }
+
+    function connect() {
+      const token = getToken();
+
+      const socket = new SockJS("/ws-chat");
+
+      stompClient = Stomp.over(socket);
+
+      stompClient.debug = null;
+
+      stompClient.connect(
+        { Authorization: "Bearer " + token },
+
+        function () {
+          document.getElementById("status").textContent =
+            "Đã kết nối WebSocket";
+
+          loadCurrentUser().then((u) => {
+            currentUserId = u.userId;
+            loadConversations(); // dùng API conversations
+          });
+
+          stompClient.subscribe("/user/queue/messages", function (message) {
+            const msg = JSON.parse(message.body);
+
+            const partnerId =
+              msg.senderUserId === currentUserId
+                ? msg.receiverUserId
+                : msg.senderUserId;
+
+            const partnerName =
+              msg.senderUserId === currentUserId
+                ? msg.receiverName
+                : msg.senderName;
+
+            updateConversationList(msg, partnerName);
+
+            // nếu chưa chọn ai thì tự mở chat
+            if (!currentReceiverId) {
+              setCurrentTarget(partnerId, partnerName);
+              renderMessage(msg);
+              return;
+            }
+
+            // nếu đang chat đúng người
+            if (currentReceiverId === partnerId) {
+              renderMessage(msg);
+            }
+          });
+        },
+      );
+    }
+
+    function updateConversationList(msg, partnerName) {
+      const partnerId =
+        msg.senderUserId === currentUserId
+          ? msg.receiverUserId
+          : msg.senderUserId;
+
+      const existing = document.querySelector(
+        '[data-user-id="' + partnerId + '"]',
+      );
+
+      if (!existing) {
+        // message mới -> người chat này phải nhảy lên đầu
+        ensurePartnerButton(partnerId, partnerName, true);
+      } else {
+        const parent = existing.parentElement;
+        parent.prepend(existing);
+      }
+    }
+
+    async function loadConversations() {
+      const token = getToken();
+      const res = await fetch("/api/chat/conversations", {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      });
+
+      const body = await res.json();
+
+      const list = document.getElementById("partnersList");
+
+      list.innerHTML = "";
+      partnerButtonsById.clear();
+
+      body.data.forEach((u) => {
+        // load lần đầu: giữ đúng thứ tự backend trả về (mới nhất trước)
+        ensurePartnerButton(u.userId, u.fullName, false);
+      });
+    }
+
+    function ensurePartnerButton(userId, label, toTop) {
+      const list = document.getElementById("partnersList");
+
+      if (partnerButtonsById.has(userId)) {
+        const btn = partnerButtonsById.get(userId);
+
+        if (btn.textContent !== label) {
+          btn.textContent = label;
+        }
+
+        // đã có thì luôn đưa lên đầu (khi có tin nhắn mới)
+        list.prepend(btn);
+
+        return;
+      }
+
+      const btn = document.createElement("button");
+      btn.dataset.userId = userId;
+
+      btn.textContent = label || "Người dùng";
+
+      btn.onclick = () => setCurrentTarget(userId, label);
+
+      partnerButtonsById.set(userId, btn);
+
+      // nếu là realtime/new message thì đưa lên đầu, còn load lần đầu thì append để giữ order từ API
+      if (toTop) {
+        list.prepend(btn);
+      } else {
+        list.appendChild(btn);
+      }
+    }
+
+    function renderMessage(msg) {
+      const list = document.getElementById("messages");
+
+      const li = document.createElement("li");
+
+      const isMine = msg.senderUserId === currentUserId;
+
+      li.className = isMine ? "me" : "other";
+
+      const name = msg.senderName || "User";
+      const time = msg.sentAt
+        ? new Date(msg.sentAt).toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "";
+
+      li.innerHTML =
+        "<div style='font-size:11px;color:#6b7280'>" +
+        name +
+        "</div>" +
+        "<div>" +
+        msg.content +
+        "</div>" +
+        "<div style='font-size:10px;color:#9ca3af;margin-top:2px;text-align:right'>" +
+        time +
+        "</div>";
+
+      list.appendChild(li);
+
+      list.scrollTop = list.scrollHeight;
+    }
+
+    function send() {
+      if (!currentReceiverId) {
+        alert("Chọn người chat");
+        return;
+      }
+
+      const input = document.getElementById("msg");
+
+      const content = input.value.trim();
+
+      if (!content) return;
+
+      stompClient.send(
+        "/app/chat.sendMessage",
+        {},
+        JSON.stringify({
+          receiverUserId: currentReceiverId,
+          content: content,
+        }),
+      );
+
+      input.value = "";
+    }
+
+    function setCurrentTarget(id, label) {
+      currentReceiverId = id;
+
+      document.getElementById("currentTargetLabel").textContent = label;
+
+      document.getElementById("messages").innerHTML = "";
+
+      loadConversation(id);
+    }
+
+    async function loadPartners() {
+      const token = getToken();
+
+      const res = await fetch("/api/chat/conversations", {
+        headers: { Authorization: "Bearer " + token },
+      });
+
+      const data = await res.json();
+
+      const partners = data.data || [];
+
+      partners.forEach((p) => {
+        ensurePartnerButton(p.userId, p.fullName);
+      });
+    }
+
+    async function loadConversation(partnerUserId) {
+      const token = getToken();
+
+      const res = await fetch("/api/chat/history/" + partnerUserId, {
+        headers: { Authorization: "Bearer " + token },
+      });
+
+      const data = await res.json();
+
+      const messages = data.data || [];
+
+      document.getElementById("messages").innerHTML = "";
+
+      messages.forEach(renderMessage);
+    }
+
+    connect();
+</script>
+</body>
+</html>

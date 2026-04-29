@@ -17,6 +17,7 @@ public interface UserMapper {
 	//User toEntity(UserRequestDTO dto);
 
 	@Mapping(source = "role.roleName", target = "role")
+	@Mapping(source = "avatarUrl", target = "avatarUrl")
 	UserResponseDTO toDTO(User user);
 
 	// Không map ngược từ SignUpRequest sang User qua mapper

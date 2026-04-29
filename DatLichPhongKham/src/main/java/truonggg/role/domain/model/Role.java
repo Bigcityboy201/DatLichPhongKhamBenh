@@ -30,7 +30,7 @@ public class Role {
     // ===== Domain behaviour =====
 
     public static Role create(String roleName, String description) {
-        if (roleName == null || roleName.isBlank()) {
+        if (!truonggg.utils.ValidationUtils.isNotBlank(roleName)) {
             throw new IllegalArgumentException("Role name is required");
         }
         Role role = new Role();
@@ -41,7 +41,7 @@ public class Role {
     }
 
     public void updateInfo(String newName, String newDescription) {
-        if (newName != null && !newName.isBlank()) {
+        if (truonggg.utils.ValidationUtils.isNotBlank(newName)) {
             this.roleName = newName;
         }
         if (newDescription != null) {

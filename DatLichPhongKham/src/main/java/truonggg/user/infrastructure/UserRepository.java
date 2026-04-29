@@ -1,5 +1,6 @@
 package truonggg.user.infrastructure;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -30,6 +31,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 	@Query(value = "SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.role WHERE u.role.roleId = :roleId",
 			countQuery = "SELECT COUNT(DISTINCT u) FROM User u WHERE u.role.roleId = :roleId")
 	Page<User> findByRole_RoleId(@Param("roleId") Integer roleId, Pageable pageable);
+
+	@Query("SELECT u FROM User u LEFT JOIN FETCH u.role WHERE u.role.roleName = :roleName")
+	List<User> findByRoleName(@Param("roleName") String roleName);
 }
 
 

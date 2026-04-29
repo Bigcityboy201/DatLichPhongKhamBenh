@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -50,13 +51,16 @@ public class UserServiceTest {
     @Mock
     private RoleRepository roleRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private UserServiceIMPL userService;
 
     @BeforeEach
     void setUp() {
         List<RoleAssignmentHandler> handlers = List.of(new DoctorRoleAssignmentHandler());
-        userService = new UserServiceIMPL(userRepository, userMapper, passwordService, roleRepository, handlers);
-        userService.init(); // build handlerMap như @PostConstruct
+        userService = new UserServiceIMPL(userRepository, userMapper, passwordService, roleRepository, eventPublisher, handlers);
+        userService.init();
     }
 
     // ===================== CREATE =====================
@@ -78,10 +82,13 @@ public class UserServiceTest {
         when(roleRepository.findByRoleName(SecurityRole.ROLE_USER)).thenReturn(roleUser);
         when(passwordService.encodePassword(dto.getPassword())).thenReturn("encoded-password");
 
+        User savedUser = org.mockito.Mockito.mock(User.class);
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
         UserResponseDTO responseDTO = new UserResponseDTO();
         responseDTO.setEmail(dto.getEmail());
         responseDTO.setUserName(dto.getUserName());
-        when(userMapper.toDTO(any(User.class))).thenReturn(responseDTO);
+        when(userMapper.toDTO(savedUser)).thenReturn(responseDTO);
 
         UserResponseDTO result = userService.createUser(dto);
 

@@ -30,14 +30,14 @@ public class Notifications {
         if (user == null) {
             throw new IllegalArgumentException("User is required");
         }
-        if (message == null || message.isBlank()) {
+        if (!truonggg.utils.ValidationUtils.isNotBlank(message)) {
             throw new IllegalArgumentException("Message is required");
         }
         Notifications notification = new Notifications();
         notification.user = user;
         notification.message = message;
         notification.isRead = false;
-        notification.createdAt = new Date();
+        notification.createdAt = truonggg.utils.DateUtils.currentDate();
         return notification;
     }
 
@@ -49,7 +49,7 @@ public class Notifications {
     }
 
     public void updateMessage(String newMessage) {
-        if (newMessage != null && !newMessage.isBlank()) {
+        if (truonggg.utils.ValidationUtils.isNotBlank(newMessage)) {
             this.message = newMessage;
         }
     }

@@ -3,8 +3,7 @@ package truonggg.department.domain.model;
 import jakarta.persistence.*;
 import lombok.*;
 import truonggg.doctor.domain.model.Doctors;
-
-import java.time.LocalDateTime;
+import truonggg.domain.model.BaseEntity;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 //@AllArgsConstructor
 //@Builder
-public class Departments {
+public class Departments extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -22,8 +21,6 @@ public class Departments {
     private String description;
     @Column(columnDefinition = "BIT DEFAULT 1")
     private boolean isActive;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     @OneToMany(mappedBy = "departments")
     private List<Doctors> list = new ArrayList<>();
 
@@ -33,7 +30,7 @@ public class Departments {
 
     public static Departments create(String name, String description) {
 
-        if (name == null || name.isBlank()) {
+        if (!truonggg.utils.ValidationUtils.isNotBlank(name)) {
             throw new IllegalArgumentException("Department name is required");
         }
 
@@ -41,15 +38,13 @@ public class Departments {
         department.name = name;
         department.description = description;
         department.isActive = true; // default business rule
-        department.createdAt = LocalDateTime.now();
-        department.updatedAt = LocalDateTime.now();
 
         return department;
     }
     public void changeInfo(String name, String description) {
 
         if (name != null) {
-            if (name.isBlank()) {
+            if (!truonggg.utils.ValidationUtils.isNotBlank(name)) {
                 throw new IllegalArgumentException("Department name cannot be blank");
             }
             this.name = name;
@@ -58,8 +53,6 @@ public class Departments {
         if (description != null) {
             this.description = description;
         }
-
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void activate() {
@@ -67,7 +60,6 @@ public class Departments {
             throw new IllegalStateException("Department already active");
         }
         this.isActive = true;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void deactivate() {
@@ -75,6 +67,5 @@ public class Departments {
             throw new IllegalStateException("Department already inactive");
         }
         this.isActive = false;
-        this.updatedAt = LocalDateTime.now();
     }
 }

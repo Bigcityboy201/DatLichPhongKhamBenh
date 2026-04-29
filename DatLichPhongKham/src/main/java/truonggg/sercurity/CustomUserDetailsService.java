@@ -1,5 +1,7 @@
 package truonggg.sercurity;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,20 +16,22 @@ import truonggg.user.infrastructure.UserRepository;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
+	private static final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
+
 	private final UserRepository userRepository;
 
 	@Override
 	@Transactional
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		System.out.println("Trying to load user: " + username);
+		logger.debug("Trying to load user: {}", username);
 		
 		User user = this.userRepository.findByUserName(username)
 				.orElseThrow(() -> {
-					System.out.println("User not found: " + username);
+					logger.warn("User not found: {}", username);
 					return new UsernameNotFoundException("Cannot find user with userName: " + username);
 				});
 
-		System.out.println("User found: " + user.getUserName() + ", password hash: " + user.getPassword());
+		logger.debug("User found: {}, password hash: {}", user.getUserName(), user.getPassword());
 		return new CustomUserDetails(user);
 	}
 }

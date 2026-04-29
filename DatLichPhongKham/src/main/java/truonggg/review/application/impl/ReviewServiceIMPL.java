@@ -46,7 +46,7 @@ public class ReviewServiceIMPL implements ReviewAdminService, ReviewSelfService 
 		review review = this.reviewMapper.toEntity(dto);
 		review.setUser(user);
 		review.setDoctors(doctors);
-		review.setCreateAt(new Date());
+		review.setCreateAt(truonggg.utils.DateUtils.currentDate());
 		review = this.reviewRepository.save(review);
 		return toResponse(review);
 	}
@@ -60,7 +60,7 @@ public class ReviewServiceIMPL implements ReviewAdminService, ReviewSelfService 
 		review review = this.reviewMapper.toEntity(dto);
 		review.setUser(user);
 		review.setDoctors(doctors);
-		review.setCreateAt(new Date());
+		review.setCreateAt(truonggg.utils.DateUtils.currentDate());
 
 		return toResponse(this.reviewRepository.save(review));
 	}

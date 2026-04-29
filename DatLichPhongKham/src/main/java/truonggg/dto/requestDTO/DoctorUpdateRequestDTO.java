@@ -2,7 +2,7 @@ package truonggg.dto.requestDTO;
 
 import java.sql.Date;
 
-import jakarta.validation.constraints.Email;
+import truonggg.validation.ValidEmail;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -40,7 +40,7 @@ public class DoctorUpdateRequestDTO {
 	@Size(min = 2, max = 100, message = "Full name must be between 2 and 100 characters")
 	private String fullName;
 
-	@Email(message = "Email should be valid")
+	@ValidEmail()
 	@Size(max = 100)
 	private String email;
 

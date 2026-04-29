@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+  </head>
+  <body>
+    <input id="msg" placeholder="Type a message" />
+    <button onclick="send()">Send</button>
+
+    <script>
+      let socket = new SockJS("/ws"); // Endpoint WebSocket (cần đăng ký ở config)
+      let stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function () {
+        console.log("Connected to WebSocket");
+
+        // subscribe topic
+        stompClient.subscribe("/topic/chat", function (message) {
+          console.log("Received:", message.body);
+        });
+      });
+
+      function send() {
+        let msg = document.getElementById("msg").value;
+
+        stompClient.send(
+          "/app/chat.sendMessage",
+          {},
+          JSON.stringify({
+            userId: 1,
+            senderType: "PATIENT",
+            content: msg,
+          }),
+        );
+      }
+    </script>
+  </body>
+</html>

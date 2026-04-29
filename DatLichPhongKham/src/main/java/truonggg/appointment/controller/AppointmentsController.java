@@ -28,9 +28,10 @@ import truonggg.dto.requestDTO.AppointmentsUpdateRequestDTO;
 import truonggg.reponse.PagedResult;
 import truonggg.reponse.SuccessReponse;
 import truonggg.user.application.UserManagementService;
+import truonggg.constant.ApiConstants;
 
 @RestController
-@RequestMapping(path = "/api/appointments")
+@RequestMapping(path = ApiConstants.APPOINTMENTS_BASE)
 @RequiredArgsConstructor
 public class AppointmentsController {
 	private final AppointmentsQueryService appointmentsQueryService;
@@ -82,7 +83,7 @@ public class AppointmentsController {
 		return SuccessReponse.of(this.appointmentsCommandService.delete(id));
 	}
 
-	@GetMapping("/me")
+	@GetMapping(ApiConstants.APPOINTMENTS_ME)
 	@PreAuthorize("hasAnyAuthority('USER', 'DOCTOR', 'EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<List<AppointmentsResponseDTO>> getMyAppointments(
 			@RequestParam(value = "page", defaultValue = "0") int page,
@@ -94,7 +95,7 @@ public class AppointmentsController {
 		return SuccessReponse.ofPaged(pagedResult);
 	}
 
-	@PutMapping("/{id}/cancel-user")
+	@PutMapping(ApiConstants.APPOINTMENTS_CANCEL_USER)
 	@PreAuthorize("hasAuthority('USER')")
 	public SuccessReponse<CancelAppointmentResponse> cancelAppointmentByUser(@PathVariable Integer id) {
 
@@ -103,7 +104,7 @@ public class AppointmentsController {
 		return SuccessReponse.of(appointmentsCommandService.cancelByUser(id, currentUsername));
 	}
 
-	@PutMapping("/{id}/assign-doctor")
+	@PutMapping(ApiConstants.APPOINTMENTS_ASSIGN_DOCTOR)
 	@PreAuthorize("hasAnyAuthority('EMPLOYEE', 'ADMIN')")
 	public SuccessReponse<AppointmentsResponseDTO> assignDoctor(@PathVariable Integer id,
 			@RequestBody @Valid AppointmentAssignDoctorRequestDTO dto) {
